@@ -1,0 +1,2131 @@
+{
+  "kept_count": 302,
+  "dropped_count": 1,
+  "kept": [
+    "AAPL",
+    "ABBV",
+    "ABNB",
+    "ABT",
+    "ADBE",
+    "ADP",
+    "ADSK",
+    "AEP",
+    "AFL",
+    "AIG",
+    "ALGN",
+    "ALL",
+    "AMAT",
+    "AMD",
+    "AME",
+    "AMGN",
+    "AMP",
+    "AMT",
+    "AMZN",
+    "ANET",
+    "AON",
+    "APD",
+    "ARM",
+    "ASML",
+    "AVB",
+    "AVGO",
+    "AWK",
+    "AXP",
+    "AZO",
+    "BA",
+    "BAC",
+    "BAX",
+    "BBY",
+    "BDX",
+    "BIIB",
+    "BK",
+    "BKNG",
+    "BKR",
+    "BLK",
+    "BMY",
+    "BSX",
+    "BX",
+    "C",
+    "CARR",
+    "CAT",
+    "CB",
+    "CCI",
+    "CDNS",
+    "CHD",
+    "CHTR",
+    "CI",
+    "CL",
+    "CLX",
+    "CMCSA",
+    "CME",
+    "CMG",
+    "CMS",
+    "CNC",
+    "COF",
+    "COP",
+    "COST",
+    "CRM",
+    "CRWD",
+    "CSCO",
+    "CSX",
+    "CTVA",
+    "CVS",
+    "CVX",
+    "D",
+    "DD",
+    "DDOG",
+    "DE",
+    "DELL",
+    "DG",
+    "DHR",
+    "DIA",
+    "DIS",
+    "DLR",
+    "DLTR",
+    "DOV",
+    "DOW",
+    "DRI",
+    "DTE",
+    "DUK",
+    "DVN",
+    "DXCM",
+    "EA",
+    "ECL",
+    "ED",
+    "ELV",
+    "EMR",
+    "EOG",
+    "EQIX",
+    "EQR",
+    "ES",
+    "ETN",
+    "EW",
+    "EXC",
+    "EXR",
+    "F",
+    "FANG",
+    "FCX",
+    "FDX",
+    "FIS",
+    "FITB",
+    "FTNT",
+    "GD",
+    "GE",
+    "GEHC",
+    "GEN",
+    "GILD",
+    "GIS",
+    "GLD",
+    "GM",
+    "GOOG",
+    "GOOGL",
+    "GS",
+    "HAL",
+    "HBAN",
+    "HCA",
+    "HD",
+    "HEI",
+    "HLT",
+    "HON",
+    "HPE",
+    "HPQ",
+    "HSY",
+    "HUM",
+    "IBM",
+    "ICE",
+    "IDXX",
+    "INTC",
+    "INTU",
+    "INVH",
+    "IQV",
+    "ISRG",
+    "ITW",
+    "IWM",
+    "JBHT",
+    "JNJ",
+    "JPM",
+    "KDP",
+    "KEY",
+    "KHC",
+    "KLAC",
+    "KMB",
+    "KMI",
+    "KO",
+    "LIN",
+    "LLY",
+    "LMT",
+    "LOW",
+    "LRCX",
+    "LVS",
+    "LYB",
+    "MA",
+    "MAR",
+    "MCD",
+    "MCK",
+    "MCO",
+    "MDB",
+    "MDLZ",
+    "MDT",
+    "MET",
+    "META",
+    "MGM",
+    "MKC",
+    "MLM",
+    "MMM",
+    "MNST",
+    "MO",
+    "MPC",
+    "MPWR",
+    "MRK",
+    "MRVL",
+    "MS",
+    "MSCI",
+    "MSFT",
+    "MSI",
+    "MTB",
+    "MTD",
+    "MU",
+    "NDAQ",
+    "NEE",
+    "NEM",
+    "NET",
+    "NFLX",
+    "NKE",
+    "NOC",
+    "NOW",
+    "NSC",
+    "NTRS",
+    "NUE",
+    "NVDA",
+    "O",
+    "ODFL",
+    "OKE",
+    "OKTA",
+    "ON",
+    "ORCL",
+    "ORLY",
+    "OTIS",
+    "OXY",
+    "PANW",
+    "PCAR",
+    "PCG",
+    "PEG",
+    "PEP",
+    "PFE",
+    "PG",
+    "PH",
+    "PLD",
+    "PM",
+    "PNC",
+    "PPG",
+    "PPL",
+    "PRU",
+    "PSA",
+    "PSX",
+    "PWR",
+    "PYPL",
+    "QCOM",
+    "QQQ",
+    "REGN",
+    "RF",
+    "RMD",
+    "ROK",
+    "ROP",
+    "ROST",
+    "RSG",
+    "RTX",
+    "SBUX",
+    "SCHW",
+    "SHW",
+    "SLB",
+    "SNOW",
+    "SNPS",
+    "SO",
+    "SPG",
+    "SPGI",
+    "SPY",
+    "SRE",
+    "STLD",
+    "STT",
+    "STZ",
+    "SYK",
+    "T",
+    "TDG",
+    "TEAM",
+    "TGT",
+    "TJX",
+    "TLT",
+    "TMO",
+    "TMUS",
+    "TRGP",
+    "TRV",
+    "TSLA",
+    "TT",
+    "TTWO",
+    "TXN",
+    "UNH",
+    "UNP",
+    "UPS",
+    "URI",
+    "USB",
+    "USO",
+    "V",
+    "VICI",
+    "VLO",
+    "VMC",
+    "VRTX",
+    "VTI",
+    "VZ",
+    "WAT",
+    "WBD",
+    "WDAY",
+    "WEC",
+    "WELL",
+    "WFC",
+    "WM",
+    "WMB",
+    "WMT",
+    "WST",
+    "WTW",
+    "XEL",
+    "XLB",
+    "XLC",
+    "XLE",
+    "XLF",
+    "XLI",
+    "XLK",
+    "XLP",
+    "XLRE",
+    "XLU",
+    "XLV",
+    "XLY",
+    "XOM",
+    "YUM",
+    "ZBH",
+    "ZBRA",
+    "ZS",
+    "ZTS"
+  ],
+  "dropped": [
+    "UUP"
+  ],
+  "report": {
+    "AAPL": {
+      "rows": 2104,
+      "last_close": 300.2300109863281,
+      "adv_20d_usd": 13626820383.173676,
+      "reason": "ok"
+    },
+    "ABBV": {
+      "rows": 2104,
+      "last_close": 210.38999938964844,
+      "adv_20d_usd": 1360173304.1900635,
+      "reason": "ok"
+    },
+    "ABNB": {
+      "rows": 1363,
+      "last_close": 132.85000610351562,
+      "adv_20d_usd": 527889034.29733276,
+      "reason": "ok"
+    },
+    "ABT": {
+      "rows": 2104,
+      "last_close": 84.47000122070312,
+      "adv_20d_usd": 1195662102.305603,
+      "reason": "ok"
+    },
+    "ADBE": {
+      "rows": 2104,
+      "last_close": 247.60000610351562,
+      "adv_20d_usd": 1241749681.4453125,
+      "reason": "ok"
+    },
+    "ADP": {
+      "rows": 2104,
+      "last_close": 214.47999572753906,
+      "adv_20d_usd": 636238689.7356415,
+      "reason": "ok"
+    },
+    "ADSK": {
+      "rows": 2104,
+      "last_close": 236.6199951171875,
+      "adv_20d_usd": 419127264.39704895,
+      "reason": "ok"
+    },
+    "AEP": {
+      "rows": 2104,
+      "last_close": 125.1500015258789,
+      "adv_20d_usd": 520941737.7604294,
+      "reason": "ok"
+    },
+    "AFL": {
+      "rows": 2104,
+      "last_close": 116.80999755859375,
+      "adv_20d_usd": 245447391.46076202,
+      "reason": "ok"
+    },
+    "AIG": {
+      "rows": 2104,
+      "last_close": 76.11000061035156,
+      "adv_20d_usd": 390395871.5459442,
+      "reason": "ok"
+    },
+    "ALGN": {
+      "rows": 2104,
+      "last_close": 157.25,
+      "adv_20d_usd": 183322212.5946045,
+      "reason": "ok"
+    },
+    "ALL": {
+      "rows": 2104,
+      "last_close": 217.3699951171875,
+      "adv_20d_usd": 330395561.84181213,
+      "reason": "ok"
+    },
+    "AMAT": {
+      "rows": 2104,
+      "last_close": 436.6199951171875,
+      "adv_20d_usd": 3027932953.0415344,
+      "reason": "ok"
+    },
+    "AMD": {
+      "rows": 2104,
+      "last_close": 424.1000061035156,
+      "adv_20d_usd": 17312921560.54245,
+      "reason": "ok"
+    },
+    "AME": {
+      "rows": 2104,
+      "last_close": 227.89999389648438,
+      "adv_20d_usd": 311843800.5181122,
+      "reason": "ok"
+    },
+    "AMGN": {
+      "rows": 2104,
+      "last_close": 326.30999755859375,
+      "adv_20d_usd": 894578007.7461243,
+      "reason": "ok"
+    },
+    "AMP": {
+      "rows": 2104,
+      "last_close": 470.3800048828125,
+      "adv_20d_usd": 292132747.55996704,
+      "reason": "ok"
+    },
+    "AMT": {
+      "rows": 2104,
+      "last_close": 170.6300048828125,
+      "adv_20d_usd": 514956795.5138397,
+      "reason": "ok"
+    },
+    "AMZN": {
+      "rows": 2104,
+      "last_close": 264.1400146484375,
+      "adv_20d_usd": 12108733079.529037,
+      "reason": "ok"
+    },
+    "ANET": {
+      "rows": 2104,
+      "last_close": 141.97000122070312,
+      "adv_20d_usd": 1868949321.7616272,
+      "reason": "ok"
+    },
+    "AON": {
+      "rows": 2104,
+      "last_close": 317.2200012207031,
+      "adv_20d_usd": 451140793.5081482,
+      "reason": "ok"
+    },
+    "APD": {
+      "rows": 2104,
+      "last_close": 295.3800048828125,
+      "adv_20d_usd": 308836444.3348694,
+      "reason": "ok"
+    },
+    "ARM": {
+      "rows": 670,
+      "last_close": 209.16000366210938,
+      "adv_20d_usd": 2479627022.490692,
+      "reason": "ok"
+    },
+    "ASML": {
+      "rows": 2104,
+      "last_close": 1501.81005859375,
+      "adv_20d_usd": 2508470627.48291,
+      "reason": "ok"
+    },
+    "AVB": {
+      "rows": 2104,
+      "last_close": 180.83999633789062,
+      "adv_20d_usd": 188716326.23420715,
+      "reason": "ok"
+    },
+    "AVGO": {
+      "rows": 2104,
+      "last_close": 425.19000244140625,
+      "adv_20d_usd": 8067510154.500732,
+      "reason": "ok"
+    },
+    "AWK": {
+      "rows": 2104,
+      "last_close": 124.29000091552734,
+      "adv_20d_usd": 229930131.90689087,
+      "reason": "ok"
+    },
+    "AXP": {
+      "rows": 2104,
+      "last_close": 313.4800109863281,
+      "adv_20d_usd": 1090937577.2242737,
+      "reason": "ok"
+    },
+    "AZO": {
+      "rows": 2104,
+      "last_close": 3321.14990234375,
+      "adv_20d_usd": 920661525.3442383,
+      "reason": "ok"
+    },
+    "BA": {
+      "rows": 2104,
+      "last_close": 220.49000549316406,
+      "adv_20d_usd": 1666652846.9328308,
+      "reason": "ok"
+    },
+    "BAC": {
+      "rows": 2104,
+      "last_close": 49.77000045776367,
+      "adv_20d_usd": 1655622610.7920265,
+      "reason": "ok"
+    },
+    "BAX": {
+      "rows": 2104,
+      "last_close": 17.299999237060547,
+      "adv_20d_usd": 141866393.68561745,
+      "reason": "ok"
+    },
+    "BBY": {
+      "rows": 2104,
+      "last_close": 56.279998779296875,
+      "adv_20d_usd": 188349967.10062027,
+      "reason": "ok"
+    },
+    "BDX": {
+      "rows": 2104,
+      "last_close": 143.47000122070312,
+      "adv_20d_usd": 500757272.9524231,
+      "reason": "ok"
+    },
+    "BIIB": {
+      "rows": 2104,
+      "last_close": 192.9499969482422,
+      "adv_20d_usd": 232247933.12675476,
+      "reason": "ok"
+    },
+    "BK": {
+      "rows": 2104,
+      "last_close": 135.02000427246094,
+      "adv_20d_usd": 482046952.93426514,
+      "reason": "ok"
+    },
+    "BKNG": {
+      "rows": 2104,
+      "last_close": 154.1300048828125,
+      "adv_20d_usd": 1278149210.7268524,
+      "reason": "ok"
+    },
+    "BKR": {
+      "rows": 2104,
+      "last_close": 64.12000274658203,
+      "adv_20d_usd": 547218291.89785,
+      "reason": "ok"
+    },
+    "BLK": {
+      "rows": 2103,
+      "last_close": 1081.9000244140625,
+      "adv_20d_usd": 566070709.2730713,
+      "reason": "ok"
+    },
+    "BMY": {
+      "rows": 2104,
+      "last_close": 57.0,
+      "adv_20d_usd": 587096231.6465187,
+      "reason": "ok"
+    },
+    "BSX": {
+      "rows": 2104,
+      "last_close": 52.68000030517578,
+      "adv_20d_usd": 1176698317.8647041,
+      "reason": "ok"
+    },
+    "BX": {
+      "rows": 2104,
+      "last_close": 117.88999938964844,
+      "adv_20d_usd": 663613750.8213425,
+      "reason": "ok"
+    },
+    "C": {
+      "rows": 2103,
+      "last_close": 123.41999816894531,
+      "adv_20d_usd": 1391998893.246193,
+      "reason": "ok"
+    },
+    "CARR": {
+      "rows": 1548,
+      "last_close": 64.66999816894531,
+      "adv_20d_usd": 398318314.1267395,
+      "reason": "ok"
+    },
+    "CAT": {
+      "rows": 2104,
+      "last_close": 888.3099975585938,
+      "adv_20d_usd": 2166051316.268921,
+      "reason": "ok"
+    },
+    "CB": {
+      "rows": 2104,
+      "last_close": 324.1499938964844,
+      "adv_20d_usd": 525102851.55426025,
+      "reason": "ok"
+    },
+    "CCI": {
+      "rows": 2104,
+      "last_close": 86.66000366210938,
+      "adv_20d_usd": 293076437.52342224,
+      "reason": "ok"
+    },
+    "CDNS": {
+      "rows": 2104,
+      "last_close": 347.239990234375,
+      "adv_20d_usd": 871130342.060852,
+      "reason": "ok"
+    },
+    "CHD": {
+      "rows": 2104,
+      "last_close": 94.05000305175781,
+      "adv_20d_usd": 201028858.0001831,
+      "reason": "ok"
+    },
+    "CHTR": {
+      "rows": 2104,
+      "last_close": 140.3300018310547,
+      "adv_20d_usd": 711182717.1122742,
+      "reason": "ok"
+    },
+    "CI": {
+      "rows": 2104,
+      "last_close": 285.2699890136719,
+      "adv_20d_usd": 512382355.6021118,
+      "reason": "ok"
+    },
+    "CL": {
+      "rows": 2104,
+      "last_close": 88.12999725341797,
+      "adv_20d_usd": 459154319.62055206,
+      "reason": "ok"
+    },
+    "CLX": {
+      "rows": 2104,
+      "last_close": 90.44999694824219,
+      "adv_20d_usd": 347763762.45414734,
+      "reason": "ok"
+    },
+    "CMCSA": {
+      "rows": 2104,
+      "last_close": 24.760000228881836,
+      "adv_20d_usd": 917471086.4631081,
+      "reason": "ok"
+    },
+    "CME": {
+      "rows": 2104,
+      "last_close": 298.8599853515625,
+      "adv_20d_usd": 677421151.8663025,
+      "reason": "ok"
+    },
+    "CMG": {
+      "rows": 2104,
+      "last_close": 32.650001525878906,
+      "adv_20d_usd": 586899556.9490433,
+      "reason": "ok"
+    },
+    "CMS": {
+      "rows": 2104,
+      "last_close": 71.63999938964844,
+      "adv_20d_usd": 214522681.76513672,
+      "reason": "ok"
+    },
+    "CNC": {
+      "rows": 2104,
+      "last_close": 58.27000045776367,
+      "adv_20d_usd": 385851079.6763611,
+      "reason": "ok"
+    },
+    "COF": {
+      "rows": 2104,
+      "last_close": 187.1699981689453,
+      "adv_20d_usd": 846503858.4413147,
+      "reason": "ok"
+    },
+    "COP": {
+      "rows": 2104,
+      "last_close": 122.41000366210938,
+      "adv_20d_usd": 1002617552.7164459,
+      "reason": "ok"
+    },
+    "COST": {
+      "rows": 2104,
+      "last_close": 1048.949951171875,
+      "adv_20d_usd": 1749320935.3082275,
+      "reason": "ok"
+    },
+    "CRM": {
+      "rows": 2104,
+      "last_close": 173.50999450683594,
+      "adv_20d_usd": 2193441020.5138397,
+      "reason": "ok"
+    },
+    "CRWD": {
+      "rows": 1742,
+      "last_close": 594.0800170898438,
+      "adv_20d_usd": 1401661277.9397583,
+      "reason": "ok"
+    },
+    "CSCO": {
+      "rows": 2104,
+      "last_close": 118.20999908447266,
+      "adv_20d_usd": 2399396081.330185,
+      "reason": "ok"
+    },
+    "CSX": {
+      "rows": 2104,
+      "last_close": 45.65999984741211,
+      "adv_20d_usd": 586290366.3205528,
+      "reason": "ok"
+    },
+    "CTVA": {
+      "rows": 1754,
+      "last_close": 82.20999908447266,
+      "adv_20d_usd": 286251532.59059906,
+      "reason": "ok"
+    },
+    "CVS": {
+      "rows": 2104,
+      "last_close": 95.88999938964844,
+      "adv_20d_usd": 757876639.0512085,
+      "reason": "ok"
+    },
+    "CVX": {
+      "rows": 2104,
+      "last_close": 191.10000610351562,
+      "adv_20d_usd": 1806000154.299469,
+      "reason": "ok"
+    },
+    "D": {
+      "rows": 2103,
+      "last_close": 61.72999954223633,
+      "adv_20d_usd": 295968964.9403572,
+      "reason": "ok"
+    },
+    "DD": {
+      "rows": 2104,
+      "last_close": 49.310001373291016,
+      "adv_20d_usd": 181975688.0014038,
+      "reason": "ok"
+    },
+    "DDOG": {
+      "rows": 1673,
+      "last_close": 207.97999572753906,
+      "adv_20d_usd": 1101580178.2439423,
+      "reason": "ok"
+    },
+    "DE": {
+      "rows": 2104,
+      "last_close": 561.8300170898438,
+      "adv_20d_usd": 553143414.0679932,
+      "reason": "ok"
+    },
+    "DELL": {
+      "rows": 2104,
+      "last_close": 241.99000549316406,
+      "adv_20d_usd": 1397709864.4895172,
+      "reason": "ok"
+    },
+    "DG": {
+      "rows": 2104,
+      "last_close": 102.37999725341797,
+      "adv_20d_usd": 357687464.76963043,
+      "reason": "ok"
+    },
+    "DHR": {
+      "rows": 2104,
+      "last_close": 161.91000366210938,
+      "adv_20d_usd": 998845495.328064,
+      "reason": "ok"
+    },
+    "DIA": {
+      "rows": 2104,
+      "last_close": 495.3699951171875,
+      "adv_20d_usd": 2028259684.5387268,
+      "reason": "ok"
+    },
+    "DIS": {
+      "rows": 2104,
+      "last_close": 102.72000122070312,
+      "adv_20d_usd": 926975079.258995,
+      "reason": "ok"
+    },
+    "DLR": {
+      "rows": 2104,
+      "last_close": 188.50999450683594,
+      "adv_20d_usd": 433762513.0342865,
+      "reason": "ok"
+    },
+    "DLTR": {
+      "rows": 2104,
+      "last_close": 89.58000183105469,
+      "adv_20d_usd": 356798619.7665024,
+      "reason": "ok"
+    },
+    "DOV": {
+      "rows": 2104,
+      "last_close": 210.77000427246094,
+      "adv_20d_usd": 208964915.496521,
+      "reason": "ok"
+    },
+    "DOW": {
+      "rows": 1800,
+      "last_close": 38.75,
+      "adv_20d_usd": 456547634.41228867,
+      "reason": "ok"
+    },
+    "DRI": {
+      "rows": 2104,
+      "last_close": 195.88999938964844,
+      "adv_20d_usd": 197292745.25169373,
+      "reason": "ok"
+    },
+    "DTE": {
+      "rows": 2104,
+      "last_close": 139.77999877929688,
+      "adv_20d_usd": 235764356.9379425,
+      "reason": "ok"
+    },
+    "DUK": {
+      "rows": 2104,
+      "last_close": 120.94999694824219,
+      "adv_20d_usd": 383310073.00209045,
+      "reason": "ok"
+    },
+    "DVN": {
+      "rows": 2102,
+      "last_close": 49.4900016784668,
+      "adv_20d_usd": 707326764.6246529,
+      "reason": "ok"
+    },
+    "DXCM": {
+      "rows": 2104,
+      "last_close": 61.630001068115234,
+      "adv_20d_usd": 328055084.04777527,
+      "reason": "ok"
+    },
+    "EA": {
+      "rows": 2104,
+      "last_close": 200.63999938964844,
+      "adv_20d_usd": 346113582.99568176,
+      "reason": "ok"
+    },
+    "ECL": {
+      "rows": 2104,
+      "last_close": 247.6199951171875,
+      "adv_20d_usd": 382241741.4935303,
+      "reason": "ok"
+    },
+    "ED": {
+      "rows": 2104,
+      "last_close": 105.36000061035156,
+      "adv_20d_usd": 224893532.97958374,
+      "reason": "ok"
+    },
+    "ELV": {
+      "rows": 2104,
+      "last_close": 392.67999267578125,
+      "adv_20d_usd": 694767694.2616272,
+      "reason": "ok"
+    },
+    "EMR": {
+      "rows": 2104,
+      "last_close": 133.0500030517578,
+      "adv_20d_usd": 404860300.8215332,
+      "reason": "ok"
+    },
+    "EOG": {
+      "rows": 2104,
+      "last_close": 140.25999450683594,
+      "adv_20d_usd": 497856484.4595337,
+      "reason": "ok"
+    },
+    "EQIX": {
+      "rows": 2104,
+      "last_close": 1059.43994140625,
+      "adv_20d_usd": 617549013.4661865,
+      "reason": "ok"
+    },
+    "EQR": {
+      "rows": 2104,
+      "last_close": 63.880001068115234,
+      "adv_20d_usd": 185411462.12713242,
+      "reason": "ok"
+    },
+    "ES": {
+      "rows": 2104,
+      "last_close": 67.16999816894531,
+      "adv_20d_usd": 150832858.20289612,
+      "reason": "ok"
+    },
+    "ETN": {
+      "rows": 2104,
+      "last_close": 399.44000244140625,
+      "adv_20d_usd": 1214100389.8344421,
+      "reason": "ok"
+    },
+    "EW": {
+      "rows": 2104,
+      "last_close": 81.37999725341797,
+      "adv_20d_usd": 439470673.2649231,
+      "reason": "ok"
+    },
+    "EXC": {
+      "rows": 2104,
+      "last_close": 43.380001068115234,
+      "adv_20d_usd": 384008915.8451271,
+      "reason": "ok"
+    },
+    "EXR": {
+      "rows": 2104,
+      "last_close": 136.89999389648438,
+      "adv_20d_usd": 172012486.58874512,
+      "reason": "ok"
+    },
+    "F": {
+      "rows": 2102,
+      "last_close": 13.399999618530273,
+      "adv_20d_usd": 789987410.1884556,
+      "reason": "ok"
+    },
+    "FANG": {
+      "rows": 2104,
+      "last_close": 203.55999755859375,
+      "adv_20d_usd": 485669216.6925049,
+      "reason": "ok"
+    },
+    "FCX": {
+      "rows": 2104,
+      "last_close": 63.0099983215332,
+      "adv_20d_usd": 1006080414.8517418,
+      "reason": "ok"
+    },
+    "FDX": {
+      "rows": 2104,
+      "last_close": 375.7799987792969,
+      "adv_20d_usd": 590155456.6999817,
+      "reason": "ok"
+    },
+    "FIS": {
+      "rows": 2104,
+      "last_close": 41.79999923706055,
+      "adv_20d_usd": 281675107.2256279,
+      "reason": "ok"
+    },
+    "FITB": {
+      "rows": 2104,
+      "last_close": 47.349998474121094,
+      "adv_20d_usd": 263212946.65948868,
+      "reason": "ok"
+    },
+    "FTNT": {
+      "rows": 2104,
+      "last_close": 122.77999877929688,
+      "adv_20d_usd": 600339599.2385483,
+      "reason": "ok"
+    },
+    "GD": {
+      "rows": 2104,
+      "last_close": 334.5,
+      "adv_20d_usd": 523443110.6062317,
+      "reason": "ok"
+    },
+    "GE": {
+      "rows": 2104,
+      "last_close": 281.5299987792969,
+      "adv_20d_usd": 1994773280.3337097,
+      "reason": "ok"
+    },
+    "GEHC": {
+      "rows": 856,
+      "last_close": 60.7599983215332,
+      "adv_20d_usd": 402530565.48254013,
+      "reason": "ok"
+    },
+    "GEN": {
+      "rows": 2103,
+      "last_close": 23.450000762939453,
+      "adv_20d_usd": 163207013.0114174,
+      "reason": "ok"
+    },
+    "GILD": {
+      "rows": 2104,
+      "last_close": 129.5800018310547,
+      "adv_20d_usd": 823304076.2593079,
+      "reason": "ok"
+    },
+    "GIS": {
+      "rows": 2104,
+      "last_close": 32.9900016784668,
+      "adv_20d_usd": 308645314.72618103,
+      "reason": "ok"
+    },
+    "GLD": {
+      "rows": 2104,
+      "last_close": 417.2900085449219,
+      "adv_20d_usd": 2727117480.0790405,
+      "reason": "ok"
+    },
+    "GM": {
+      "rows": 2104,
+      "last_close": 74.86000061035156,
+      "adv_20d_usd": 534980061.20700836,
+      "reason": "ok"
+    },
+    "GOOG": {
+      "rows": 2104,
+      "last_close": 393.32000732421875,
+      "adv_20d_usd": 6878873369.791412,
+      "reason": "ok"
+    },
+    "GOOGL": {
+      "rows": 2104,
+      "last_close": 396.7799987792969,
+      "adv_20d_usd": 10389175105.41336,
+      "reason": "ok"
+    },
+    "GS": {
+      "rows": 2104,
+      "last_close": 948.469970703125,
+      "adv_20d_usd": 1671151516.1831665,
+      "reason": "ok"
+    },
+    "HAL": {
+      "rows": 2104,
+      "last_close": 41.7599983215332,
+      "adv_20d_usd": 483280708.6722183,
+      "reason": "ok"
+    },
+    "HBAN": {
+      "rows": 2104,
+      "last_close": 15.40999984741211,
+      "adv_20d_usd": 340989369.29440975,
+      "reason": "ok"
+    },
+    "HCA": {
+      "rows": 2104,
+      "last_close": 423.0,
+      "adv_20d_usd": 574352892.3092651,
+      "reason": "ok"
+    },
+    "HD": {
+      "rows": 2104,
+      "last_close": 297.510009765625,
+      "adv_20d_usd": 1418828715.7530212,
+      "reason": "ok"
+    },
+    "HEI": {
+      "rows": 2104,
+      "last_close": 288.8399963378906,
+      "adv_20d_usd": 223834706.6581726,
+      "reason": "ok"
+    },
+    "HLT": {
+      "rows": 2104,
+      "last_close": 316.1700134277344,
+      "adv_20d_usd": 557382841.0536194,
+      "reason": "ok"
+    },
+    "HON": {
+      "rows": 2104,
+      "last_close": 213.24000549316406,
+      "adv_20d_usd": 864420231.6317749,
+      "reason": "ok"
+    },
+    "HPE": {
+      "rows": 2104,
+      "last_close": 33.099998474121094,
+      "adv_20d_usd": 473140337.37329483,
+      "reason": "ok"
+    },
+    "HPQ": {
+      "rows": 2104,
+      "last_close": 20.809999465942383,
+      "adv_20d_usd": 339276354.82771873,
+      "reason": "ok"
+    },
+    "HSY": {
+      "rows": 2103,
+      "last_close": 186.97999572753906,
+      "adv_20d_usd": 369956665.2056122,
+      "reason": "ok"
+    },
+    "HUM": {
+      "rows": 2104,
+      "last_close": 305.1199951171875,
+      "adv_20d_usd": 520391636.5283203,
+      "reason": "ok"
+    },
+    "IBM": {
+      "rows": 2104,
+      "last_close": 219.3000030517578,
+      "adv_20d_usd": 1659098714.7080994,
+      "reason": "ok"
+    },
+    "ICE": {
+      "rows": 2104,
+      "last_close": 154.36000061035156,
+      "adv_20d_usd": 481486114.7138214,
+      "reason": "ok"
+    },
+    "IDXX": {
+      "rows": 2104,
+      "last_close": 528.7899780273438,
+      "adv_20d_usd": 356696358.00994873,
+      "reason": "ok"
+    },
+    "INTC": {
+      "rows": 2104,
+      "last_close": 108.7699966430664,
+      "adv_20d_usd": 15582222789.27151,
+      "reason": "ok"
+    },
+    "INTU": {
+      "rows": 2104,
+      "last_close": 393.0,
+      "adv_20d_usd": 1015089262.5602722,
+      "reason": "ok"
+    },
+    "INVH": {
+      "rows": 2104,
+      "last_close": 27.93000030517578,
+      "adv_20d_usd": 155347210.02843857,
+      "reason": "ok"
+    },
+    "IQV": {
+      "rows": 2104,
+      "last_close": 169.1199951171875,
+      "adv_20d_usd": 297674472.2013092,
+      "reason": "ok"
+    },
+    "ISRG": {
+      "rows": 2104,
+      "last_close": 421.1199951171875,
+      "adv_20d_usd": 1106848100.0386047,
+      "reason": "ok"
+    },
+    "ITW": {
+      "rows": 2104,
+      "last_close": 247.67999267578125,
+      "adv_20d_usd": 341233230.04859924,
+      "reason": "ok"
+    },
+    "IWM": {
+      "rows": 2104,
+      "last_close": 277.6000061035156,
+      "adv_20d_usd": 7168289409.6310425,
+      "reason": "ok"
+    },
+    "JBHT": {
+      "rows": 2104,
+      "last_close": 262.2099914550781,
+      "adv_20d_usd": 239023660.50628662,
+      "reason": "ok"
+    },
+    "JNJ": {
+      "rows": 2104,
+      "last_close": 226.7100067138672,
+      "adv_20d_usd": 1754401351.8966675,
+      "reason": "ok"
+    },
+    "JPM": {
+      "rows": 2104,
+      "last_close": 297.80999755859375,
+      "adv_20d_usd": 2415039515.9770203,
+      "reason": "ok"
+    },
+    "KDP": {
+      "rows": 2103,
+      "last_close": 28.93000030517578,
+      "adv_20d_usd": 331272286.1806011,
+      "reason": "ok"
+    },
+    "KEY": {
+      "rows": 2103,
+      "last_close": 21.040000915527344,
+      "adv_20d_usd": 230339268.1691265,
+      "reason": "ok"
+    },
+    "KHC": {
+      "rows": 2103,
+      "last_close": 22.920000076293945,
+      "adv_20d_usd": 323083258.7513733,
+      "reason": "ok"
+    },
+    "KLAC": {
+      "rows": 2104,
+      "last_close": 1804.3199462890625,
+      "adv_20d_usd": 1913678130.2685547,
+      "reason": "ok"
+    },
+    "KMB": {
+      "rows": 2104,
+      "last_close": 95.91000366210938,
+      "adv_20d_usd": 448077284.8541641,
+      "reason": "ok"
+    },
+    "KMI": {
+      "rows": 2102,
+      "last_close": 33.630001068115234,
+      "adv_20d_usd": 369381038.64624023,
+      "reason": "ok"
+    },
+    "KO": {
+      "rows": 2104,
+      "last_close": 80.81999969482422,
+      "adv_20d_usd": 1120805373.0995178,
+      "reason": "ok"
+    },
+    "LIN": {
+      "rows": 2104,
+      "last_close": 506.1099853515625,
+      "adv_20d_usd": 994143385.3268433,
+      "reason": "ok"
+    },
+    "LLY": {
+      "rows": 2104,
+      "last_close": 1004.9199829101562,
+      "adv_20d_usd": 3258141132.3657227,
+      "reason": "ok"
+    },
+    "LMT": {
+      "rows": 2104,
+      "last_close": 516.010009765625,
+      "adv_20d_usd": 872801323.9929199,
+      "reason": "ok"
+    },
+    "LOW": {
+      "rows": 2104,
+      "last_close": 218.4199981689453,
+      "adv_20d_usd": 606424155.8377838,
+      "reason": "ok"
+    },
+    "LRCX": {
+      "rows": 2104,
+      "last_close": 284.7200012207031,
+      "adv_20d_usd": 2610043596.4548492,
+      "reason": "ok"
+    },
+    "LVS": {
+      "rows": 2104,
+      "last_close": 51.15999984741211,
+      "adv_20d_usd": 284185196.2582588,
+      "reason": "ok"
+    },
+    "LYB": {
+      "rows": 2104,
+      "last_close": 75.05999755859375,
+      "adv_20d_usd": 433687707.6231384,
+      "reason": "ok"
+    },
+    "MA": {
+      "rows": 2104,
+      "last_close": 494.20001220703125,
+      "adv_20d_usd": 1880772844.8036194,
+      "reason": "ok"
+    },
+    "MAR": {
+      "rows": 2104,
+      "last_close": 353.1700134277344,
+      "adv_20d_usd": 485638624.6569824,
+      "reason": "ok"
+    },
+    "MCD": {
+      "rows": 2104,
+      "last_close": 276.3900146484375,
+      "adv_20d_usd": 1165382328.3895874,
+      "reason": "ok"
+    },
+    "MCK": {
+      "rows": 2104,
+      "last_close": 760.5700073242188,
+      "adv_20d_usd": 925062168.3551025,
+      "reason": "ok"
+    },
+    "MCO": {
+      "rows": 2104,
+      "last_close": 428.8999938964844,
+      "adv_20d_usd": 501865807.55722046,
+      "reason": "ok"
+    },
+    "MDB": {
+      "rows": 2104,
+      "last_close": 312.1600036621094,
+      "adv_20d_usd": 427405046.1580658,
+      "reason": "ok"
+    },
+    "MDLZ": {
+      "rows": 2104,
+      "last_close": 60.439998626708984,
+      "adv_20d_usd": 467128009.20850754,
+      "reason": "ok"
+    },
+    "MDT": {
+      "rows": 2104,
+      "last_close": 76.1500015258789,
+      "adv_20d_usd": 778923654.5987701,
+      "reason": "ok"
+    },
+    "MET": {
+      "rows": 2104,
+      "last_close": 79.77999877929688,
+      "adv_20d_usd": 242348932.1944046,
+      "reason": "ok"
+    },
+    "META": {
+      "rows": 2104,
+      "last_close": 614.22998046875,
+      "adv_20d_usd": 9969117096.457214,
+      "reason": "ok"
+    },
+    "MGM": {
+      "rows": 2104,
+      "last_close": 36.970001220703125,
+      "adv_20d_usd": 183415593.57175827,
+      "reason": "ok"
+    },
+    "MKC": {
+      "rows": 2103,
+      "last_close": 46.349998474121094,
+      "adv_20d_usd": 177149713.7806511,
+      "reason": "ok"
+    },
+    "MLM": {
+      "rows": 2104,
+      "last_close": 558.6599731445312,
+      "adv_20d_usd": 292988362.61291504,
+      "reason": "ok"
+    },
+    "MMM": {
+      "rows": 2104,
+      "last_close": 146.22000122070312,
+      "adv_20d_usd": 630803082.4041748,
+      "reason": "ok"
+    },
+    "MNST": {
+      "rows": 2104,
+      "last_close": 87.08999633789062,
+      "adv_20d_usd": 436377200.19462585,
+      "reason": "ok"
+    },
+    "MO": {
+      "rows": 2103,
+      "last_close": 73.08999633789062,
+      "adv_20d_usd": 695900938.6112976,
+      "reason": "ok"
+    },
+    "MPC": {
+      "rows": 2104,
+      "last_close": 255.02999877929688,
+      "adv_20d_usd": 550707992.1448517,
+      "reason": "ok"
+    },
+    "MPWR": {
+      "rows": 2104,
+      "last_close": 1550.02001953125,
+      "adv_20d_usd": 1030955675.8868408,
+      "reason": "ok"
+    },
+    "MRK": {
+      "rows": 2104,
+      "last_close": 111.37999725341797,
+      "adv_20d_usd": 972046780.4799652,
+      "reason": "ok"
+    },
+    "MRVL": {
+      "rows": 2104,
+      "last_close": 176.88999938964844,
+      "adv_20d_usd": 4318392540.192642,
+      "reason": "ok"
+    },
+    "MS": {
+      "rows": 2104,
+      "last_close": 192.50999450683594,
+      "adv_20d_usd": 943254442.9291534,
+      "reason": "ok"
+    },
+    "MSCI": {
+      "rows": 2104,
+      "last_close": 561.719970703125,
+      "adv_20d_usd": 392530110.3149414,
+      "reason": "ok"
+    },
+    "MSFT": {
+      "rows": 2104,
+      "last_close": 421.9200134277344,
+      "adv_20d_usd": 14392182219.24057,
+      "reason": "ok"
+    },
+    "MSI": {
+      "rows": 2104,
+      "last_close": 393.2799987792969,
+      "adv_20d_usd": 472750672.38098145,
+      "reason": "ok"
+    },
+    "MTB": {
+      "rows": 2104,
+      "last_close": 204.89999389648438,
+      "adv_20d_usd": 201598243.9768982,
+      "reason": "ok"
+    },
+    "MTD": {
+      "rows": 2104,
+      "last_close": 1031.6400146484375,
+      "adv_20d_usd": 216889312.35473633,
+      "reason": "ok"
+    },
+    "MU": {
+      "rows": 2104,
+      "last_close": 724.6599731445312,
+      "adv_20d_usd": 29892842806.977386,
+      "reason": "ok"
+    },
+    "NDAQ": {
+      "rows": 2104,
+      "last_close": 91.05999755859375,
+      "adv_20d_usd": 296085474.9117279,
+      "reason": "ok"
+    },
+    "NEE": {
+      "rows": 2104,
+      "last_close": 93.36000061035156,
+      "adv_20d_usd": 842208421.8169785,
+      "reason": "ok"
+    },
+    "NEM": {
+      "rows": 2103,
+      "last_close": 109.05999755859375,
+      "adv_20d_usd": 830186908.5281754,
+      "reason": "ok"
+    },
+    "NET": {
+      "rows": 1677,
+      "last_close": 197.55999755859375,
+      "adv_20d_usd": 991038469.1504669,
+      "reason": "ok"
+    },
+    "NFLX": {
+      "rows": 2104,
+      "last_close": 87.0199966430664,
+      "adv_20d_usd": 3397816021.047821,
+      "reason": "ok"
+    },
+    "NKE": {
+      "rows": 2104,
+      "last_close": 41.880001068115234,
+      "adv_20d_usd": 844128192.1108818,
+      "reason": "ok"
+    },
+    "NOC": {
+      "rows": 2104,
+      "last_close": 540.6900024414062,
+      "adv_20d_usd": 481542658.7020874,
+      "reason": "ok"
+    },
+    "NOW": {
+      "rows": 2104,
+      "last_close": 95.06999969482422,
+      "adv_20d_usd": 2591162513.6424255,
+      "reason": "ok"
+    },
+    "NSC": {
+      "rows": 2104,
+      "last_close": 315.95001220703125,
+      "adv_20d_usd": 338583525.9526062,
+      "reason": "ok"
+    },
+    "NTRS": {
+      "rows": 2104,
+      "last_close": 163.86000061035156,
+      "adv_20d_usd": 200592044.0235901,
+      "reason": "ok"
+    },
+    "NUE": {
+      "rows": 2104,
+      "last_close": 227.02000427246094,
+      "adv_20d_usd": 359998093.83865356,
+      "reason": "ok"
+    },
+    "NVDA": {
+      "rows": 2104,
+      "last_close": 225.32000732421875,
+      "adv_20d_usd": 32444531297.00775,
+      "reason": "ok"
+    },
+    "O": {
+      "rows": 2104,
+      "last_close": 61.119998931884766,
+      "adv_20d_usd": 358919683.4366417,
+      "reason": "ok"
+    },
+    "ODFL": {
+      "rows": 2104,
+      "last_close": 203.1199951171875,
+      "adv_20d_usd": 435862842.8404236,
+      "reason": "ok"
+    },
+    "OKE": {
+      "rows": 2104,
+      "last_close": 92.31999969482422,
+      "adv_20d_usd": 370518544.42474365,
+      "reason": "ok"
+    },
+    "OKTA": {
+      "rows": 2104,
+      "last_close": 82.7699966430664,
+      "adv_20d_usd": 223156523.24207306,
+      "reason": "ok"
+    },
+    "ON": {
+      "rows": 2104,
+      "last_close": 113.11000061035156,
+      "adv_20d_usd": 1397940822.934227,
+      "reason": "ok"
+    },
+    "ORCL": {
+      "rows": 2104,
+      "last_close": 192.9499969482422,
+      "adv_20d_usd": 4704246299.026947,
+      "reason": "ok"
+    },
+    "ORLY": {
+      "rows": 2104,
+      "last_close": 88.48999786376953,
+      "adv_20d_usd": 542072467.9521942,
+      "reason": "ok"
+    },
+    "OTIS": {
+      "rows": 1548,
+      "last_close": 71.01000213623047,
+      "adv_20d_usd": 322565683.5400009,
+      "reason": "ok"
+    },
+    "OXY": {
+      "rows": 2104,
+      "last_close": 59.619998931884766,
+      "adv_20d_usd": 694805034.6848488,
+      "reason": "ok"
+    },
+    "PANW": {
+      "rows": 2104,
+      "last_close": 242.8300018310547,
+      "adv_20d_usd": 1452091519.8699188,
+      "reason": "ok"
+    },
+    "PCAR": {
+      "rows": 2104,
+      "last_close": 110.31999969482422,
+      "adv_20d_usd": 335743778.9336014,
+      "reason": "ok"
+    },
+    "PCG": {
+      "rows": 2104,
+      "last_close": 16.1299991607666,
+      "adv_20d_usd": 350245350.6342697,
+      "reason": "ok"
+    },
+    "PEG": {
+      "rows": 2104,
+      "last_close": 76.44000244140625,
+      "adv_20d_usd": 232806624.66220856,
+      "reason": "ok"
+    },
+    "PEP": {
+      "rows": 2104,
+      "last_close": 149.1199951171875,
+      "adv_20d_usd": 861632524.3438721,
+      "reason": "ok"
+    },
+    "PFE": {
+      "rows": 2104,
+      "last_close": 25.329999923706055,
+      "adv_20d_usd": 982505209.1889763,
+      "reason": "ok"
+    },
+    "PG": {
+      "rows": 2104,
+      "last_close": 141.57000732421875,
+      "adv_20d_usd": 1275926899.2362213,
+      "reason": "ok"
+    },
+    "PH": {
+      "rows": 2104,
+      "last_close": 862.719970703125,
+      "adv_20d_usd": 718680634.8831177,
+      "reason": "ok"
+    },
+    "PLD": {
+      "rows": 2104,
+      "last_close": 140.52999877929688,
+      "adv_20d_usd": 452598620.4386902,
+      "reason": "ok"
+    },
+    "PM": {
+      "rows": 2103,
+      "last_close": 189.61000061035156,
+      "adv_20d_usd": 884807876.3807678,
+      "reason": "ok"
+    },
+    "PNC": {
+      "rows": 2103,
+      "last_close": 212.83999633789062,
+      "adv_20d_usd": 389576754.105072,
+      "reason": "ok"
+    },
+    "PPG": {
+      "rows": 2104,
+      "last_close": 102.63999938964844,
+      "adv_20d_usd": 188177513.36071014,
+      "reason": "ok"
+    },
+    "PPL": {
+      "rows": 2104,
+      "last_close": 34.880001068115234,
+      "adv_20d_usd": 332973923.7540245,
+      "reason": "ok"
+    },
+    "PRU": {
+      "rows": 2104,
+      "last_close": 101.93000030517578,
+      "adv_20d_usd": 241418649.8361969,
+      "reason": "ok"
+    },
+    "PSA": {
+      "rows": 2104,
+      "last_close": 292.4700012207031,
+      "adv_20d_usd": 293618845.11535645,
+      "reason": "ok"
+    },
+    "PSX": {
+      "rows": 2104,
+      "last_close": 176.1999969482422,
+      "adv_20d_usd": 435315696.7224121,
+      "reason": "ok"
+    },
+    "PWR": {
+      "rows": 2104,
+      "last_close": 769.989990234375,
+      "adv_20d_usd": 861050520.8944702,
+      "reason": "ok"
+    },
+    "PYPL": {
+      "rows": 2104,
+      "last_close": 44.40999984741211,
+      "adv_20d_usd": 715371927.7776337,
+      "reason": "ok"
+    },
+    "QCOM": {
+      "rows": 2104,
+      "last_close": 201.49000549316406,
+      "adv_20d_usd": 5472105855.685959,
+      "reason": "ok"
+    },
+    "QQQ": {
+      "rows": 2104,
+      "last_close": 708.9299926757812,
+      "adv_20d_usd": 26695191774.05426,
+      "reason": "ok"
+    },
+    "REGN": {
+      "rows": 2104,
+      "last_close": 698.25,
+      "adv_20d_usd": 590544278.3609009,
+      "reason": "ok"
+    },
+    "RF": {
+      "rows": 2103,
+      "last_close": 26.65999984741211,
+      "adv_20d_usd": 264990502.05381393,
+      "reason": "ok"
+    },
+    "RMD": {
+      "rows": 2104,
+      "last_close": 201.8800048828125,
+      "adv_20d_usd": 300405244.6852112,
+      "reason": "ok"
+    },
+    "ROK": {
+      "rows": 2104,
+      "last_close": 448.739990234375,
+      "adv_20d_usd": 347194494.81033325,
+      "reason": "ok"
+    },
+    "ROP": {
+      "rows": 2104,
+      "last_close": 320.8999938964844,
+      "adv_20d_usd": 417719559.5428467,
+      "reason": "ok"
+    },
+    "ROST": {
+      "rows": 2104,
+      "last_close": 212.75,
+      "adv_20d_usd": 518927077.12509155,
+      "reason": "ok"
+    },
+    "RSG": {
+      "rows": 2104,
+      "last_close": 208.32000732421875,
+      "adv_20d_usd": 376078908.0982208,
+      "reason": "ok"
+    },
+    "RTX": {
+      "rows": 2104,
+      "last_close": 171.17999267578125,
+      "adv_20d_usd": 1120548719.1775513,
+      "reason": "ok"
+    },
+    "SBUX": {
+      "rows": 2104,
+      "last_close": 106.81999969482422,
+      "adv_20d_usd": 807718115.9612656,
+      "reason": "ok"
+    },
+    "SCHW": {
+      "rows": 2104,
+      "last_close": 90.87999725341797,
+      "adv_20d_usd": 960719157.1792984,
+      "reason": "ok"
+    },
+    "SHW": {
+      "rows": 2104,
+      "last_close": 300.1000061035156,
+      "adv_20d_usd": 634833164.8487854,
+      "reason": "ok"
+    },
+    "SLB": {
+      "rows": 2104,
+      "last_close": 55.380001068115234,
+      "adv_20d_usd": 718074718.3600616,
+      "reason": "ok"
+    },
+    "SNOW": {
+      "rows": 1423,
+      "last_close": 157.47000122070312,
+      "adv_20d_usd": 1013487138.5102081,
+      "reason": "ok"
+    },
+    "SNPS": {
+      "rows": 2104,
+      "last_close": 502.4200134277344,
+      "adv_20d_usd": 801684289.7158813,
+      "reason": "ok"
+    },
+    "SO": {
+      "rows": 2103,
+      "last_close": 92.55000305175781,
+      "adv_20d_usd": 485023865.97343445,
+      "reason": "ok"
+    },
+    "SPG": {
+      "rows": 2103,
+      "last_close": 200.02000427246094,
+      "adv_20d_usd": 262404492.57026672,
+      "reason": "ok"
+    },
+    "SPGI": {
+      "rows": 2104,
+      "last_close": 403.1499938964844,
+      "adv_20d_usd": 790846899.7669983,
+      "reason": "ok"
+    },
+    "SPY": {
+      "rows": 2104,
+      "last_close": 739.1699829101562,
+      "adv_20d_usd": 34890209196.214294,
+      "reason": "ok"
+    },
+    "SRE": {
+      "rows": 2104,
+      "last_close": 90.43000030517578,
+      "adv_20d_usd": 333093885.8628845,
+      "reason": "ok"
+    },
+    "STLD": {
+      "rows": 2104,
+      "last_close": 229.33999633789062,
+      "adv_20d_usd": 274355129.75006104,
+      "reason": "ok"
+    },
+    "STT": {
+      "rows": 2104,
+      "last_close": 152.85000610351562,
+      "adv_20d_usd": 314617938.2045746,
+      "reason": "ok"
+    },
+    "STZ": {
+      "rows": 2104,
+      "last_close": 142.35000610351562,
+      "adv_20d_usd": 258250495.68748474,
+      "reason": "ok"
+    },
+    "SYK": {
+      "rows": 2104,
+      "last_close": 306.760009765625,
+      "adv_20d_usd": 813056186.6377258,
+      "reason": "ok"
+    },
+    "T": {
+      "rows": 2100,
+      "last_close": 24.030000686645508,
+      "adv_20d_usd": 918907296.6545868,
+      "reason": "ok"
+    },
+    "TDG": {
+      "rows": 2103,
+      "last_close": 1148.969970703125,
+      "adv_20d_usd": 488200026.6906738,
+      "reason": "ok"
+    },
+    "TEAM": {
+      "rows": 2104,
+      "last_close": 87.45999908447266,
+      "adv_20d_usd": 731295023.7482834,
+      "reason": "ok"
+    },
+    "TGT": {
+      "rows": 2104,
+      "last_close": 121.54000091552734,
+      "adv_20d_usd": 591637623.2949448,
+      "reason": "ok"
+    },
+    "TJX": {
+      "rows": 2104,
+      "last_close": 147.42999267578125,
+      "adv_20d_usd": 746945671.827774,
+      "reason": "ok"
+    },
+    "TLT": {
+      "rows": 2103,
+      "last_close": 83.66000366210938,
+      "adv_20d_usd": 2015160180.7369232,
+      "reason": "ok"
+    },
+    "TMO": {
+      "rows": 2104,
+      "last_close": 438.3399963378906,
+      "adv_20d_usd": 1159148298.6412048,
+      "reason": "ok"
+    },
+    "TMUS": {
+      "rows": 2104,
+      "last_close": 185.22000122070312,
+      "adv_20d_usd": 1203855509.3370056,
+      "reason": "ok"
+    },
+    "TRGP": {
+      "rows": 2104,
+      "last_close": 271.989990234375,
+      "adv_20d_usd": 309307133.1391144,
+      "reason": "ok"
+    },
+    "TRV": {
+      "rows": 2104,
+      "last_close": 299.760009765625,
+      "adv_20d_usd": 424108610.0274658,
+      "reason": "ok"
+    },
+    "TSLA": {
+      "rows": 2104,
+      "last_close": 422.239990234375,
+      "adv_20d_usd": 24080569134.139557,
+      "reason": "ok"
+    },
+    "TT": {
+      "rows": 2104,
+      "last_close": 466.6000061035156,
+      "adv_20d_usd": 635879929.1209412,
+      "reason": "ok"
+    },
+    "TTWO": {
+      "rows": 2104,
+      "last_close": 242.44000244140625,
+      "adv_20d_usd": 362294492.9171753,
+      "reason": "ok"
+    },
+    "TXN": {
+      "rows": 2104,
+      "last_close": 302.7300109863281,
+      "adv_20d_usd": 2498189440.646744,
+      "reason": "ok"
+    },
+    "UNH": {
+      "rows": 2104,
+      "last_close": 393.8500061035156,
+      "adv_20d_usd": 3131580406.441498,
+      "reason": "ok"
+    },
+    "UNP": {
+      "rows": 2103,
+      "last_close": 270.55999755859375,
+      "adv_20d_usd": 802771774.9003601,
+      "reason": "ok"
+    },
+    "UPS": {
+      "rows": 2104,
+      "last_close": 98.93000030517578,
+      "adv_20d_usd": 646459565.9653473,
+      "reason": "ok"
+    },
+    "URI": {
+      "rows": 2104,
+      "last_close": 961.1500244140625,
+      "adv_20d_usd": 576308170.5255127,
+      "reason": "ok"
+    },
+    "USB": {
+      "rows": 2104,
+      "last_close": 53.119998931884766,
+      "adv_20d_usd": 481170760.65834045,
+      "reason": "ok"
+    },
+    "USO": {
+      "rows": 2104,
+      "last_close": 148.22999572753906,
+      "adv_20d_usd": 1566725861.812172,
+      "reason": "ok"
+    },
+    "UUP": {
+      "rows": 2104,
+      "last_close": 27.770000457763672,
+      "adv_20d_usd": 49713441.045007706,
+      "reason": "below_min_dollar_volume"
+    },
+    "V": {
+      "rows": 2104,
+      "last_close": 325.75,
+      "adv_20d_usd": 2390514521.5213013,
+      "reason": "ok"
+    },
+    "VICI": {
+      "rows": 2100,
+      "last_close": 27.899999618530273,
+      "adv_20d_usd": 225048854.57036972,
+      "reason": "ok"
+    },
+    "VLO": {
+      "rows": 2104,
+      "last_close": 250.74000549316406,
+      "adv_20d_usd": 705497031.0134125,
+      "reason": "ok"
+    },
+    "VMC": {
+      "rows": 2104,
+      "last_close": 267.8299865722656,
+      "adv_20d_usd": 286799235.4911804,
+      "reason": "ok"
+    },
+    "VRTX": {
+      "rows": 2104,
+      "last_close": 436.95001220703125,
+      "adv_20d_usd": 476710091.6029358,
+      "reason": "ok"
+    },
+    "VTI": {
+      "rows": 2104,
+      "last_close": 362.739990234375,
+      "adv_20d_usd": 1156742007.999878,
+      "reason": "ok"
+    },
+    "VZ": {
+      "rows": 2103,
+      "last_close": 46.369998931884766,
+      "adv_20d_usd": 1064130357.4466515,
+      "reason": "ok"
+    },
+    "WAT": {
+      "rows": 2104,
+      "last_close": 329.2200012207031,
+      "adv_20d_usd": 405550961.93084717,
+      "reason": "ok"
+    },
+    "WBD": {
+      "rows": 2104,
+      "last_close": 26.979999542236328,
+      "adv_20d_usd": 456037707.2681904,
+      "reason": "ok"
+    },
+    "WDAY": {
+      "rows": 2104,
+      "last_close": 125.01000213623047,
+      "adv_20d_usd": 581305109.6368408,
+      "reason": "ok"
+    },
+    "WEC": {
+      "rows": 2104,
+      "last_close": 109.16000366210938,
+      "adv_20d_usd": 208636261.90612793,
+      "reason": "ok"
+    },
+    "WELL": {
+      "rows": 2104,
+      "last_close": 213.74000549316406,
+      "adv_20d_usd": 638721452.8639984,
+      "reason": "ok"
+    },
+    "WFC": {
+      "rows": 2104,
+      "last_close": 73.41999816894531,
+      "adv_20d_usd": 1345421175.3867722,
+      "reason": "ok"
+    },
+    "WM": {
+      "rows": 2104,
+      "last_close": 219.82000732421875,
+      "adv_20d_usd": 463021426.0392761,
+      "reason": "ok"
+    },
+    "WMB": {
+      "rows": 2104,
+      "last_close": 77.72000122070312,
+      "adv_20d_usd": 471100182.76844025,
+      "reason": "ok"
+    },
+    "WMT": {
+      "rows": 2104,
+      "last_close": 131.4499969482422,
+      "adv_20d_usd": 2102540561.0601425,
+      "reason": "ok"
+    },
+    "WST": {
+      "rows": 2104,
+      "last_close": 302.8900146484375,
+      "adv_20d_usd": 314915918.6482239,
+      "reason": "ok"
+    },
+    "WTW": {
+      "rows": 2104,
+      "last_close": 248.3800048828125,
+      "adv_20d_usd": 248308547.58247375,
+      "reason": "ok"
+    },
+    "XEL": {
+      "rows": 2104,
+      "last_close": 77.91999816894531,
+      "adv_20d_usd": 416922764.2995453,
+      "reason": "ok"
+    },
+    "XLB": {
+      "rows": 2104,
+      "last_close": 50.29999923706055,
+      "adv_20d_usd": 514758354.6816826,
+      "reason": "ok"
+    },
+    "XLC": {
+      "rows": 1988,
+      "last_close": 116.08000183105469,
+      "adv_20d_usd": 535134392.8981781,
+      "reason": "ok"
+    },
+    "XLE": {
+      "rows": 2104,
+      "last_close": 59.439998626708984,
+      "adv_20d_usd": 2087229512.9209328,
+      "reason": "ok"
+    },
+    "XLF": {
+      "rows": 2104,
+      "last_close": 51.099998474121094,
+      "adv_20d_usd": 1705931298.875103,
+      "reason": "ok"
+    },
+    "XLI": {
+      "rows": 2104,
+      "last_close": 171.39999389648438,
+      "adv_20d_usd": 1440846552.9484558,
+      "reason": "ok"
+    },
+    "XLK": {
+      "rows": 2104,
+      "last_close": 176.25999450683594,
+      "adv_20d_usd": 1820811089.3933105,
+      "reason": "ok"
+    },
+    "XLP": {
+      "rows": 2104,
+      "last_close": 84.63999938964844,
+      "adv_20d_usd": 939004294.4676208,
+      "reason": "ok"
+    },
+    "XLRE": {
+      "rows": 2103,
+      "last_close": 43.22999954223633,
+      "adv_20d_usd": 232001697.7228546,
+      "reason": "ok"
+    },
+    "XLU": {
+      "rows": 2104,
+      "last_close": 43.869998931884766,
+      "adv_20d_usd": 919047674.3979073,
+      "reason": "ok"
+    },
+    "XLV": {
+      "rows": 2104,
+      "last_close": 145.10000610351562,
+      "adv_20d_usd": 1362216408.1881714,
+      "reason": "ok"
+    },
+    "XLY": {
+      "rows": 2104,
+      "last_close": 116.52999877929688,
+      "adv_20d_usd": 894417348.7039185,
+      "reason": "ok"
+    },
+    "XOM": {
+      "rows": 2104,
+      "last_close": 157.9199981689453,
+      "adv_20d_usd": 2489664031.2687683,
+      "reason": "ok"
+    },
+    "YUM": {
+      "rows": 2104,
+      "last_close": 149.97000122070312,
+      "adv_20d_usd": 283825484.4960022,
+      "reason": "ok"
+    },
+    "ZBH": {
+      "rows": 2104,
+      "last_close": 83.69999694824219,
+      "adv_20d_usd": 236390283.54995728,
+      "reason": "ok"
+    },
+    "ZBRA": {
+      "rows": 2104,
+      "last_close": 259.3500061035156,
+      "adv_20d_usd": 221960532.34054565,
+      "reason": "ok"
+    },
+    "ZS": {
+      "rows": 2053,
+      "last_close": 161.0500030517578,
+      "adv_20d_usd": 394666479.3160248,
+      "reason": "ok"
+    },
+    "ZTS": {
+      "rows": 2104,
+      "last_close": 74.22000122070312,
+      "adv_20d_usd": 728729327.1166611,
+      "reason": "ok"
+    }
+  }
+}

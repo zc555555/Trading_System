@@ -1,0 +1,26 @@
+{
+  "feature_names": [
+    "returns_1d",
+    "returns_2d",
+    "returns_5d",
+    "volatility_5d",
+    "volatility_10d",
+    "volatility_20d",
+    "volume_ratio_5d",
+    "volume_ratio_20d",
+    "macd",
+    "bb_upper",
+    "bb_lower",
+    "bb_position",
+    "ema_5",
+    "ema_10",
+    "ema_20",
+    "price_to_ema20"
+  ],
+  "num_features": 16,
+  "lookback_days": 250,
+  "label_type": "classification",
+  "label_horizon": 1,
+  "missing_policy": "forward_fill",
+  "version": "1.0"
+}

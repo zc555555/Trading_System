@@ -1,0 +1,335 @@
+
+# Research Configuration
+
+# Data settings
+data:
+  # Universe selection (W1 upgrade - 2026-05).
+  # Resolved at fetch time by research/data/universe.py.
+  #   sp100       : ~100 mega-caps (offline-safe)
+  #   sp500_safe  : sp100 + ~150 high-conviction large/mid-caps (offline-safe)
+  #   sp500       : Live Wikipedia fetch (current S&P 500 constituents)
+  #   benchmarks  : Broad + sector ETFs only
+  #   all         : sp500 + benchmarks (production default)
+  universe: "sp500_safe"
+
+  # Whether to include benchmark / sector ETFs alongside the equity universe.
+  # ETFs are useful as alternative tradables AND as a stability anchor.
+  include_benchmark_etfs: true
+
+  # Legacy explicit symbol list. If set (non-null), OVERRIDES `universe`.
+  # Kept here as a rollback escape hatch — leave null in production.
+  symbols: null
+
+  # Liquidity filter applied AFTER raw fetch (see apply_liquidity_filter.py).
+  # Stocks failing this filter are dropped from training & prediction.
+  liquidity_filter:
+    enabled: true
+    min_dollar_volume_20d: 50000000   # $50M average daily $-volume over 20d
+    min_price: 5.0                    # Drop penny stocks
+    min_history_days: 252             # Require >= 1 year of data
+
+  start_date: "2018-01-01"
+  end_date: null  # null = today
+
+  parquet_path: "stocks.parquet"
+
+# Feature settings
+features:
+  # Lookback window (max days needed for any feature)
+  max_lookback: 250
+
+  # 101 Alphas to implement (EXPANDED from 20 to 50 for maximum accuracy)
+  alphas_101:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+    - 11
+    - 12
+    - 13
+    - 14
+    - 15
+    - 16
+    - 17
+    - 18
+    - 19
+    - 20
+    - 21
+    - 22
+    - 23
+    - 24
+    - 25
+    - 26
+    - 27
+    - 28
+    - 29
+    - 30
+    - 31
+    - 32
+    - 33
+    - 34
+    - 35
+    - 36
+    - 37
+    - 38
+    - 39
+    - 40
+    - 41
+    - 42
+    - 43
+    - 44
+    - 45
+    - 46
+    - 47
+    - 48
+    - 49
+    - 50
+
+  # Additional technical features (EXPANDED from 25 to 50+ for maximum accuracy)
+  technical:
+    # Multi-period returns
+    - returns_1d
+    - returns_2d
+    - returns_5d
+    - returns_10d
+    - returns_20d
+    - returns_60d      # Quarterly returns
+    # Multi-period volatility
+    - volatility_5d
+    - volatility_10d
+    - volatility_20d
+    - volatility_60d   # Quarterly volatility
+    # Volume indicators
+    - volume_ratio_5d
+    - volume_ratio_20d
+    - volume_std_20d   # Volume standard deviation
+    # RSI (Relative Strength Index)
+    - rsi_7
+    - rsi_14
+    - rsi_21
+    - rsi_50           # Long-term RSI
+    # MACD
+    - macd
+    - macd_signal
+    - macd_hist
+    # Bollinger Bands
+    - bb_upper
+    - bb_lower
+    - bb_position
+    - bb_width         # Bollinger Band width
+    # EMA (Exponential Moving Average)
+    - ema_5
+    - ema_10
+    - ema_20
+    - ema_50           # Long-term EMA
+    - ema_200          # Very long-term EMA
+    # SMA (Simple Moving Average)
+    - sma_10
+    - sma_20
+    - sma_50
+    - sma_200
+    # ATR (Average True Range)
+    - atr_14
+    # ADX (Average Directional Index)
+    - adx_14
+    # Stochastic Oscillator
+    - stochastic_k
+    - stochastic_d
+    # CCI (Commodity Channel Index)
+    - cci_20
+    # Williams %R
+    - williams_r_14
+    # OBV (On-Balance Volume)
+    - obv
+    - obv_ema_20       # OBV exponential moving average
+    # CMF (Chaikin Money Flow)
+    - cmf_20
+    # MFI (Money Flow Index)
+    - mfi_14
+    # TRIX (Triple Exponential Average)
+    - trix_14
+    # DPO (Detrended Price Oscillator)
+    - dpo_20
+    # Keltner Channel
+    - kc_upper
+    - kc_lower
+    - kc_position
+    # Ichimoku Cloud
+    - ichimoku_conversion
+    - ichimoku_base
+    - ichimoku_span_a
+    - ichimoku_span_b
+    # Parabolic SAR
+    - psar
+    - psar_direction   # 1 if above price, -1 if below
+    # SuperTrend
+    - supertrend
+    - supertrend_direction
+    # VWAP (Volume Weighted Average Price)
+    - vwap_ratio       # current_price / vwap
+    # Statistical features
+    - returns_std_20d  # Standard deviation of returns
+    - returns_skew_20d # Skewness of returns
+    - returns_kurt_20d # Kurtosis of returns
+    # Price momentum
+    - momentum_10d
+    - momentum_20d
+    - momentum_50d
+    # Rate of Change
+    - roc_10
+    - roc_20
+    # Directional features (for direction prediction)
+    - price_above_sma_20       # Price > 20-day SMA (binary)
+    - price_above_ema_50       # Price > 50-day EMA (binary)
+    - golden_cross             # SMA10 > SMA50 (binary)
+    - adx_strong_trend         # ADX > 25 (binary)
+    - macd_positive            # MACD > 0 (binary)
+    - consecutive_up_days      # Count of consecutive up days
+    - consecutive_down_days    # Count of consecutive down days
+    - returns_1d_positive      # Yesterday up (binary)
+    - volume_increasing        # Volume above average (binary)
+    - rsi_oversold             # RSI < 30 (binary)
+    - bb_squeeze               # Bollinger Band squeeze (binary)
+
+  # Market environment features (EXPANDED for better market context)
+  market_features:
+    # S&P 500 (SPY)
+    - spy_returns_1d     # S&P 500 daily return
+    - spy_returns_5d     # S&P 500 weekly return
+    - spy_returns_20d    # S&P 500 monthly return
+    - spy_volatility_20d # S&P 500 volatility
+    # Nasdaq 100 (QQQ)
+    - qqq_returns_1d     # Nasdaq 100 daily return
+    - qqq_returns_5d     # Nasdaq 100 weekly return
+    # Dow Jones (DIA)
+    - dia_returns_1d     # Dow Jones daily return
+    - dia_returns_5d     # Dow Jones weekly return
+    # Russell 2000 (IWM) - Small caps
+    - iwm_returns_1d     # Russell 2000 daily return
+    - iwm_returns_5d     # Russell 2000 weekly return
+    # VIX (Volatility Index)
+    - vix_level          # VIX level
+    - vix_change_1d      # VIX daily change
+    - vix_change_5d      # VIX 5-day change
+    # Treasury Bonds (TLT) - 20-year
+    - tlt_returns_1d     # 20-year Treasury daily return
+    - tlt_returns_5d     # 20-year Treasury weekly return
+    # Gold (GLD)
+    - gld_returns_1d     # Gold ETF daily return
+    - gld_returns_5d     # Gold ETF weekly return
+    # Oil (USO)
+    - uso_returns_1d     # Oil ETF daily return
+    - uso_returns_5d     # Oil ETF weekly return
+    # Dollar Index (UUP)
+    - uup_returns_1d     # Dollar Index daily return
+    - uup_returns_5d     # Dollar Index weekly return
+    # Market breadth (calculated from stock universe)
+    - market_breadth_1d  # % of stocks up today
+    - market_breadth_5d  # % of stocks up in last 5 days
+
+# Label settings (UPDATED - Direction 2: predict 1 day instead of 3)
+label:
+  horizon: 1  # Future return horizon (days) - CHANGED FROM 3 TO 1
+  type: "classification"  # "classification" or "regression"
+  cost_buffer: 0.001  # 10 bps total cost (lower for 1-day holding)
+
+# Regression label for price prediction (NEW - for accurate price forecast)
+label_regression:
+  horizon: 1  # Predict tomorrow's closing price
+  type: "regression"
+  target: "next_day_return"  # Predict actual return percentage
+
+# Backtest settings
+backtest:
+  initial_capital: 100000
+
+  # Walk-forward parameters
+  train_window: 756  # ~3 years
+  test_window: 63    # ~3 months
+  step_size: 21      # ~1 month
+
+  # Costs
+  commission: 0.0005  # 5 bps
+  slippage: 0.001     # 10 bps
+
+  # Position constraints
+  max_position_size: 0.35  # Max 35% per stock
+  max_total_leverage: 1.0  # Long-only (100% max invested)
+
+# Model settings (UPDATED - Multiple models for ensemble)
+model:
+  type: "ensemble"  # Use ensemble of multiple models for maximum accuracy
+
+  xgboost:
+    n_estimators: 500           # Increased from 300
+    max_depth: 6                # Increased from 5
+    learning_rate: 0.03         # Decreased from 0.05 for better generalization
+    subsample: 0.7              # More aggressive sampling
+    colsample_bytree: 0.7       # More aggressive feature sampling
+    min_child_weight: 3         # Added regularization
+    gamma: 0.1                  # Added complexity penalty
+    scale_pos_weight: 1.2       # Handle class imbalance
+    random_state: 42
+
+  lightgbm:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.03
+    num_leaves: 31              # 2^depth - 1
+    feature_fraction: 0.7       # Similar to colsample_bytree
+    bagging_fraction: 0.7       # Similar to subsample
+    bagging_freq: 5
+    min_child_samples: 20       # Similar to min_child_weight
+    lambda_l1: 0.1              # L1 regularization
+    lambda_l2: 0.1              # L2 regularization
+    random_state: 42
+
+  catboost:
+    iterations: 500
+    depth: 6
+    learning_rate: 0.03
+    l2_leaf_reg: 3              # L2 regularization
+    bagging_temperature: 0.7    # Similar to subsample
+    random_strength: 0.1        # Randomness for scoring splits
+    border_count: 128           # Number of splits for numerical features
+    random_state: 42
+    verbose: False
+
+  # Ensemble settings
+  ensemble:
+    method: "weighted_average"  # or "stacking"
+    weights:
+      xgboost: 0.35
+      lightgbm: 0.35
+      catboost: 0.30
+
+  # Factor blending (W2-A upgrade, 2026-05).
+  # How to combine the 6 factor-level ensemble predictions into one signal.
+  #
+  #   static          : Use hand-tuned weights from factor_definitions.FACTOR_WEIGHTS.
+  #                     Use this only if you have a strong prior. Ignored after universe changes.
+  #   ic_proportional : Read each factor's out-of-sample validation IC, clip negatives, normalize.
+  #                     Linear in IC -- a 5x stronger factor gets 5x the weight.
+  #                     Good when ICs are similar magnitude.
+  #   ic_sqrt         : Same idea but weight by sqrt(max(IC, 0)). DAMPENS the spread between
+  #                     strong and weak factors. CURRENT DEFAULT after W2-A multi-horizon training
+  #                     pushed momentum IC to 0.65 -- ic_proportional would give momentum 88%
+  #                     weight (too concentrated). ic_sqrt gives a more diversified 45-50%.
+  #   ic_squared      : max(IC, 0)^2 -- amplifies the strongest factor. Use only when one factor
+  #                     is dominant and you want to concentrate exposure.
+  factor_weighting:
+    strategy: "ic_sqrt"
+    floor: 0.0                  # Factors with IC at or below this get zero weight
+    fallback_to_static: true    # If all factors are below floor, use static weights
+
+  # Export settings
+  onnx_output: "model.onnx"
+  manifest_output: "feature_manifest.json"
+  thresholds_output: "thresholds.json"
+  golden_vectors_output: "golden_vectors.json"

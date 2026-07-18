@@ -1,0 +1,149 @@
+🗺️ 总路线图（16 周 / 4 个月）
+
+Phase A  地基         W1-3    股票池 + 数据层 + 基线
+Phase B  特征工程     W4-6    IV 因子 + GARCH + 基本面
+Phase C  模型升级     W7-9    截面排名 + 多任务 + Transformer
+Phase D  组合构建     W10-12  Mean-Variance + Long-Short + Regime
+Phase E  执行风控     W13-14  VWAP + 自适应 sizing
+Phase F  进阶 Alpha   W15-16+ 配对交易 + Signature + LLM
+每个 Phase 结束有 质量门 (Quality Gate) —— 不达标就不进下一阶段，回头优化。
+
+Phase A · 地基（W1-3）
+W1 — 股票池扩张到 S&P 500
+research/config.yaml：symbols 改成 S&P 500 全员（500 支）
+流动性过滤：20 日均成交额 > $50M（去掉 ~50 支低流动性，剩 ~450）
+trading_symbols：先设 50 支
+重抓 OHLCV 数据（约 2-4 小时）
+验证 stocks.parquet 完整性
+W2 — 数据基础设施重构
+拆分 parquet：按年 + symbol 分区（year=2024/symbol=AAPL/data.parquet）
+接入 DuckDB 做本地查询层
+写 daily_ingest.py 增量更新脚本（独立于交易流程）
+数据质量检查器：缺失日检测、价格跳跃检测、成交量异常检测
+W3 — 基线重训 + 验证
+用现有 6 因子模型在 500 支上重训
+跑 walk-forward 回测，记录基线指标
+Paper trade 一周
+🚦 Phase A 质量门
+✅ 数据 500 支跑通，无缺失
+✅ 重训模型方向准确率 ≥ 52%
+✅ Paper trade Sharpe ≥ 0.8
+❌ 不达标 → 调试数据/特征再说
+Phase B · 特征工程（W4-6）
+W4 — GARCH 波动率预测 + 期权数据接入
+装 arch 包，训 EGARCH(1,1) per 股票
+加特征：garch_vol_predicted_1d / 5d / 20d
+注册 Polygon.io（$99/月 starter 档），开始拉历史期权链
+历史回填：每只股票每天的 ATM IV、25Δ Put IV、25Δ Call IV
+W5 — IV 衍生因子（7 个）
+iv_rank — 当前 IV 在过去 252 日的分位
+iv_skew_25d — 25Δ Put IV - 25Δ Call IV（恐慌指标）
+iv_term_structure — 30d IV - 90d IV
+vol_risk_premium — IV - 实现波动率
+put_call_iv_ratio — Put ATM IV / Call ATM IV
+iv_over_rv — IV_30d / RV_30d
+skew_slope — (10Δ - 50Δ) put IV
+W6 — 基本面 + 盈利预期因子
+接 Financial Modeling Prep API（免费档够用）
+加 PEAD 因子：earnings surprise × 公告后 1/5/20 日窗口
+加质量因子：Piotroski F-score（9 项财务指标）
+加分析师上调/下调因子（Finnhub estimates）
+加 52 周高点距离
+🚦 Phase B 质量门
+✅ IV 数据覆盖率 > 95%（小盘股可能缺）
+✅ 新因子平均 IC > 0.03
+✅ 重训后方向准确率提升 +2% 以上
+❌ 不达标 → 因子审查，剔除噪音特征
+Phase C · 模型升级（W7-9）
+W7 — 改造为截面排名预测
+修改 label：从 future_return 改成每日横截面 z-score 排名
+LightGBM 切换到 objective='lambdarank'
+XGBoost 切换到 objective='rank:pairwise'
+重训，对比绝对回归 vs 截面排名的 IC 和 IR
+W8 — 多任务学习（Multi-task）
+用 PyTorch 写一个共享 backbone + 3 头模型：
+Head 1: 1 日方向（分类）
+Head 2: 5 日累计 return（回归）
+Head 3: 5 日实现波动率（回归，给 sizing 用）
+联合训练，loss = α·L1 + β·L2 + γ·L3
+加入现有 stacking 集成
+W9 — Transformer for 时序
+实现 PatchTST（比 LSTM 强，比 TFT 简单）
+每只股票最近 60 日 (OHLCV + IV + 基本面) 作为输入序列
+输出未来 1/5/20 日预测
+加入 stacking 集成，让 meta-learner 决定权重
+🚦 Phase C 质量门
+✅ 截面排名版 IC > 绝对回归版 IC
+✅ Multi-task 联合训练比单任务 Sharpe 高 ≥ 0.2
+✅ Transformer 在长尾股票上方向准确率 > 55%
+✅ 集成总 Sharpe ≥ 1.2
+Phase D · 组合构建（W10-12）
+W10 — Mean-Variance 优化 + 行业中性
+用 cvxpy 实现凸优化求解器
+协方差矩阵：Ledoit-Wolf shrinkage
+约束：单票上限 5%、行业敞口 ≤ 20%、beta 中性
+替换现有"按 confidence 比例分仓"逻辑
+W11 — Long-Short Market Neutral
+多头：截面 rank 前 20%
+空头：截面 rank 后 20%（Alpaca 申请 short approval；不行就用反向 ETF）
+现金中性 + Beta 中性（用 SPY 对冲剩余 beta）
+单独跑回测，验证 2022 这种熊年是否正收益
+W12 — HMM Regime Switching
+在 SPY 日收益 + VIX 上训 3-state HMM（牛/熊/震荡）
+不同 regime 切换策略权重：
+牛市：动量因子加权
+熊市：质量 + 低波动加权
+震荡：均值回归加权
+VIX > 30 时仓位上限自动 × 0.5
+🚦 Phase D 质量门
+✅ Mean-Variance 组合年化波动率 ≤ 15%
+✅ Long-short 与 SPY 相关性 |ρ| < 0.3
+✅ HMM 切换在历史熊市段（2022Q1-Q3）超额收益 > +10%
+✅ 整体 Sharpe ≥ 1.5
+Phase E · 执行 + 风控（W13-14）
+W13 — 智能执行
+VWAP 拆单：单票 > $10K 的订单拆 5-10 笔，30 分钟均匀执行
+避开开盘前 15 分钟（9:30-9:45）
+限价单 + IOC，减少 slippage
+加入真实成本模型到回测：commission + SEC fee + 非线性 slippage
+W14 — 自适应风控
+止损按 ATR 设：stop = entry - 1.5 × ATR_14
+波动率目标：组合年化波动率瞄准 12%
+Drawdown control：回撤 5%/10%/15% → 降仓 25%/50%/100%
+相关性约束：组合内任意持仓 90 日 ρ < 0.7
+🚦 Phase E 质量门
+✅ 实盘 slippage < 回测预设 50%
+✅ 最大回撤回测 < -10%
+✅ 连续回撤天数 < 8 天
+Phase F · 进阶 Alpha（W15-16+）
+W15 — 配对交易（OU 过程）
+协整测试找 pairs（500 支两两组合，p < 0.01 的留下）
+拟合 OU 过程参数（θ, μ, σ）
+价差 z-score > 2 反向开仓，< 0.5 平仓
+单独资金池，与主策略并行运行
+W16 — Signature Method
+装 iisignature
+每只股票最近 20 日 (price, volume, IV) 路径编码成 signature 向量
+当作额外特征喂给 LightGBM
+A/B 测试是否提升
+W17+（持续）
+LLM 处理 earnings call 文本，做 sentiment / hawkishness 因子
+GNN 建模股票关系图（供应链、行业、机构持仓重叠）
+因子衰减监控 → 持续淘汰失效因子，挖新因子
+🔧 全程并行做的事
+项目	何时做	工作量
+自动化部署	W2 开始就改用 APScheduler	持续优化
+Telegram 告警	W3 就要加，越早越好	1 天
+PnL 归因仪表板	W4 升级现有 dashboard.py	持续
+Drift detection (PSI)	W7 加	半天
+每周回测报告自动化	W5 加	1 天
+📊 阶段性目标（量化）
+阶段	月份	预测准确率	Sharpe	最大回撤	备注
+现状	M0	53%	0.8	-8%	5 支股票
+Phase A 完成	M1	53%	1.0	-7%	单纯扩池效果
+Phase B 完成	M2	56%	1.3	-6%	IV/GARCH 加持
+Phase C 完成	M3	58%	1.6	-6%	模型架构升级
+Phase D 完成	M4	58%	2.0	-5%	组合优化
+Phase E 完成	M5	58%	2.2	-4%	风控收紧
+Phase F+ 长期	M6+	60%	2.5+	-4%	多 alpha 来源
+这些数字是乐观但现实的目标。Renaissance 真实数据没人知道，但学术上 Sharpe > 2 已经是顶级。

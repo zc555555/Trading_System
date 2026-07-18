@@ -1,0 +1,39 @@
+Copyright (c) 2026 Zhaochen Wu
+
+All rights reserved.
+
+This software and associated documentation files (the "Software") are the
+proprietary property of the copyright holder. The Software is provided for
+personal, educational, and research use only.
+
+Permission is NOT granted to:
+
+  1. Use the Software for commercial purposes without explicit written
+     permission from the copyright holder.
+  2. Redistribute the Software, in source or binary form, in whole or in
+     part, without explicit written permission from the copyright holder.
+  3. Create derivative works based on the Software for distribution
+     without explicit written permission from the copyright holder.
+
+Permission IS granted to:
+
+  1. Read, study, and modify the Software for personal, educational, or
+     research use.
+  2. Run the Software locally for paper trading or research purposes.
+
+DISCLAIMER
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+THIS SOFTWARE IS NOT FINANCIAL ADVICE. TRADING SECURITIES INVOLVES
+SUBSTANTIAL RISK OF LOSS, INCLUDING THE POSSIBLE LOSS OF PRINCIPAL. THE
+COPYRIGHT HOLDER SHALL NOT BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT, OR OTHERWISE, ARISING
+FROM, OUT OF, OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE, INCLUDING ANY TRADING LOSSES INCURRED THROUGH
+ITS USE.
+
+Use this software in paper-trading mode (ALPACA_PAPER = True) until you
+fully understand its behaviour and accept the associated risks.

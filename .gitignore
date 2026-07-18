@@ -1,0 +1,82 @@
+# =============================================================================
+# Python
+# =============================================================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.egg-info/
+.ipynb_checkpoints/
+
+# Virtual environments (anywhere)
+venv/
+.venv/
+env/
+**/venv/
+**/.venv/
+
+# Build artefacts
+build/
+dist/
+*.egg
+
+# =============================================================================
+# Data, models, runtime artefacts
+# =============================================================================
+research/data/*.parquet
+research/data/*.csv
+research/artifacts/*.onnx
+research/artifacts/*.pkl
+research/artifacts/*.json
+catboost_info/
+**/catboost_info/
+
+# Logs and runtime outputs
+*.log
+logs/
+trading_logs/
+paper_trading_reports/
+alerts/
+news_cache/
+
+# =============================================================================
+# Go (legacy trader/ subproject)
+# =============================================================================
+trader/vendor/
+trader/trader
+trader/server
+trader/*.exe
+
+# =============================================================================
+# Editors / OS
+# =============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# =============================================================================
+# Secrets — NEVER commit these
+# =============================================================================
+*.env
+.env
+.env.*
+secrets/
+trader/configs/production.yaml
+
+# Alpaca / Finnhub API keys (CRITICAL)
+config_alpaca.py
+config_finnhub.py
+research/config_alpaca.py
+research/config_finnhub.py
