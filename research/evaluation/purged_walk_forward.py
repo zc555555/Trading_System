@@ -75,14 +75,22 @@ def generate_folds(dates: np.ndarray, cfg: WalkForwardConfig):
 
 
 def run_walk_forward(cfg: WalkForwardConfig, max_folds: int | None = None,
-                     data_path: Path = DATA_PATH) -> dict:
+                     data_path: Path = DATA_PATH,
+                     df: pd.DataFrame | None = None,
+                     factor_groups: dict | None = None,
+                     tag: str = "") -> dict:
+    """Run the walk-forward. Experiments can pass a pre-augmented ``df``,
+    custom ``factor_groups``, and a ``tag`` appended to result filenames;
+    the default call evaluates the production factor set."""
     t0 = time.time()
     print("=" * 78)
-    print(f"PURGED WALK-FORWARD EVALUATION  (label horizon = {cfg.horizon}d)")
+    print(f"PURGED WALK-FORWARD EVALUATION  (label horizon = {cfg.horizon}d"
+          + (f", variant '{tag}'" if tag else "") + ")")
     print("=" * 78)
     print(f"config: {asdict(cfg)}")
 
-    df = pd.read_parquet(data_path)
+    if df is None:
+        df = pd.read_parquet(data_path)
     df = df.sort_values(['date', 'symbol']).reset_index(drop=True)
 
     # Compute the horizon label on the fly from close prices; the stored
@@ -122,7 +130,7 @@ def run_walk_forward(cfg: WalkForwardConfig, max_folds: int | None = None,
 
         fold = train_factor_ensembles(
             train_df, horizon=cfg.horizon, embargo_days=cfg.embargo_days,
-            target_col=target_col, seed=cfg.seed)
+            target_col=target_col, factor_groups=factor_groups, seed=cfg.seed)
 
         panel = predict_panel(fold, test_df, target_col=target_col)
         panel['fold'] = k
@@ -178,9 +186,9 @@ def run_walk_forward(cfg: WalkForwardConfig, max_folds: int | None = None,
                       f"{s['t_stat']:>8.2f}{s['ic_ir']:>7.3f}"
                       f"{s['pct_positive']:>7.1%}{s['n_days']:>6}")
 
-    # ---- persist (files suffixed by horizon) ----------------------------
+    # ---- persist (files suffixed by horizon + variant tag) --------------
     RESULTS_DIR.mkdir(exist_ok=True)
-    suffix = f"_h{cfg.horizon}"
+    suffix = f"_h{cfg.horizon}" + (f"_{tag}" if tag else "")
     report['target_col'] = target_col
     panel.to_parquet(RESULTS_DIR / f"oos_predictions{suffix}.parquet", index=False)
     with open(RESULTS_DIR / f"walk_forward_report{suffix}.json", "w") as f:
