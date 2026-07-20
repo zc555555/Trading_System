@@ -34,6 +34,9 @@ dist/
 research/data/*.parquet
 research/data/*.parquet.*
 research/data/*.csv
+research/data/data/
+research/data/fetch_manifest.json
+research/data/liquidity_report.json
 research/stocks.parquet
 research/artifacts/*.onnx
 research/artifacts/*.pkl
