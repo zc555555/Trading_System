@@ -766,8 +766,11 @@ def dpo(df: pd.DataFrame, column: str = 'close', window: int = 20) -> pd.Series:
     shift_period = window // 2 + 1
 
     def calc_dpo(group):
+        # DPO = close from (window/2 + 1) periods AGO minus current SMA.
+        # The shift must be positive (into the past); a negative shift here
+        # would read close[t + shift] and leak future prices into the feature.
         sma_values = group[column].rolling(window=window).mean()
-        dpo_values = group[column].shift(-shift_period) - sma_values
+        dpo_values = group[column].shift(shift_period) - sma_values
         return dpo_values
 
     return df.groupby('symbol', group_keys=False).apply(calc_dpo)

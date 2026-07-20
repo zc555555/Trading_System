@@ -89,34 +89,48 @@ def main():
     print("="*80)
     run_command('python log_comprehensive_trading.py', '记录交易数据')
 
-    # Step 4: 平仓
-    print("\n" + "="*80)
-    print("[4/5] 步骤4: 平仓旧持仓")
-    print("="*80)
+    # 执行路径由 config_trading.STRATEGY 决定:
+    #   staggered — 多日错峰持仓, 由 run_staggered_trading.py 管理开平仓,
+    #               绝不能在这里全量平仓(会摧毁未到期的 tranche 并使注册表失去同步)
+    #   legacy    — 单日持仓, 先全量平仓再按信号买入
+    import config_trading
 
-    try:
-        from monitor_dynamic_trading import DynamicTradingMonitor
-        m = DynamicTradingMonitor()
-        positions = m.client.get_all_positions()
-        print(f"\n找到 {len(positions)} 个持仓")
+    if config_trading.STRATEGY == "staggered":
+        print("\n" + "="*80)
+        print("[4/5] 步骤4-5: STAGGERED 策略 — 平掉到期批次并开新批次")
+        print("="*80)
+        if not run_command('python run_staggered_trading.py', '执行错峰交易'):
+            input("\n按回车键退出...")
+            return
+    else:
+        # Step 4: 平仓 (仅 legacy 单日策略)
+        print("\n" + "="*80)
+        print("[4/5] 步骤4: 平仓旧持仓")
+        print("="*80)
 
-        if positions:
-            for p in positions:
-                print(f"平仓: {p.symbol}")
-                m.client.close_position(p.symbol)
-            print("\n所有持仓已平仓")
-        else:
-            print("\n没有需要平仓的持仓")
-    except Exception as e:
-        print(f"\n平仓时出错: {e}")
+        try:
+            from monitor_dynamic_trading import DynamicTradingMonitor
+            m = DynamicTradingMonitor()
+            positions = m.client.get_all_positions()
+            print(f"\n找到 {len(positions)} 个持仓")
 
-    # Step 5: 执行交易
-    print("\n" + "="*80)
-    print("[5/5] 步骤5: 执行新交易")
-    print("="*80)
-    if not run_command('python alpaca_trader.py', '执行交易'):
-        input("\n按回车键退出...")
-        return
+            if positions:
+                for p in positions:
+                    print(f"平仓: {p.symbol}")
+                    m.client.close_position(p.symbol)
+                print("\n所有持仓已平仓")
+            else:
+                print("\n没有需要平仓的持仓")
+        except Exception as e:
+            print(f"\n平仓时出错: {e}")
+
+        # Step 5: 执行交易
+        print("\n" + "="*80)
+        print("[5/5] 步骤5: 执行新交易")
+        print("="*80)
+        if not run_command('python alpaca_trader.py', '执行交易'):
+            input("\n按回车键退出...")
+            return
 
     # 生成报告
     print("\n生成每日报告...")

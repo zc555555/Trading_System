@@ -174,90 +174,31 @@ def main():
             input("\n按回车键继续...")
 
 def run_auto_trading():
-    """运行自动交易流程"""
+    """运行自动交易流程
+
+    完整管线只在 run_auto_trading.py 维护一份(含流动性过滤和
+    legacy/staggered 策略分支), 菜单直接委托, 避免两份流程漂移。
+    """
     clear_screen()
     print("\n" + "="*80)
     print("自动交易 - 完整流程")
     print("="*80)
+    try:
+        import config_trading
+        print(f"\n当前策略: {config_trading.STRATEGY}")
+    except Exception:
+        pass
     print("\n这将执行完整的交易流程：")
-    print("  1. 下载最新数据")
+    print("  1. 下载最新数据 + 流动性过滤")
     print("  2. 生成交易信号")
-    print("  3. 平仓旧持仓")
-    print("  4. 买入新股票\n")
-    print("建议运行时间：每天21:00（英国时间）\n")
+    print("  3. 按策略执行交易 (legacy: 平仓后买入 / staggered: 批次开平仓)")
+    print("\n建议运行时间：每天21:00（英国时间）\n")
 
     confirm = input("确认开始交易? [Y/N]: ").strip().upper()
     if confirm != 'Y':
         return
 
-    print("\n" + "="*80)
-    print("[1/5] 更新数据和生成信号")
-    print("="*80 + "\n")
-
-    # 进入research目录
-    os.chdir('research')
-
-    # Step 1: 下载数据
-    print("\n下载最新股票数据...")
-    if not run_command(f'python {os.path.join("data", "fetch_ohlcv.py")}', '下载OHLCV数据'):
-        os.chdir('..')
-        return
-
-    # Step 2: 计算特征
-    print("\n计算技术指标...")
-    if not run_command('python prepare_prediction_data.py', '计算特征'):
-        os.chdir('..')
-        return
-
-    # Step 3: 生成信号
-    print("\n生成交易信号...")
-    if not run_command('python get_daily_signals_multi_factor.py', '生成信号'):
-        os.chdir('..')
-        return
-
-    # 返回主目录
-    os.chdir('..')
-
-    # Step 4: 测试连接
-    print("\n" + "="*80)
-    print("[2/5] 检查Alpaca连接")
-    print("="*80 + "\n")
-    if not run_command('python test_alpaca_connection.py', '测试连接'):
-        return
-
-    # Step 5: 记录数据
-    print("\n" + "="*80)
-    print("[3/5] 记录交易数据")
-    print("="*80 + "\n")
-    run_command('python log_comprehensive_trading.py', '记录数据')
-
-    # Step 6: 平仓
-    print("\n" + "="*80)
-    print("[4/5] 平仓旧持仓")
-    print("="*80 + "\n")
-    run_command('python -c "from monitor_dynamic_trading import DynamicTradingMonitor; m = DynamicTradingMonitor(); positions = m.client.get_all_positions(); print(f\'Found {len(positions)} positions\'); [m.client.close_position(p.symbol) for p in positions] if positions else print(\'No positions to close\')"', '平仓')
-
-    # Step 7: 执行交易
-    print("\n" + "="*80)
-    print("[5/5] 执行新交易")
-    print("="*80 + "\n")
-    if not run_command('python alpaca_trader.py', '执行交易'):
-        return
-
-    # 生成报告
-    print("\n生成交易报告...")
-    run_command('python -c "from alpaca_trader import AlpacaAutoTrader; t = AlpacaAutoTrader(); t.generate_daily_report()"', '生成报告')
-
-    # 监控
-    print("\n监控持仓...")
-    run_command('python monitor_paper_trading.py', '监控')
-
-    print("\n" + "="*80)
-    print("交易完成！")
-    print("="*80)
-    print("\n查看结果:")
-    print("  - trading_logs/         (交易日志)")
-    print("  - 运行 [2] 查看仪表板\n")
+    run_command('python run_auto_trading.py', '自动交易完整流程')
 
     input("\n按回车键返回主菜单...")
 

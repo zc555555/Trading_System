@@ -243,7 +243,18 @@ class AlpacaAutoTrader:
 
         for stock in signals['stocks']:
             symbol = stock['symbol']
-            position_pct = stock['position_pct'] / 100
+
+            # Direction lives in the sign of `prediction` (see
+            # get_daily_signals_multi_factor.py). This legacy path is
+            # long-only: SELL signals are skipped, never bought. Shorting
+            # is handled exclusively by run_staggered_trading.py.
+            prediction = float(stock.get('prediction', 0.0))
+            if prediction <= 0:
+                print(f"[SKIP] {symbol}: SELL signal (prediction {prediction*100:+.2f}%), legacy path is long-only")
+                continue
+
+            # Cap any single name at max_position_pct of capital.
+            position_pct = min(stock['position_pct'] / 100, self.max_position_pct)
             amount = capital * position_pct
 
             # Get current price
@@ -375,6 +386,21 @@ class AlpacaAutoTrader:
 
 def main():
     """Main function for testing"""
+    # Guard: this script flattens ALL positions before buying. Under the
+    # staggered strategy that would destroy open multi-day tranches and
+    # desync trading_logs/position_tranches.json. Mirror of the guard in
+    # run_staggered_trading.py.
+    try:
+        import config_trading
+        if config_trading.STRATEGY == "staggered":
+            print("[ABORT] config_trading.STRATEGY = 'staggered'.")
+            print("        Use run_staggered_trading.py; running the legacy trader")
+            print("        would flatten all staggered tranches. Set STRATEGY='legacy'")
+            print("        only if you intend to abandon the staggered book.")
+            return
+    except ImportError:
+        pass
+
     trader = AlpacaAutoTrader()
 
     # Print status

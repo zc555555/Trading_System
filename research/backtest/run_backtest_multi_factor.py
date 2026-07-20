@@ -170,19 +170,31 @@ class MultiFactorBacktest:
             X_df = X_df.fillna(0)
             X = X_df.values
 
-            # Get predictions from each model in the ensemble
+            # Get predictions from each model in the ensemble.
+            # `models` and `weights` are dicts keyed by 'xgb'/'lgb'/'cat'
+            # (see train_multi_factor_models.py). Iterating them with
+            # zip() would yield the KEY STRINGS and silently produce
+            # all-zero predictions, so walk .items() explicitly.
             models = ensemble_data['models']
             weights = ensemble_data['weights']
 
             ensemble_predictions = np.zeros(len(X))
+            n_ok = 0
 
-            for model, weight in zip(models, weights):
+            for model_name in sorted(models.keys()):
                 try:
-                    pred = model.predict(X)
-                    ensemble_predictions += pred * weight
+                    pred = models[model_name].predict(X)
+                    ensemble_predictions += pred * weights.get(model_name, 0.0)
+                    n_ok += 1
                 except Exception as e:
-                    # Skip this model if prediction fails
+                    print(f"  [警告] {factor_name}/{model_name} 预测失败: {e}")
                     continue
+
+            if n_ok == 0:
+                # No base model produced a prediction — do not feed a
+                # silent all-zero series into the blend.
+                print(f"  [警告] {factor_name}: 所有基模型预测失败, 跳过该因子")
+                continue
 
             factor_predictions[factor_name] = pd.Series(ensemble_predictions, index=latest_df.index)
 

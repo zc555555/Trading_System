@@ -183,8 +183,25 @@ class TrancheRegistry:
                 return
         raise KeyError(f"Tranche {tranche_id} not found")
 
-    def remove_position(self, tranche_id: str, symbol: str, side: str) -> bool:
-        """Remove a single position (e.g. after a partial stop-loss).
+    def add_position(self, tranche_id: str, pos: TranchePosition) -> None:
+        """Append one position to an existing tranche.
+
+        Used by the orchestrator to record each leg IMMEDIATELY after its
+        order is accepted (followed by save()), so a crash mid-tranche never
+        leaves live broker positions missing from the registry.
+        """
+        for rec in self._payload["tranches"]:
+            if rec["id"] == tranche_id:
+                key = "longs" if pos.side == "long" else "shorts"
+                rec[key].append(asdict(pos))
+                return
+        raise KeyError(f"Tranche {tranche_id} not found")
+
+    def remove_position(self, tranche_id: str, symbol: str, side: str,
+                        reason: str = "all_positions_stopped_out") -> bool:
+        """Remove a single position (e.g. after a stop-loss or a confirmed
+        scheduled close). If the tranche becomes empty it is marked closed
+        with ``reason``.
 
         Returns True if a position was removed, False if nothing matched.
         """
@@ -197,7 +214,7 @@ class TrancheRegistry:
             removed = before > len(rec[key])
             if removed and not rec["longs"] and not rec["shorts"]:
                 rec["status"] = "closed"
-                rec["close_reason"] = "all_positions_stopped_out"
+                rec["close_reason"] = reason
                 rec["closed_at"] = datetime.now().isoformat()
             return removed
         return False

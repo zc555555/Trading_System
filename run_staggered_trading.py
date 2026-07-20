@@ -69,41 +69,56 @@ def close_due_tranches(trader: AlpacaAutoTrader, registry: TrancheRegistry,
         print(f"\n[close] {tranche.id}  open={tranche.open_date}  "
               f"sched_close={tranche.scheduled_close_date}  positions={n_pos}")
 
+        # (position, close-order side, book side) — long -> sell, short -> buy to cover
+        legs = ([(pos, "sell", "long") for pos in tranche.longs]
+                + [(pos, "buy", "short") for pos in tranche.shorts])
+
         realized_total = 0.0
-        for pos in tranche.longs:
-            # long -> sell
-            ok = _close_position(trader, pos.symbol, pos.qty, "sell",
+        n_failed = 0
+        for pos, order_side, side in legs:
+            ok = _close_position(trader, pos.symbol, pos.qty, order_side,
                                  client_order_id=f"close_{tranche.id}_{pos.symbol}",
                                  dry_run=dry_run)
-            n_orders += int(ok)
-            if ok:
-                # P&L estimate based on current price; settlement may differ slightly
-                cur = trader.get_current_price(pos.symbol)
-                if cur:
+            if not ok:
+                # Leg stays in the registry; the tranche remains 'open' and
+                # past-due, so the next run retries it. Never mark a position
+                # closed that the broker may still hold.
+                n_failed += 1
+                print(f"  [FAIL] close {order_side.upper()} {pos.qty} {pos.symbol} "
+                      f"-- position kept in registry for retry")
+                continue
+
+            n_orders += 1
+            # P&L estimate based on current price; settlement may differ slightly
+            cur = trader.get_current_price(pos.symbol)
+            if cur:
+                if side == "long":
                     pnl = (cur - pos.entry_price) * pos.qty
-                    realized_total += pnl
-                    print(f"  [SELL  long]  {pos.symbol:<6} qty={pos.qty:>4}  "
-                          f"entry=${pos.entry_price:>7.2f}  cur=${cur:>7.2f}  "
-                          f"P&L=${pnl:+.2f}")
-        for pos in tranche.shorts:
-            # short -> buy to cover
-            ok = _close_position(trader, pos.symbol, pos.qty, "buy",
-                                 client_order_id=f"close_{tranche.id}_{pos.symbol}",
-                                 dry_run=dry_run)
-            n_orders += int(ok)
-            if ok:
-                cur = trader.get_current_price(pos.symbol)
-                if cur:
+                else:
                     pnl = (pos.entry_price - cur) * pos.qty
-                    realized_total += pnl
-                    print(f"  [BUY  short]  {pos.symbol:<6} qty={pos.qty:>4}  "
-                          f"entry=${pos.entry_price:>7.2f}  cur=${cur:>7.2f}  "
-                          f"P&L=${pnl:+.2f}")
+                realized_total += pnl
+                tag = "[SELL  long]" if side == "long" else "[BUY  short]"
+                print(f"  {tag}  {pos.symbol:<6} qty={pos.qty:>4}  "
+                      f"entry=${pos.entry_price:>7.2f}  cur=${cur:>7.2f}  "
+                      f"P&L=${pnl:+.2f}")
+
+            if not dry_run:
+                # Persist each confirmed close immediately so a crash between
+                # legs can't desync registry vs broker.
+                registry.remove_position(tranche.id, pos.symbol, side,
+                                         reason="scheduled_close")
+                registry.save()
 
         if not dry_run:
-            registry.mark_closed(
-                tranche.id, realized_total, reason="scheduled_close"
-            )
+            if n_failed == 0:
+                # remove_position() emptied the tranche and marked it closed;
+                # record the realized P&L estimate on top.
+                registry.mark_closed(tranche.id, realized_total,
+                                     reason="scheduled_close")
+                registry.save()
+            else:
+                print(f"  [WARN] {tranche.id}: {n_failed} leg(s) failed to close; "
+                      f"tranche stays open and will be retried next run")
 
     return n_orders
 
@@ -181,6 +196,7 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
 
     longs: list[TranchePosition] = []
     shorts: list[TranchePosition] = []
+    tranche_created = False
 
     for stock in signals["stocks"]:
         symbol = stock["symbol"]
@@ -254,20 +270,26 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
         )
         (longs if side == "long" else shorts).append(pos)
 
+        # Persist THIS leg before placing the next order. An exception on
+        # stock N must never leave stocks 1..N-1 live at the broker but
+        # absent from the registry (they would have no stops and would be
+        # invisible to the close leg).
+        if not dry_run:
+            if not tranche_created:
+                registry.add_tranche(
+                    tranche_id=tranche_id,
+                    open_date=_today_str(),
+                    hold_days=config_trading.HOLD_DAYS,
+                    signal_file=Path(signals.get("data_date", "")).name
+                               if signals.get("data_date") else None,
+                )
+                tranche_created = True
+            registry.add_position(tranche_id, pos)
+            registry.save()
+
     if not longs and not shorts:
         print(f"\n[open] All positions skipped -- no tranche created.")
         return None
-
-    if not dry_run:
-        registry.add_tranche(
-            tranche_id=tranche_id,
-            open_date=_today_str(),
-            hold_days=config_trading.HOLD_DAYS,
-            longs=longs,
-            shorts=shorts,
-            signal_file=Path(signals.get("data_date", "")).name
-                       if signals.get("data_date") else None,
-        )
 
     print(f"\n[open] Tranche {tranche_id}: "
           f"{len(longs)} longs + {len(shorts)} shorts, "
