@@ -208,6 +208,8 @@ if __name__ == "__main__":
                     help="Limit folds (smoke test)")
     ap.add_argument("--horizon", type=int, default=1, choices=[1, 5, 20],
                     help="Label horizon in trading days")
+    ap.add_argument("--tag", type=str, default="",
+                    help="Variant tag appended to result filenames")
     args = ap.parse_args()
     run_walk_forward(WalkForwardConfig(horizon=args.horizon),
-                     max_folds=args.max_folds)
+                     max_folds=args.max_folds, tag=args.tag)

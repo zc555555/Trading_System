@@ -127,7 +127,7 @@ def variant_factor_groups(variant: str) -> dict:
     return groups
 
 
-def main(variants: list[str], max_folds: int | None = None):
+def main(variants: list[str], max_folds: int | None = None, tag_suffix: str = ""):
     print("loading + augmenting dataset...")
     df = pd.read_parquet(DATA_PATH)
     df = compute_new_vol_features(df)
@@ -142,7 +142,7 @@ def main(variants: list[str], max_folds: int | None = None):
             max_folds=max_folds,
             df=df,
             factor_groups=variant_factor_groups(variant),
-            tag=f"vol{variant}",
+            tag=f"vol{variant}{tag_suffix}",
         )
 
 
@@ -150,6 +150,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--variant", choices=["B", "C", "both"], default="both")
     ap.add_argument("--max-folds", type=int, default=None)
+    ap.add_argument("--tag-suffix", type=str, default="",
+                    help="Appended to the variant tag (e.g. '_ext')")
     args = ap.parse_args()
     main(["B", "C"] if args.variant == "both" else [args.variant],
-         max_folds=args.max_folds)
+         max_folds=args.max_folds, tag_suffix=args.tag_suffix)

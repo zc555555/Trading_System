@@ -28,7 +28,11 @@ data:
     min_price: 5.0                    # Drop penny stocks
     min_history_days: 252             # Require >= 1 year of data
 
-  start_date: "2018-01-01"
+  # 2026-07: extended back from 2018-01-01 so the walk-forward gains
+  # ~4 years of never-evaluated folds (virgin test data for new factors).
+  # NOTE: universe is CURRENT constituents applied to all history --
+  # survivorship bias grows with lookback; affects all variants equally.
+  start_date: "2014-01-01"
   end_date: null  # null = today
 
   parquet_path: "stocks.parquet"
