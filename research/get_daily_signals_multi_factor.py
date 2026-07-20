@@ -12,6 +12,7 @@ Improvement over single model:
 - Easier to diagnose and improve
 """
 
+import io
 import pickle
 import json
 import sys
@@ -19,6 +20,13 @@ from pathlib import Path
 from datetime import datetime
 import pandas as pd
 import numpy as np
+
+# Windows: piped/redirected stdout defaults to cp1252, which cannot encode
+# the Chinese status lines (finbert_sentiment etc.) and crashes the script
+# mid-run under Task Scheduler. Force UTF-8, never crash on odd characters.
+if sys.platform == 'win32' and hasattr(sys.stdout, 'buffer'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 # Import factor definitions
 # W1.5: FACTOR_WEIGHTS is resolved at import time via load_effective_factor_weights()
@@ -562,7 +570,9 @@ def main():
 
         # Show win rates
         if win_rates:
-            print(f"Historical Win Rates (last {win_rates['sample_size']} predictions):")
+            print(f"IN-SAMPLE direction check (last {win_rates['sample_size']} rows "
+                  f"the models were trained on -- NOT expected live performance;")
+            print(f"see evaluation/results/walk_forward_report.json for honest out-of-sample stats):")
             print(f"  Overall: {win_rates['overall_win_rate']*100:.1f}%")
             print(f"  BUY signals: {win_rates['buy_win_rate']*100:.1f}% ({win_rates['buy_total']} BUY predictions)")
             print(f"  SELL signals: {win_rates['sell_win_rate']*100:.1f}% ({win_rates['sell_total']} SELL predictions)")
@@ -637,7 +647,8 @@ def main():
         print("Recommendation: Hold cash today\n")
 
         if win_rates:
-            print(f"Historical Win Rates (last {win_rates['sample_size']} predictions):")
+            print(f"IN-SAMPLE direction check (last {win_rates['sample_size']} rows, "
+                  f"not expected live performance):")
             print(f"  Overall: {win_rates['overall_win_rate']*100:.1f}%")
             print()
 

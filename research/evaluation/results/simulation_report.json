@@ -1,0 +1,98 @@
+{
+  "generated_at": "2026-07-20T14:36:44.297944",
+  "costs": {
+    "commission": 0.0005,
+    "slippage": 0.001
+  },
+  "selection": {
+    "top_n": 10,
+    "min_stocks": 3
+  },
+  "holdout_start": "2025-07-01",
+  "legacy": {
+    "mode": "legacy (1-day hold, next-open entry)",
+    "all": {
+      "n_days": 1071,
+      "total_return": -0.9612015625650422,
+      "ann_return": -0.5344607628117286,
+      "ann_vol": 0.1841563612852024,
+      "sharpe": -4.054149778868041,
+      "sortino": -6.075932806980897,
+      "max_drawdown": -0.9611169125423525,
+      "calmar": -0.5560829861977661,
+      "daily_win_rate": 0.35014005602240894
+    },
+    "dev": {
+      "n_days": 877,
+      "total_return": -0.9307575650254822,
+      "ann_return": -0.535710505431771,
+      "ann_vol": 0.18626060229192656,
+      "sharpe": -4.020941109633759,
+      "sortino": -6.2032471689367386,
+      "max_drawdown": -0.9324044517526984,
+      "calmar": -0.5745473484438677,
+      "daily_win_rate": 0.34777651083238315
+    },
+    "holdout": {
+      "n_days": 194,
+      "total_return": -0.4396725440225183,
+      "ann_return": -0.5287690436459976,
+      "ann_vol": 0.17478826283310334,
+      "sharpe": -4.210778305004168,
+      "sortino": -5.540759396544872,
+      "max_drawdown": -0.4388428204855921,
+      "calmar": -1.2049167012938702,
+      "daily_win_rate": 0.36082474226804123
+    },
+    "trade_stats": {
+      "n_trades": 10710,
+      "win_rate": 0.43604108309990663,
+      "avg_net_return": -0.0031469083284873245,
+      "buy_win_rate": 0.4363547120418848,
+      "sell_win_rate": 0.4356241844280122
+    }
+  },
+  "staggered": {
+    "mode": "staggered (5-day hold, 5 tranches)",
+    "all": {
+      "n_days": 1075,
+      "total_return": -0.5149725530369518,
+      "ann_return": -0.15600907265538388,
+      "ann_vol": 0.14769293089743227,
+      "sharpe": -1.0741881359860164,
+      "sortino": -1.5159045438070522,
+      "max_drawdown": -0.5241581764701941,
+      "calmar": -0.29763739202922695,
+      "daily_win_rate": 0.4697674418604651
+    },
+    "dev": {
+      "n_days": 876,
+      "total_return": -0.4570859720021697,
+      "ann_return": -0.16113947495673175,
+      "ann_vol": 0.14344205555444384,
+      "sharpe": -1.1528804595977724,
+      "sortino": -1.6677992116943527,
+      "max_drawdown": -0.4570124471828,
+      "calmar": -0.352593186356427,
+      "daily_win_rate": 0.4680365296803653
+    },
+    "holdout": {
+      "n_days": 199,
+      "total_return": -0.10662200283948764,
+      "ann_return": -0.1330493239367324,
+      "ann_vol": 0.16549375144441347,
+      "sharpe": -0.7798582584969082,
+      "sortino": -1.021123438519181,
+      "max_drawdown": -0.13664347587830628,
+      "calmar": -0.973696863911931,
+      "daily_win_rate": 0.47738693467336685
+    },
+    "trade_stats": {
+      "n_trades": 10710,
+      "win_rate": 0.4760971055088702,
+      "avg_net_return": -0.002954670366370061,
+      "buy_win_rate": 0.4908376963350785,
+      "sell_win_rate": 0.45650282731622444
+    }
+  }
+}

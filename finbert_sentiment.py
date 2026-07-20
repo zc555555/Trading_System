@@ -191,13 +191,14 @@ class FinBERTSentimentAnalyzer:
                     'news_count': len(headlines)
                 }
 
-                # 显示结果
+                # 显示结果 (ASCII 标记: stdout 被重定向时 Windows 默认 cp1252,
+                # 打印 ✓/✗ 会 UnicodeEncodeError 并让整个信号脚本崩溃)
                 sentiment_str = f"{avg_sentiment:+.4f}"
                 trend = "positive" if avg_sentiment > 0.1 else "negative" if avg_sentiment < -0.1 else "neutral"
-                print(f"  ✓ {symbol}: 情绪={sentiment_str}, 新闻数={len(headlines)}, 趋势={trend}")
+                print(f"  [OK] {symbol}: 情绪={sentiment_str}, 新闻数={len(headlines)}, 趋势={trend}")
 
             except Exception as e:
-                print(f"  ✗ {symbol}: 获取失败 - {e}")
+                print(f"  [X] {symbol}: 获取失败 - {e}")
                 results[symbol] = {'sentiment_score': 0.0, 'news_count': 0}
 
             # API限流延迟

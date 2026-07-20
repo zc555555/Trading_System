@@ -46,6 +46,8 @@ research/artifacts/deprecated/
 research/artifacts/multi_horizon/
 research/artifacts/pre_w2a_backup/
 research/backtest/results/
+research/evaluation/results/*.parquet
+research/evaluation/results/*.csv
 catboost_info/
 **/catboost_info/
 

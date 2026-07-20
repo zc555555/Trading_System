@@ -74,6 +74,19 @@ def main():
         os.chdir('..')
         return False
 
+    # 流动性过滤 + 特征重建。此前重训流程抓完原始数据后直接训练,
+    # 模型学的是上一次构建的旧特征 —— 必须先重建特征再训练。
+    if not run_command(f'python {os.path.join("data", "apply_liquidity_filter.py")}',
+                       "流动性过滤"):
+        print("\n[ERROR] Liquidity filter failed!")
+        os.chdir('..')
+        return False
+
+    if not run_command('python prepare_prediction_data.py', "重建特征"):
+        print("\n[ERROR] Feature rebuild failed!")
+        os.chdir('..')
+        return False
+
     # 切回主目录
     os.chdir('..')
 

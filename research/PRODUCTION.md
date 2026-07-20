@@ -11,8 +11,19 @@ This file is the single source of truth for "which scripts and models are actual
 | [data/fetch_ohlcv.py](data/fetch_ohlcv.py) | daily / weekly | `run_auto_trading.py`, `run_retrain_models.py` | Pull latest OHLCV → `data/stocks.parquet` |
 | [prepare_prediction_data.py](prepare_prediction_data.py) | daily | `run_auto_trading.py` | Rebuild features → `data/stocks_selected_features.parquet` |
 | [get_daily_signals_multi_factor.py](get_daily_signals_multi_factor.py) | daily | `run_auto_trading.py`, `run_menu.py` | Load 6 factor ensembles → emit `artifacts/signals_multi_factor_YYYYMMDD.json` |
-| [train_multi_factor_models.py](train_multi_factor_models.py) | weekly (Sunday) | `run_retrain_models.py` | Retrain 6 factor ensembles → overwrite `artifacts/ensemble_{factor}.pkl` |
-| [backtest/run_backtest_multi_factor.py](backtest/run_backtest_multi_factor.py) | on demand | (manual) | Backtest using the same 6 pkl files |
+| [train_multi_factor_models.py](train_multi_factor_models.py) | weekly (Sunday) | `run_retrain_models.py` | Retrain 6 factor ensembles → overwrite `artifacts/ensemble_{factor}.pkl`. P1 (2026-07): uses the shared core in `evaluation/factor_training.py`; scores are per-date rank ICs on a purged inner validation; models refit on all data after weights are measured. |
+| [backtest/run_backtest_multi_factor.py](backtest/run_backtest_multi_factor.py) | on demand | (manual) | Legacy quick backtest using the production pkls. ⚠️ Models are trained once on data overlapping the backtest window and no costs are applied — use the evaluation layer below for honest numbers. |
+
+### Evaluation layer (P1, 2026-07) — the source of truth for performance claims
+
+| Script | Purpose |
+|---|---|
+| [evaluation/purged_walk_forward.py](evaluation/purged_walk_forward.py) | Rolling 3y-train / 1q-test walk-forward with purge+embargo; retrains all 6 factor ensembles per fold; emits a fully out-of-sample prediction panel + per-date rank IC report (`evaluation/results/`) |
+| [evaluation/simulate_portfolio.py](evaluation/simulate_portfolio.py) | Cost-aware simulation from that panel (next-open execution, 30 bps round trip): legacy 1-day and staggered 5-day modes, dev/holdout split at 2025-07-01 |
+| [evaluation/factor_training.py](evaluation/factor_training.py) | Shared training core used by BOTH the walk-forward and `train_multi_factor_models.py` |
+| [evaluation/metrics.py](evaluation/metrics.py) | Per-date cross-sectional rank IC + portfolio metrics |
+
+Rules: performance numbers quoted anywhere (docs, decisions, README) must come from `evaluation/results/`, never from in-sample checks or the legacy backtest. The holdout segment (test windows ≥ 2025-07-01) must never drive tuning decisions.
 
 ### Occasional (W2-A workflow)
 

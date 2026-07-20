@@ -1,8 +1,9 @@
 """
-Update stocks_selected_features.parquet with latest data from stocks.parquet.
+Update stocks_selected_features.parquet from stocks_features.parquet.
 
 This script:
-1. Loads latest stocks.parquet (has data through Jan 29/30)
+1. Loads stocks_features.parquet (enriched output of prepare_prediction_data;
+   stocks.parquet itself stays RAW as of the P1 pipeline separation)
 2. Renames market features to add '_y' suffix (to match training data format)
 3. Selects the 60 features used by the model
 4. Saves as stocks_selected_features.parquet
@@ -11,14 +12,13 @@ This script:
 import pandas as pd
 from pathlib import Path
 
-# Load latest stocks.parquet
 data_dir = Path(__file__).parent / "data"
-df = pd.read_parquet(data_dir / "stocks.parquet")
+df = pd.read_parquet(data_dir / "stocks_features.parquet")
 
 print("=" * 80)
 print("UPDATING STOCKS_SELECTED_FEATURES.PARQUET")
 print("=" * 80)
-print(f"\nLoaded stocks.parquet:")
+print(f"\nLoaded stocks_features.parquet:")
 print(f"  Date range: {df['date'].min()} to {df['date'].max()}")
 print(f"  Shape: {df.shape}")
 
@@ -47,9 +47,17 @@ market_features_to_rename = {
     'vix_change_5d': 'vix_change_5d_y',
 }
 
-# Rename market features
+# Rename market features. If a '_y' target already exists (stale column from
+# an older enrichment cycle), drop it first so the rename can never produce
+# duplicate column names.
+stale = [dst for src, dst in market_features_to_rename.items()
+         if src in df.columns and dst in df.columns]
+if stale:
+    print(f"\n[WARN] Dropping {len(stale)} stale '_y' columns from a previous cycle")
+    df = df.drop(columns=stale)
 print(f"\nRenaming {len(market_features_to_rename)} market features to add '_y' suffix...")
 df = df.rename(columns=market_features_to_rename)
+assert not df.columns.duplicated().any(), "duplicate columns after rename"
 
 # The 60 features used by the model (excluding meta columns)
 selected_features = [

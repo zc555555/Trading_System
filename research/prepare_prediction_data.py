@@ -32,8 +32,16 @@ if __name__ == "__main__":
 
     builder = DatasetBuilder()
 
-    # Load raw data
+    # Load raw data. Select ONLY the raw OHLCV columns so this script is
+    # idempotent: re-running it on a file that already carries feature
+    # columns (or _x/_y merge junk from older cycles) always starts from
+    # the same clean input instead of enriching on top of enrichment.
+    RAW_COLS = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume']
     df_raw = pd.read_parquet('data/stocks.parquet')
+    missing = [c for c in RAW_COLS if c not in df_raw.columns]
+    if missing:
+        raise SystemExit(f"stocks.parquet is missing raw columns {missing}")
+    df_raw = df_raw[RAW_COLS]
     print(f"\n[OK] Loaded raw data:")
     print(f"    Date range: {df_raw['date'].min().date()} to {df_raw['date'].max().date()}")
     print(f"    Shape: {df_raw.shape}")
@@ -66,9 +74,16 @@ if __name__ == "__main__":
         print(f"  Dropping {len(bad_features)} features with >90% NaN")
         feature_cols = [f for f in feature_cols if f not in bad_features]
 
-    # Fill NaNs
+    # Fill NaNs: forward-fill only. Warm-up rows (before long-lookback
+    # features have enough history) are DROPPED, not backward-filled --
+    # bfill would copy future values into the past.
+    df_labeled = df_labeled.sort_values(['symbol', 'date'])
     df_labeled[feature_cols] = df_labeled.groupby('symbol')[feature_cols].ffill()
-    df_labeled[feature_cols] = df_labeled.groupby('symbol')[feature_cols].bfill()
+    warmup = int(builder.config.get('features', {}).get('max_lookback', 250))
+    obs_idx = df_labeled.groupby('symbol').cumcount()
+    print(f"[INFO] Dropping {(obs_idx < warmup).sum():,} warm-up rows "
+          f"(first {warmup} obs per symbol; replaces look-ahead bfill)")
+    df_labeled = df_labeled[obs_idx >= warmup]
     df_labeled[feature_cols] = df_labeled[feature_cols].fillna(0)
 
     # CRITICAL: Add back the last day for prediction
@@ -78,9 +93,8 @@ if __name__ == "__main__":
     last_day_features['future_return'] = float('nan')
     last_day_features['label'] = float('nan')
 
-    # Fill NaNs in last day features
-    last_day_features[feature_cols] = last_day_features.groupby('symbol')[feature_cols].ffill()
-    last_day_features[feature_cols] = last_day_features.groupby('symbol')[feature_cols].bfill()
+    # Fill NaNs in last day features (single-date frame: per-symbol
+    # ffill/bfill are no-ops here, a plain 0-fill is all that applies)
     last_day_features[feature_cols] = last_day_features[feature_cols].fillna(0)
 
     # Append last day
@@ -92,9 +106,11 @@ if __name__ == "__main__":
     print(f"    Shape: {df_labeled.shape}")
     print(f"    Features: {len(feature_cols)}")
 
-    # Save processed data
-    df_labeled.to_parquet('data/stocks.parquet', index=False, compression='snappy')
-    print(f"\n[OK] Saved to data/stocks.parquet")
+    # Save processed data to a SEPARATE file. stocks.parquet stays raw
+    # (owned by fetch_ohlcv / apply_liquidity_filter); overwriting it with
+    # enriched data made the pipeline non-idempotent and destroyed rows.
+    df_labeled.to_parquet('data/stocks_features.parquet', index=False, compression='snappy')
+    print(f"\n[OK] Saved to data/stocks_features.parquet")
 
     # Step 2: Update stocks_selected_features.parquet
     print("\n[Step 2/3] Updating selected features...")

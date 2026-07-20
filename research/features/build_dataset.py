@@ -536,18 +536,19 @@ class DatasetBuilder:
             try:
                 print(f"\n  Computing market breadth...")
 
-                # Calculate % of stocks up each day
-                breadth_1d = df.groupby('date').apply(
-                    lambda g: (g['close'] > g.groupby('symbol')['close'].shift(1)).mean()
-                ).reset_index()
-                breadth_1d.columns = ['date', 'market_breadth_1d']
+                # The per-symbol shift must happen on the FULL series, not
+                # inside a per-date group (where every symbol has one row and
+                # shift(1) is all-NaN, making breadth a constant 0).
+                tmp = df[['date', 'symbol', 'close']].sort_values(['symbol', 'date'])
+                prev1 = tmp.groupby('symbol')['close'].shift(1)
+                prev5 = tmp.groupby('symbol')['close'].shift(5)
+                tmp['up_1d'] = (tmp['close'] > prev1).astype(float).where(prev1.notna())
+                tmp['up_5d'] = (tmp['close'] > prev5).astype(float).where(prev5.notna())
 
-                breadth_5d = df.groupby('date').apply(
-                    lambda g: (g['close'] > g.groupby('symbol')['close'].shift(5)).mean()
-                ).reset_index()
-                breadth_5d.columns = ['date', 'market_breadth_5d']
-
-                market_data['breadth'] = breadth_1d.merge(breadth_5d, on='date', how='outer')
+                breadth = (tmp.groupby('date')[['up_1d', 'up_5d']]
+                           .mean().reset_index())
+                breadth.columns = ['date', 'market_breadth_1d', 'market_breadth_5d']
+                market_data['breadth'] = breadth
                 print(f"  [OK] market_breadth")
 
             except Exception as e:
@@ -711,10 +712,19 @@ class DatasetBuilder:
 
         # Forward-fill remaining NaNs (within each symbol)
         print("\nForward-filling NaN values per symbol...")
+        df = df.sort_values(['symbol', 'date'])
         df[feature_cols] = df.groupby('symbol')[feature_cols].ffill()
 
-        # Backward-fill any remaining NaNs
-        df[feature_cols] = df.groupby('symbol')[feature_cols].bfill()
+        # Drop each symbol's warm-up rows instead of backward-filling them.
+        # bfill copies the first FUTURE valid value into earlier rows, which
+        # is look-ahead; the leading rows before long-lookback features
+        # (sma_200 etc.) become valid simply don't have enough history yet.
+        warmup = int(self.config.get('features', {}).get('max_lookback', 250))
+        obs_idx = df.groupby('symbol').cumcount()
+        n_warmup_dropped = int((obs_idx < warmup).sum())
+        df = df[obs_idx >= warmup]
+        print(f"Dropped {n_warmup_dropped:,} warm-up rows "
+              f"(first {warmup} obs per symbol; replaces look-ahead bfill)")
 
         # Fill any remaining NaNs with 0 (should be rare)
         remaining_nans = df[feature_cols].isna().sum().sum()
