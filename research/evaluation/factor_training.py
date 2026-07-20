@@ -206,12 +206,13 @@ def _per_date_zscore(s: pd.Series, dates: pd.Series) -> pd.Series:
     return ((s - mean) / std).fillna(0.0)
 
 
-def predict_panel(fold: dict, df: pd.DataFrame) -> pd.DataFrame:
+def predict_panel(fold: dict, df: pd.DataFrame,
+                  target_col: str = 'future_return') -> pd.DataFrame:
     """Score a frame with a trained fold: per-factor preds -> z-score -> blend.
 
-    Returns [date, symbol, close, open, future_return, factor_*, pred].
+    Returns [date, symbol, close, open, <target_col>, factor_*, pred].
     """
-    keep = [c for c in ['date', 'symbol', 'open', 'close', 'future_return']
+    keep = [c for c in ['date', 'symbol', 'open', 'close', target_col]
             if c in df.columns]
     out = df[keep].copy()
 

@@ -94,6 +94,52 @@ class TestPurgedSplits:
             assert last_label_day_idx < test_start_idx
 
 
+class TestNeweyWest:
+    def test_zero_lags_equals_iid_t(self):
+        rng = np.random.default_rng(3)
+        s = pd.Series(rng.normal(0.01, 0.1, 300))
+        plain = summarize_ic(s, nw_lags=0)
+        assert np.isclose(plain["t_stat"],
+                          s.mean() / s.std(ddof=1) * np.sqrt(len(s)))
+
+    def test_autocorrelated_series_gets_smaller_t(self):
+        """Overlapping h-day labels autocorrelate daily ICs; the NW t must
+        shrink relative to the naive i.i.d. t on such a series."""
+        rng = np.random.default_rng(4)
+        noise = rng.normal(0.01, 0.1, 600)
+        overlapped = pd.Series(noise).rolling(5).mean().dropna()  # AR-ish
+        naive = summarize_ic(overlapped, nw_lags=0)["t_stat"]
+        nw = summarize_ic(overlapped, nw_lags=4)["t_stat"]
+        assert abs(nw) < abs(naive)
+        # roughly sqrt(5) shrinkage for a 5-day overlap
+        assert abs(nw) < abs(naive) / 1.5
+
+    def test_iid_series_barely_changes(self):
+        rng = np.random.default_rng(5)
+        s = pd.Series(rng.normal(0.02, 0.1, 600))
+        naive = summarize_ic(s, nw_lags=0)["t_stat"]
+        nw = summarize_ic(s, nw_lags=4)["t_stat"]
+        assert abs(nw - naive) / abs(naive) < 0.35
+
+
+class TestLongHorizonPurge:
+    def test_20d_horizon_folds_are_purged(self):
+        cfg = WalkForwardConfig(train_window=252, test_window=63, step=63,
+                                horizon=20, embargo_days=5)
+        dates = pd.date_range("2019-01-01", periods=800, freq="B").values
+        all_sorted = np.sort(dates)
+        folds = generate_folds(dates, cfg)
+        assert len(folds) >= 2
+        for train, test in folds:
+            gap = (np.searchsorted(all_sorted, test[0])
+                   - np.searchsorted(all_sorted, train[-1]) - 1)
+            assert gap == 25  # horizon 20 + embargo 5
+            # a label at the last train date reaches 20 days forward --
+            # still strictly inside the purge gap
+            last_label_idx = np.searchsorted(all_sorted, train[-1]) + 20
+            assert last_label_idx < np.searchsorted(all_sorted, test[0])
+
+
 class TestPortfolioMetrics:
     def test_constant_positive_returns(self):
         r = pd.Series(0.001, index=pd.date_range("2024-01-01", periods=252, freq="B"))

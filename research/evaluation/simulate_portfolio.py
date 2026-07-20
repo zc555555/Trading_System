@@ -49,7 +49,6 @@ TOP_N = 10
 MIN_STOCKS = 3
 MAX_WEIGHT_LEGACY = 0.15      # per-name cap, share of equity (alpaca_trader)
 MAX_WEIGHT_TRANCHE = 0.30     # per-name cap, share of tranche (config_trading)
-HOLD_DAYS = 5
 
 
 def _select(day: pd.DataFrame, max_weight: float) -> pd.DataFrame:
@@ -63,8 +62,10 @@ def _select(day: pd.DataFrame, max_weight: float) -> pd.DataFrame:
     return day[day['direction'] != 0]
 
 
-def _load_panel_with_execution_prices() -> pd.DataFrame:
-    panel = pd.read_parquet(RESULTS_DIR / "oos_predictions.parquet")
+def _load_panel_with_execution_prices(horizon: int = 1) -> pd.DataFrame:
+    suffixed = RESULTS_DIR / f"oos_predictions_h{horizon}.parquet"
+    legacy_name = RESULTS_DIR / "oos_predictions.parquet"
+    panel = pd.read_parquet(suffixed if suffixed.exists() else legacy_name)
     prices = pd.read_parquet(DATA_PATH, columns=['date', 'symbol', 'open', 'close'])
     prices = prices.sort_values(['symbol', 'date'])
     g = prices.groupby('symbol')
@@ -96,12 +97,13 @@ def simulate_legacy(panel: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame]:
     return pd.Series(daily).sort_index(), pd.DataFrame(trades)
 
 
-def simulate_staggered(panel: pd.DataFrame, prices_wide: dict) -> tuple[pd.Series, pd.DataFrame]:
-    """5-day hold, 5 overlapping tranches of 1/5 equity.
+def simulate_staggered(panel: pd.DataFrame, prices_wide: dict,
+                       hold_days: int = 5) -> tuple[pd.Series, pd.DataFrame]:
+    """k-day hold, k overlapping tranches of 1/k equity.
 
     Daily mark for entry session = open->close; later sessions close->close;
-    exit at the 5th session's close. Half the round-trip cost is charged on
-    the entry mark, half on the exit mark. Tranche capital is fixed at 1/5
+    exit at the k-th session's close. Half the round-trip cost is charged on
+    the entry mark, half on the exit mark. Tranche capital is fixed at 1/k
     (marks are additive, not compounded, within a tranche's life).
     """
     sessions = prices_wide['sessions']
@@ -118,9 +120,9 @@ def simulate_staggered(panel: pd.DataFrame, prices_wide: dict) -> tuple[pd.Serie
         sel = _select(day, MAX_WEIGHT_TRANCHE)
         if sel.empty:
             continue
-        last_h = min(HOLD_DAYS, len(sessions) - 1 - i)
+        last_h = min(hold_days, len(sessions) - 1 - i)
         for _, r in sel.iterrows():
-            sym, w, d = r['symbol'], r['weight'] / HOLD_DAYS, r['direction']
+            sym, w, d = r['symbol'], r['weight'] / hold_days, r['direction']
             entry = open_px.get((sessions[i + 1], sym))
             if entry is None or not np.isfinite(entry) or entry <= 0:
                 continue
@@ -184,21 +186,27 @@ def _report(name: str, daily: pd.Series, trades: pd.DataFrame) -> dict:
     return out
 
 
-def main(modes: list[str]):
-    panel = _load_panel_with_execution_prices()
-    print(f"panel: {len(panel):,} rows, "
+def main(modes: list[str], horizon: int = 1, hold_days: int | None = None):
+    """Simulate the panel for `horizon`, holding positions `hold_days`
+    (defaults to the horizon itself so the trade expresses the prediction
+    over its own window)."""
+    hold_days = hold_days or max(horizon, 1)
+    panel = _load_panel_with_execution_prices(horizon)
+    print(f"panel (h={horizon}): {len(panel):,} rows, "
           f"{panel['date'].min().date()} .. {panel['date'].max().date()}")
 
     results = {'generated_at': datetime.now().isoformat(),
+               'horizon': horizon, 'hold_days': hold_days,
                'costs': {'commission': COMMISSION, 'slippage': SLIPPAGE},
                'selection': {'top_n': TOP_N, 'min_stocks': MIN_STOCKS},
                'holdout_start': HOLDOUT_START}
+    suffix = f"_h{horizon}"
 
     if 'legacy' in modes:
         daily, trades = simulate_legacy(panel)
         results['legacy'] = _report('legacy (1-day hold, next-open entry)',
                                     daily, trades)
-        daily.rename('ret').to_csv(RESULTS_DIR / "equity_legacy.csv")
+        daily.rename('ret').to_csv(RESULTS_DIR / f"equity_legacy{suffix}.csv")
 
     if 'staggered' in modes:
         prices = pd.read_parquet(DATA_PATH, columns=['date', 'symbol', 'open', 'close'])
@@ -208,19 +216,25 @@ def main(modes: list[str]):
             'open': prices.set_index(['date', 'symbol'])['open'].to_dict(),
             'close': prices.set_index(['date', 'symbol'])['close'].to_dict(),
         }
-        daily, trades = simulate_staggered(panel, wide)
+        daily, trades = simulate_staggered(panel, wide, hold_days=hold_days)
         results['staggered'] = _report(
-            f'staggered ({HOLD_DAYS}-day hold, 5 tranches)', daily, trades)
-        daily.rename('ret').to_csv(RESULTS_DIR / "equity_staggered.csv")
+            f'staggered ({hold_days}-day hold, {hold_days} tranches, '
+            f'h={horizon} signal)', daily, trades)
+        daily.rename('ret').to_csv(RESULTS_DIR / f"equity_staggered{suffix}.csv")
 
-    with open(RESULTS_DIR / "simulation_report.json", "w") as f:
+    with open(RESULTS_DIR / f"simulation_report{suffix}.json", "w") as f:
         json.dump(results, f, indent=2, default=float)
-    print(f"\nsaved: {RESULTS_DIR / 'simulation_report.json'}")
+    print(f"\nsaved: {RESULTS_DIR / f'simulation_report{suffix}.json'}")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--mode", choices=["legacy", "staggered", "both"],
                     default="both")
+    ap.add_argument("--horizon", type=int, default=1, choices=[1, 5, 20],
+                    help="Which walk-forward panel to simulate")
+    ap.add_argument("--hold-days", type=int, default=None,
+                    help="Holding period (defaults to horizon)")
     args = ap.parse_args()
-    main(["legacy", "staggered"] if args.mode == "both" else [args.mode])
+    modes = ["legacy", "staggered"] if args.mode == "both" else [args.mode]
+    main(modes, horizon=args.horizon, hold_days=args.hold_days)

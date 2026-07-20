@@ -46,20 +46,40 @@ def daily_rank_ic(
     return pd.Series(out, name=f"ic_{pred_col}").sort_index()
 
 
-def summarize_ic(ic: pd.Series) -> dict:
+def summarize_ic(ic: pd.Series, nw_lags: int = 0) -> dict:
     """Mean IC, t-stat, and IC information ratio for a per-date IC series.
 
-    t-stat treats daily ICs as i.i.d. -- with 1-day labels there is no
-    mechanical overlap, so this is a reasonable first-order statistic.
+    ``nw_lags``: Newey-West lag count for the t-stat's standard error.
+    With 1-day labels daily ICs have no mechanical overlap -- nw_lags=0
+    (plain i.i.d. t-stat) is fine. With an h-day label, consecutive daily
+    ICs share h-1 days of the same forward window and are positively
+    autocorrelated; treating them as independent inflates t by roughly
+    sqrt(h). Pass ``nw_lags = h - 1`` so the t-stat is honest.
     |t| >= 2 is the usual bar for "probably not noise".
     """
     ic = ic.dropna()
     n = len(ic)
     if n == 0:
         return {"n_days": 0, "ic_mean": np.nan, "ic_std": np.nan,
-                "t_stat": np.nan, "ic_ir": np.nan, "pct_positive": np.nan}
+                "t_stat": np.nan, "ic_ir": np.nan, "pct_positive": np.nan,
+                "nw_lags": nw_lags}
     mean, std = float(ic.mean()), float(ic.std(ddof=1))
-    t_stat = mean / std * np.sqrt(n) if std > 0 else np.nan
+
+    if std <= 0:
+        t_stat = np.nan
+    elif nw_lags <= 0:
+        t_stat = mean / std * np.sqrt(n)
+    else:
+        # Newey-West (Bartlett kernel) variance of the sample mean.
+        demeaned = (ic - mean).to_numpy()
+        gamma0 = float(np.mean(demeaned ** 2))
+        var_mean = gamma0
+        for lag in range(1, min(nw_lags, n - 1) + 1):
+            cov = float(np.mean(demeaned[lag:] * demeaned[:-lag]))
+            var_mean += 2.0 * (1.0 - lag / (nw_lags + 1)) * cov
+        var_mean = max(var_mean, 1e-18) / n
+        t_stat = mean / np.sqrt(var_mean)
+
     return {
         "n_days": int(n),
         "ic_mean": mean,
@@ -67,6 +87,7 @@ def summarize_ic(ic: pd.Series) -> dict:
         "t_stat": float(t_stat),
         "ic_ir": mean / std if std > 0 else np.nan,
         "pct_positive": float((ic > 0).mean()),
+        "nw_lags": nw_lags,
     }
 
 
