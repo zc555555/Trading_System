@@ -32,10 +32,17 @@ dist/
 # Data, models, runtime artefacts
 # =============================================================================
 research/data/*.parquet
+research/data/*.parquet.*
 research/data/*.csv
+research/stocks.parquet
 research/artifacts/*.onnx
 research/artifacts/*.pkl
 research/artifacts/*.json
+research/artifacts/*.parquet
+research/artifacts/deprecated/
+research/artifacts/multi_horizon/
+research/artifacts/pre_w2a_backup/
+research/backtest/results/
 catboost_info/
 **/catboost_info/
 

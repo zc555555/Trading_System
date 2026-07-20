@@ -1,149 +1,46 @@
-🗺️ 总路线图（16 周 / 4 个月）
+P0 — 立即修复:让所有结论失效的正确性 bug
+1. dpo_20 特征是未来函数(最严重)。 operators.py:770 计算 DPO 时用了 shift(-11),即把 11 个交易日之后的收盘价放进了特征:dpo_20[t] = close[t+11] − SMA20[t](正确的 DPO 应该用正向 shift 取过去的价格)。这个特征在权重最高的 momentum 因子里(factor_definitions.py:56),也在硬编码的 60 个入选特征里(update_selected_features.py:67)。这完美解释了为什么 IC 高得离谱(业界顶级日频 rank IC 约 0.02–0.08,你们报了 0.26–0.65)。修复后必须全量重建特征、重训、重新评估——预期 IC 会大幅下降,那才是真实水平。
 
-Phase A  地基         W1-3    股票池 + 数据层 + 基线
-Phase B  特征工程     W4-6    IV 因子 + GARCH + 基本面
-Phase C  模型升级     W7-9    截面排名 + 多任务 + Transformer
-Phase D  组合构建     W10-12  Mean-Variance + Long-Short + Regime
-Phase E  执行风控     W13-14  VWAP + 自适应 sizing
-Phase F  进阶 Alpha   W15-16+ 配对交易 + Signature + LLM
-每个 Phase 结束有 质量门 (Quality Gate) —— 不达标就不进下一阶段，回头优化。
+2. legacy 交易路径把 SELL 信号当 BUY 执行。 alpaca_trader.py:265 对信号列表里的每只股票一律 'buy',不看预测方向。而信号里约一半是负预测(如 5 月 18 日信号第 1 名 MU 预测 −0.758 是做空信号)。也就是说 legacy 路径会满仓买入模型最想做空的股票。另外 max_position_pct=0.15 在 alpaca_trader.py:58 定义后从未被引用——单票仓位实际上没有上限。
 
-Phase A · 地基（W1-3）
-W1 — 股票池扩张到 S&P 500
-research/config.yaml：symbols 改成 S&P 500 全员（500 支）
-流动性过滤：20 日均成交额 > $50M（去掉 ~50 支低流动性，剩 ~450）
-trading_symbols：先设 50 支
-重抓 OHLCV 数据（约 2-4 小时）
-验证 stocks.parquet 完整性
-W2 — 数据基础设施重构
-拆分 parquet：按年 + symbol 分区（year=2024/symbol=AAPL/data.parquet）
-接入 DuckDB 做本地查询层
-写 daily_ingest.py 增量更新脚本（独立于交易流程）
-数据质量检查器：缺失日检测、价格跳跃检测、成交量异常检测
-W3 — 基线重训 + 验证
-用现有 6 因子模型在 500 支上重训
-跑 walk-forward 回测，记录基线指标
-Paper trade 一周
-🚦 Phase A 质量门
-✅ 数据 500 支跑通，无缺失
-✅ 重训模型方向准确率 ≥ 52%
-✅ Paper trade Sharpe ≥ 0.8
-❌ 不达标 → 调试数据/特征再说
-Phase B · 特征工程（W4-6）
-W4 — GARCH 波动率预测 + 期权数据接入
-装 arch 包，训 EGARCH(1,1) per 股票
-加特征：garch_vol_predicted_1d / 5d / 20d
-注册 Polygon.io（$99/月 starter 档），开始拉历史期权链
-历史回填：每只股票每天的 ATM IV、25Δ Put IV、25Δ Call IV
-W5 — IV 衍生因子（7 个）
-iv_rank — 当前 IV 在过去 252 日的分位
-iv_skew_25d — 25Δ Put IV - 25Δ Call IV（恐慌指标）
-iv_term_structure — 30d IV - 90d IV
-vol_risk_premium — IV - 实现波动率
-put_call_iv_ratio — Put ATM IV / Call ATM IV
-iv_over_rv — IV_30d / RV_30d
-skew_slope — (10Δ - 50Δ) put IV
-W6 — 基本面 + 盈利预期因子
-接 Financial Modeling Prep API（免费档够用）
-加 PEAD 因子：earnings surprise × 公告后 1/5/20 日窗口
-加质量因子：Piotroski F-score（9 项财务指标）
-加分析师上调/下调因子（Finnhub estimates）
-加 52 周高点距离
-🚦 Phase B 质量门
-✅ IV 数据覆盖率 > 95%（小盘股可能缺）
-✅ 新因子平均 IC > 0.03
-✅ 重训后方向准确率提升 +2% 以上
-❌ 不达标 → 因子审查，剔除噪音特征
-Phase C · 模型升级（W7-9）
-W7 — 改造为截面排名预测
-修改 label：从 future_return 改成每日横截面 z-score 排名
-LightGBM 切换到 objective='lambdarank'
-XGBoost 切换到 objective='rank:pairwise'
-重训，对比绝对回归 vs 截面排名的 IC 和 IR
-W8 — 多任务学习（Multi-task）
-用 PyTorch 写一个共享 backbone + 3 头模型：
-Head 1: 1 日方向（分类）
-Head 2: 5 日累计 return（回归）
-Head 3: 5 日实现波动率（回归，给 sizing 用）
-联合训练，loss = α·L1 + β·L2 + γ·L3
-加入现有 stacking 集成
-W9 — Transformer for 时序
-实现 PatchTST（比 LSTM 强，比 TFT 简单）
-每只股票最近 60 日 (OHLCV + IV + 基本面) 作为输入序列
-输出未来 1/5/20 日预测
-加入 stacking 集成，让 meta-learner 决定权重
-🚦 Phase C 质量门
-✅ 截面排名版 IC > 绝对回归版 IC
-✅ Multi-task 联合训练比单任务 Sharpe 高 ≥ 0.2
-✅ Transformer 在长尾股票上方向准确率 > 55%
-✅ 集成总 Sharpe ≥ 1.2
-Phase D · 组合构建（W10-12）
-W10 — Mean-Variance 优化 + 行业中性
-用 cvxpy 实现凸优化求解器
-协方差矩阵：Ledoit-Wolf shrinkage
-约束：单票上限 5%、行业敞口 ≤ 20%、beta 中性
-替换现有"按 confidence 比例分仓"逻辑
-W11 — Long-Short Market Neutral
-多头：截面 rank 前 20%
-空头：截面 rank 后 20%（Alpaca 申请 short approval；不行就用反向 ETF）
-现金中性 + Beta 中性（用 SPY 对冲剩余 beta）
-单独跑回测，验证 2022 这种熊年是否正收益
-W12 — HMM Regime Switching
-在 SPY 日收益 + VIX 上训 3-state HMM（牛/熊/震荡）
-不同 regime 切换策略权重：
-牛市：动量因子加权
-熊市：质量 + 低波动加权
-震荡：均值回归加权
-VIX > 30 时仓位上限自动 × 0.5
-🚦 Phase D 质量门
-✅ Mean-Variance 组合年化波动率 ≤ 15%
-✅ Long-short 与 SPY 相关性 |ρ| < 0.3
-✅ HMM 切换在历史熊市段（2022Q1-Q3）超额收益 > +10%
-✅ 整体 Sharpe ≥ 1.5
-Phase E · 执行 + 风控（W13-14）
-W13 — 智能执行
-VWAP 拆单：单票 > $10K 的订单拆 5-10 笔，30 分钟均匀执行
-避开开盘前 15 分钟（9:30-9:45）
-限价单 + IOC，减少 slippage
-加入真实成本模型到回测：commission + SEC fee + 非线性 slippage
-W14 — 自适应风控
-止损按 ATR 设：stop = entry - 1.5 × ATR_14
-波动率目标：组合年化波动率瞄准 12%
-Drawdown control：回撤 5%/10%/15% → 降仓 25%/50%/100%
-相关性约束：组合内任意持仓 90 日 ρ < 0.7
-🚦 Phase E 质量门
-✅ 实盘 slippage < 回测预设 50%
-✅ 最大回撤回测 < -10%
-✅ 连续回撤天数 < 8 天
-Phase F · 进阶 Alpha（W15-16+）
-W15 — 配对交易（OU 过程）
-协整测试找 pairs（500 支两两组合，p < 0.01 的留下）
-拟合 OU 过程参数（θ, μ, σ）
-价差 z-score > 2 反向开仓，< 0.5 平仓
-单独资金池，与主策略并行运行
-W16 — Signature Method
-装 iisignature
-每只股票最近 20 日 (price, volume, IV) 路径编码成 signature 向量
-当作额外特征喂给 LightGBM
-A/B 测试是否提升
-W17+（持续）
-LLM 处理 earnings call 文本，做 sentiment / hawkishness 因子
-GNN 建模股票关系图（供应链、行业、机构持仓重叠）
-因子衰减监控 → 持续淘汰失效因子，挖新因子
-🔧 全程并行做的事
-项目	何时做	工作量
-自动化部署	W2 开始就改用 APScheduler	持续优化
-Telegram 告警	W3 就要加，越早越好	1 天
-PnL 归因仪表板	W4 升级现有 dashboard.py	持续
-Drift detection (PSI)	W7 加	半天
-每周回测报告自动化	W5 加	1 天
-📊 阶段性目标（量化）
-阶段	月份	预测准确率	Sharpe	最大回撤	备注
-现状	M0	53%	0.8	-8%	5 支股票
-Phase A 完成	M1	53%	1.0	-7%	单纯扩池效果
-Phase B 完成	M2	56%	1.3	-6%	IV/GARCH 加持
-Phase C 完成	M3	58%	1.6	-6%	模型架构升级
-Phase D 完成	M4	58%	2.0	-5%	组合优化
-Phase E 完成	M5	58%	2.2	-4%	风控收紧
-Phase F+ 长期	M6+	60%	2.5+	-4%	多 alpha 来源
-这些数字是乐观但现实的目标。Renaissance 真实数据没人知道，但学术上 Sharpe > 2 已经是顶级。
+3. 回测引擎从未使用过模型预测。 run_backtest_multi_factor.py:174-185 里 zip(models, weights) 对两个 dict 做 zip,迭代出来的是键字符串,'xgb'.predict(X) 抛异常后被裸 except: continue 吞掉,所有预测恒为 0,回测实际交易的是按索引顺序取的固定前 10 只股票。任何历史回测曲线都无意义。
+
+4. 双系统冲突:配置说 staggered,自动化跑 legacy。 config_trading.py:16 声明 STRATEGY = "staggered"(W2-B 五日错峰持仓),但所有启动器(自动交易.bat → scripts/run_trading.bat → run_auto_trading.py)仍指向 legacy 单日系统;run_staggered_trading.py 没有任何调度包装,tranche 注册表文件从未生成过(只 dry-run 过)。更危险的是 run_auto_trading.py:97-111 会无条件清掉所有持仓——如果两套系统先后运行,legacy 会摧毁 staggered 的多日仓位并让注册表失去同步。必须二选一并物理删除/禁用另一条路径。
+
+5. staggered 路径的仓位追踪不可靠。 run_staggered_trading.py:103-106 不管平仓订单是否成功都 mark_closed(失败的仓位从此无人管理);开仓订单在循环内逐笔提交但注册表在循环结束后才保存(:229 vs :323)——中途任何异常都会留下broker 有持仓、注册表无记录、没有止损的裸仓位。下单确认也只轮询 5 秒就默认成功(alpaca_trader.py:205-206)。
+
+P1 — 重建可信的评估体系("先修尺子,再量东西")
+6. 用 purged walk-forward 替代单次 80/20 切分。 现在训练用单次时间切分且无 purge/embargo(train_multi_factor_models.py:183-188),训练末尾样本的标签直接跨入验证期。讽刺的是项目里已经有一个带 purge、交易成本、Sortino/Calmar 的正经引擎 walk_forward.py——但它是死代码,从未接入多因子管线,而且 embargo_days 声明了却没实现(:247-249)。把它修好、接上,作为唯一的评估入口,embargo 至少设为最长标签周期(20 天)。
+
+7. IC 换成按日截面 rank IC。 现在的"IC"是全验证集 pooled Pearson 相关(train_multi_factor_models.py:120),混合了时序与截面信号;对 20 天重叠标签(相邻样本共享 19/20 的标签窗口),自相关会把数字吹到毫无意义。正确做法:每个交易日算一次横截面 Spearman 相关,再对日均值取平均并报 t 统计量。这一条不修,任何因子比较、周期选择、权重分配都建立在噪声上。
+
+8. 消除选择偏差,建立不可触碰的 hold-out。 W2-A 在同一个验证集上既选最优周期又把该周期的 IC 写进生产权重(promote_best_horizon_models.py:84-98),等于"考完试挑最高分再把这个分数当预期成绩"。用户看到的 63.4% 胜率同样来自模型训练/验证过的最近 500 行(get_daily_signals_multi_factor.py:57-60)——纯样本内。方案:三段式切分(训练 / 选择用验证 / 从不参与任何决策的最终测试段),或在 walk-forward 每折内做嵌套选择。
+
+9. 回测对齐真实执行。 修好 zip bug 之后还要:加成本(walk_forward.py 里现成的 5bps 佣金 + 10bps 滑点)、信号当日收盘计算→次日执行(现在是同日收盘成交的轻微前视)、仓位逻辑与生产一致(现在回测是递减的 cash 比例 + 只做多,生产是 confidence 加权 + 双向)。然后用修复后的系统在 302 股票宇宙上跑一次诚实的基线回测——这是后续所有优化的对照组。
+
+10. 数据层的次级泄漏。 顺手修:warm-up 期 bfill 引入未来值(build_dataset.py:717,改为留 NaN 并丢弃);流动性过滤用"今天的"成交额决定整段历史去留 + 宇宙用当前成分股 = 幸存者偏差(短期可先文档化为已知限制,长期做 point-in-time 宇宙);market breadth 恒等于 0 的死 bug(build_dataset.py:540-548)。
+
+P2 — 交易执行与风控加固
+11. 止损上 broker 端。 现在全部订单是裸市价单,止损/止盈完全靠 5 分钟轮询的监控进程合成——监控只在盘中跑,多日持仓的隔夜跳空完全无保护,而隔夜风险恰恰是 staggered 策略的主要风险。Alpaca 支持 bracket/OCO 订单(StopLossRequest 已经 import 了却没用,alpaca_trader.py:22-25),开仓时直接带上 ATR 止损价即可,监控进程降级为对账与告警。
+
+12. 执行细节。 统一价格源(现在 yfinance 报价定仓位、Alpaca 市价成交、平仓盈亏又用 yfinance 估算);加开市检查(代码里没有任何 get_clock,闭市下单会在次日开盘以未知价格成交);下单前检查 buying power;交易日历考虑美股假日(trading_calendar.py 目前只排除周末)。
+
+13. 风控闭环。 账户级 3% 日内 kill switch 依赖监控进程活着才生效——加一个独立的守护检查(哪怕是定时任务里的最简 5 行脚本);staggered 的注册表要与 broker 实际持仓定期对账(监控强平后注册表仍显示持仓的问题在 W2-C 文档里自己也承认了)。
+
+P3 — 工程卫生
+14. 测试从 0 到 1。 pytest 配置齐全但 tests/ 目录不存在。最优先补两类:防泄漏测试(全表扫描特征代码禁止 shift(-、标签对齐断言、"特征日期 ≤ 信号日期"的合成数据测试——dpo_20 这种 bug 一个测试就能拦住)和核心指标的 golden 值测试。其次是 tranche registry 的状态机测试。
+
+15. 清理死配置与三份真相。 config.yaml 里的模型超参(500 棵树、depth 6)是死配置——训练脚本硬编码了 100 棵树/depth 5(train_multi_factor_models.py:55-97);label.type: classification 也被忽略(实际是回归)。要么让训练读 config,要么删掉误导性配置。同类问题:每日管线存在三份不一致的实现(run_auto_trading / run_menu / 文档 cron,menu 还少跑流动性过滤这一步)、prepare_prediction_data_with_latest.py 是过时副本、菜单里多个入口指向不存在的脚本(run_menu.py:112)、多处横幅文案还写着已废弃的 ±2.5% 止损。
+
+16. 管线幂等化与 retrain 补链。 prepare_prediction_data.py 把特征原地写回 stocks.parquet(:96),重复运行会在已加工数据上再加工(目录里的 .bak 文件就是这个问题的疤痕)——改为 raw 与 features 分文件。更重要的:run_retrain_models.py 抓完新数据后不重建特征就直接重训,模型学的是上一次构建的旧特征——把 prepare_prediction_data.py 插进重训流程。
+
+17. git 与安全。 整个仓库只有 1 个提交、50 个未提交变更——先把当前状态提交了,之后小步提交。密钥文件确实没进 git(我验证过),但项目在 OneDrive 同步目录里,明文 API key 会同步上云,venv(约几 GB)也在被同步——建议项目移出 OneDrive 或至少把密钥改为环境变量。
+
+P4 — 模型与策略升级(尺子修好之后才做)
+18. 信号周期与持仓周期对齐。 现在 momentum/trend/volatility 预测 20 天、market/volume 预测 5 天、alpha 预测 1 天,z-score 后混成一个信号,却用 1–5 天的持仓 + ATR 止损去交易。要么统一预测 5 天(与 staggered 持仓期一致),要么按周期分账本各自交易。混合信号的每日 z-score 已经解决了量级问题,但语义(20 天的观点用 1 天的仓位表达)没解决。
+
+19. 因子层瘦身。 volume 因子历经 W1.6 重构后 IC 仍约 0(0.004),market 因子的特征在截面上恒同值(自家文档承认"模型无法从相同特征提取信号")——继续每周重训它们是纯浪费。砍掉或降级为 regime 条件变量(现成的 market_regime.py 完全没接线,可以让它来消化 market 信息:VIX 高位降杠杆、按牛熊切换因子权重)。
+
+20. 用起来已经抓好的另类数据。 research/data/ 里已经躺着 news_features.parquet、iv_features.parquet、option_iv.parquet、GDELT 数据——抓取脚本都写完了,但没有一个接入了模型特征。在启动 16 周计划里 Phase B 的付费 Polygon 订阅之前,先把这些免费存量数据喂给模型验证有没有增量 IC,成本为零。
+
+21. 对 16 周计划的修正建议。 原计划(GARCH → IV → 截面排名 → Transformer → 组合优化)方向都对,但它假设当前基线可信——实际不可信。建议在 Phase B 前插入一个 "Phase A′:评估体系重建"(即上面 P0+P1,约 1–2 周),否则后面每个实验的"提升"都无法与真实基线比较,16 周会白跑。另外 Phase C 的 LambdaRank 截面排名与 W7 计划一致,值得保留;Transformer(W9)建议推到有了可信评估之后再说。
