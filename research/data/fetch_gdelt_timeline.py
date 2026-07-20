@@ -41,7 +41,11 @@ START = "20170101000000"          # timeline modes cover 2017+
 DATA_DIR = Path(__file__).parent
 NAMES_CACHE = DATA_DIR / "company_names.json"
 OUTPUT = DATA_DIR / "gdelt_daily.parquet"
-SLEEP_S = 5.5   # GDELT throttles at one request per 5 seconds (HTTP 429)
+# GDELT advertises one request per 5s, but during high-traffic periods the
+# effective throttle is harsher and 429 bursts cascade. Generous spacing +
+# long backoff + a cooldown after total failure keeps throughput steady.
+SLEEP_S = 8.0
+FAIL_COOLDOWN_S = 60
 GENERIC = {"inc", "corp", "corporation", "company", "co", "ltd", "plc",
            "group", "holdings", "class", "the"}
 
@@ -94,7 +98,7 @@ def build_query(variants: list[str]) -> str:
     return phrases[0] if len(phrases) == 1 else "(" + " OR ".join(dict.fromkeys(phrases)) + ")"
 
 
-def fetch_timeline(query: str, mode: str, retries: int = 3) -> pd.Series | None:
+def fetch_timeline(query: str, mode: str, retries: int = 4) -> pd.Series | None:
     params = {"query": query, "mode": mode, "format": "json",
               "startdatetime": START,
               "enddatetime": pd.Timestamp.now().strftime("%Y%m%d%H%M%S")}
@@ -112,7 +116,7 @@ def fetch_timeline(query: str, mode: str, retries: int = 3) -> pd.Series | None:
                    for p in points}
             return pd.Series(out).sort_index()
         except Exception as e:
-            wait = 5 * (attempt + 1)
+            wait = 20 * (attempt + 1)
             print(f"    [retry {attempt + 1}] {mode}: {e} (wait {wait}s)")
             time.sleep(wait)
     return None
@@ -172,6 +176,11 @@ def main():
         print(f"  [{i}/{len(todo)}] {sym}: {status}")
         if df is not None:
             frames.append(df)
+        else:
+            # Total failure usually means we are in a throttle spiral;
+            # cool down so subsequent symbols recover.
+            print(f"    [cooldown] {FAIL_COOLDOWN_S}s after total failure")
+            time.sleep(FAIL_COOLDOWN_S)
         if i % 20 == 0 or i == len(todo):
             pd.concat(frames, ignore_index=True).to_parquet(OUTPUT, index=False)
     if frames:
