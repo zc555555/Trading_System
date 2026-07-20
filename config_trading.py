@@ -20,7 +20,11 @@ STRATEGY = "staggered"
 # ----------------------------------------------------------------------
 # Number of trading days each tranche is held before forced close.
 # 5 = weekly turnover, 20 = monthly.
-HOLD_DAYS = 5
+# 2026-07 (P2/D): switched 5 -> 20. The honest walk-forward showed the
+# 20-day-hold configuration is the only one near breakeven after costs
+# (round-trip cost amortized to ~1.5bp/day); 1-day and 5-day holds lose
+# to cost drag. See evaluation/results/simulation_report_h20.json.
+HOLD_DAYS = 20
 
 # 100 / HOLD_DAYS = pct of equity deployed per new tranche.
 # Leave None to auto-derive from HOLD_DAYS.
@@ -53,9 +57,13 @@ USE_ATR_STOPS = True
 # ATR multiples (used when USE_ATR_STOPS = True).
 #   stop_distance = STOP_ATR_MULTIPLE * ATR_14
 #   take_distance = TAKE_ATR_MULTIPLE * ATR_14
-# Defaults give a 1:2 risk:reward and survive normal 2-sigma noise.
-STOP_ATR_MULTIPLE = 2.0
-TAKE_ATR_MULTIPLE = 4.0
+# 2026-07: widened 2.0/4.0 -> 3.0/6.0 for the 20-day hold. A 20-day
+# position sees ~2x the price noise of a 5-day one; the validated
+# simulation held positions to schedule with NO stops, so stops here are
+# disaster protection, not an active exit strategy. Tight stops would
+# make live behavior diverge from the evaluated configuration.
+STOP_ATR_MULTIPLE = 3.0
+TAKE_ATR_MULTIPLE = 6.0
 
 # Fallback uniform % when ATR data is missing (e.g. brand-new ticker).
 # Also the legacy values used when USE_ATR_STOPS = False.

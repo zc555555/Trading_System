@@ -25,6 +25,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -33,7 +34,12 @@ from factors.factor_definitions import FACTOR_GROUPS, FACTOR_WEIGHTS, verify_fea
 from factors.factor_weighting import compute_ic_proportional
 from evaluation.factor_training import train_factor_ensembles, refit_on_full_data
 
-HORIZON = 1
+# 2026-07 (D): production trains at the 20-day horizon to match the live
+# 20-day staggered hold -- the only configuration the honest walk-forward
+# found near breakeven after costs. The stored parquet label is 1-day, so
+# the 20d target is computed on the fly below (same formula as the
+# walk-forward evaluation).
+HORIZON = 20
 EMBARGO_DAYS = 5
 
 
@@ -48,8 +54,13 @@ def main():
 
     print("\n[Step 1/4] Loading training data...")
     df = pd.read_parquet(data_dir / "stocks_with_time_windows.parquet")
-    df_train = df[df['label'].notna()].copy()
-    print(f"  {df_train.shape[0]:,} labeled rows, "
+
+    target_col = f'future_return_{HORIZON}d'
+    df = df.sort_values(['symbol', 'date'])
+    df[target_col] = df.groupby('symbol')['close'].transform(
+        lambda x: np.log(x.shift(-HORIZON) / x))
+    df_train = df[df[target_col].notna()].copy()
+    print(f"  {df_train.shape[0]:,} rows with {HORIZON}d labels, "
           f"{df_train['date'].min().date()} .. {df_train['date'].max().date()}, "
           f"{df_train['symbol'].nunique()} symbols")
 
@@ -64,10 +75,11 @@ def main():
     print(f"\n[Step 3/4] Training with purged inner validation "
           f"(horizon={HORIZON}, embargo={EMBARGO_DAYS})...")
     fold = train_factor_ensembles(
-        df_train, horizon=HORIZON, embargo_days=EMBARGO_DAYS)
+        df_train, horizon=HORIZON, embargo_days=EMBARGO_DAYS,
+        target_col=target_col)
 
     print("\n[Step 4/4] Refitting base models on all labeled data...")
-    fold = refit_on_full_data(fold, df_train)
+    fold = refit_on_full_data(fold, df_train, target_col=target_col)
 
     # ---- persist ensembles (schema-compatible with all consumers) -------
     print("\n" + "=" * 80)

@@ -19,10 +19,15 @@ import pandas as pd
 
 try:
     from alpaca.trading.client import TradingClient
-    from alpaca.trading.requests import MarketOrderRequest, StopLossRequest, LimitOrderRequest
-    from alpaca.trading.enums import OrderSide, TimeInForce, OrderType
+    from alpaca.trading.requests import (
+        MarketOrderRequest,
+        StopLossRequest,
+        TakeProfitRequest,
+        GetOrdersRequest,
+    )
+    from alpaca.trading.enums import OrderSide, TimeInForce, OrderClass, QueryOrderStatus
     from alpaca.data.historical import StockHistoricalDataClient
-    from alpaca.data.requests import StockLatestQuoteRequest
+    from alpaca.data.requests import StockLatestTradeRequest
 except ImportError:
     print("[ERROR] Alpaca API not installed!")
     print("Run: pip install alpaca-py")
@@ -75,7 +80,8 @@ class AlpacaAutoTrader:
                 'buying_power': float(account.buying_power),
                 'equity': float(account.equity),
                 'initial_equity': float(account.last_equity),
-                'day_trade_count': int(account.daytrade_count)
+                # daytrade_count can come back None on paper accounts
+                'day_trade_count': int(account.daytrade_count or 0)
             }
         except Exception as e:
             print(f"[ERROR] Failed to get account info: {e}")
@@ -147,28 +153,103 @@ class AlpacaAutoTrader:
         return signals
 
     def get_current_price(self, symbol: str) -> float:
-        """Get current price for a symbol using Yahoo Finance (more reliable)"""
+        """Current price from Alpaca's latest trade (same venue we execute
+        on), falling back to Yahoo Finance if the data API fails.
+
+        P2 (2026-07): previously yfinance-only, which meant sizing and P&L
+        used a different price source than execution.
+        """
+        try:
+            trade = self.data_client.get_stock_latest_trade(
+                StockLatestTradeRequest(symbol_or_symbols=symbol))
+            price = float(trade[symbol].price)
+            if price > 0:
+                return price
+        except Exception as e:
+            print(f"[WARNING] Alpaca price failed for {symbol} ({e}), trying yfinance")
+
         try:
             import yfinance as yf
-            ticker = yf.Ticker(symbol)
-
-            # Get the most recent close price
-            hist = ticker.history(period='1d')
+            hist = yf.Ticker(symbol).history(period='1d')
             if hist.empty:
                 print(f"[WARNING] No price data for {symbol}")
                 return None
-
             price = float(hist['Close'].iloc[-1])
-
-            # Check for invalid price (0 or negative)
             if price <= 0:
                 print(f"[WARNING] Invalid price for {symbol}: {price}")
                 return None
-
             return price
         except Exception as e:
             print(f"[WARNING] Failed to get price for {symbol}: {e}")
             return None
+
+    def cancel_open_orders(self, symbol: str) -> int:
+        """Cancel all open orders for a symbol (e.g. resting bracket legs).
+
+        Must be called before closing a position whose quantity is tied up
+        in bracket child orders -- Alpaca rejects the close otherwise.
+        """
+        try:
+            open_orders = self.trading_client.get_orders(
+                GetOrdersRequest(status=QueryOrderStatus.OPEN,
+                                 symbols=[symbol]))
+        except Exception as e:
+            print(f"[WARNING] Could not list open orders for {symbol}: {e}")
+            return 0
+        n = 0
+        for order in open_orders:
+            try:
+                self.trading_client.cancel_order_by_id(order.id)
+                n += 1
+            except Exception as e:
+                print(f"[WARNING] Cancel failed for {symbol} order {order.id}: {e}")
+        if n:
+            print(f"[OK] Canceled {n} open order(s) for {symbol}")
+        return n
+
+    def place_bracket_order(self, symbol: str, qty: int, side: str,
+                            stop_price: float, take_price: float) -> bool:
+        """Market entry with broker-side GTC stop-loss and take-profit legs.
+
+        P2 (2026-07): stops previously existed only in the 5-minute monitor
+        poller, leaving multi-day positions unprotected overnight. Bracket
+        legs live at the broker and survive process crashes and weekends.
+        """
+        try:
+            order_side = OrderSide.BUY if side.lower() == 'buy' else OrderSide.SELL
+
+            request = MarketOrderRequest(
+                symbol=symbol,
+                qty=qty,
+                side=order_side,
+                time_in_force=TimeInForce.GTC,
+                order_class=OrderClass.BRACKET,
+                stop_loss=StopLossRequest(stop_price=round(stop_price, 2)),
+                take_profit=TakeProfitRequest(limit_price=round(take_price, 2)),
+            )
+            order = self.trading_client.submit_order(request)
+
+            order_id = getattr(order, 'id', None)
+            if order_id is None:
+                print(f"[ERROR] Bracket order for {symbol}: no order id returned")
+                return False
+
+            bad_statuses = {'rejected', 'canceled', 'expired', 'suspended'}
+            for _ in range(5):
+                refreshed = self.trading_client.get_order_by_id(order_id)
+                status = str(getattr(refreshed, 'status', '')).lower().split('.')[-1]
+                if status in bad_statuses:
+                    reason = getattr(refreshed, 'reject_reason', None) or status
+                    print(f"[ERROR] Bracket {symbol} {status}: {reason}")
+                    return False
+                if status in ('accepted', 'new', 'partially_filled', 'filled',
+                              'pending_new', 'held'):
+                    return True
+                time.sleep(1)
+            return True
+        except Exception as e:
+            print(f"[ERROR] Bracket order failed for {symbol}: {e}")
+            return False
 
     def place_market_order(self, symbol: str, qty: int, side: str = 'buy') -> bool:
         """Place a market order and confirm it was accepted (not rejected/canceled)."""

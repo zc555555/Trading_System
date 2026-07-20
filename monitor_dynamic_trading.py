@@ -16,6 +16,8 @@ EOD_FLATTEN=False，持仓跨日保留至 tranche scheduled_close_date。
 """
 
 from alpaca.trading.client import TradingClient
+from alpaca.trading.requests import GetOrdersRequest
+from alpaca.trading.enums import QueryOrderStatus
 from config_alpaca import ALPACA_API_KEY, ALPACA_SECRET_KEY
 from datetime import datetime, time
 from pathlib import Path
@@ -121,6 +123,44 @@ class DynamicTradingMonitor:
                     # tightest take = max for short (lock profit sooner)
                     cur["take_price"] = max(cur["take_price"], p.take_price)
         return idx
+
+    def _cancel_open_orders(self, symbol: str) -> int:
+        """撤销该股票的挂单(bracket 止损/止盈子单会占用持仓数量,
+        不先撤单 close_position 会被拒)。"""
+        try:
+            open_orders = self.client.get_orders(
+                GetOrdersRequest(status=QueryOrderStatus.OPEN, symbols=[symbol]))
+        except Exception as e:
+            print(f"  [WARN] 无法列出 {symbol} 挂单: {e}")
+            return 0
+        n = 0
+        for order in open_orders:
+            try:
+                self.client.cancel_order_by_id(order.id)
+                n += 1
+            except Exception as e:
+                print(f"  [WARN] 撤单失败 {symbol} {order.id}: {e}")
+        return n
+
+    def _sync_registry_close(self, symbol: str, qty: float, reason: str):
+        """监控强平后同步 tranche 注册表, 否则次日 orchestrator 会重复平仓。"""
+        try:
+            from trading.tranche_registry import TrancheRegistry
+            import config_trading as _tcfg
+            reg_path = Path(__file__).parent / _tcfg.TRANCHE_REGISTRY_PATH
+            if not reg_path.exists():
+                return
+            reg = TrancheRegistry(reg_path)
+            side = "long" if qty > 0 else "short"
+            removed = 0
+            for t in reg.open_tranches():
+                while reg.remove_position(t.id, symbol, side, reason=reason):
+                    removed += 1
+            if removed:
+                reg.save()
+                print(f"  [registry] {symbol} {side}: 移除 {removed} 个 tranche 腿 ({reason})")
+        except Exception as e:
+            print(f"  [WARN] 注册表同步失败 {symbol}: {e}")
 
     def check_and_execute(self):
         """检查持仓并执行动态交易策略"""
@@ -273,7 +313,10 @@ class DynamicTradingMonitor:
                 print(f"平仓 {symbol} - {reason}")
 
                 try:
+                    self._cancel_open_orders(symbol)
                     self.client.close_position(symbol)
+                    self._sync_registry_close(symbol, item['qty'],
+                                              reason=action.lower())
                     print(f"  ✓ 已平仓")
                     print(f"    入场价: ${item['entry_price']:.2f}")
                     print(f"    平仓价: ${item['current_price']:.2f}")
@@ -324,7 +367,10 @@ class DynamicTradingMonitor:
         for pos in positions:
             symbol = pos.symbol
             try:
+                self._cancel_open_orders(symbol)
                 self.client.close_position(symbol)
+                self._sync_registry_close(symbol, float(pos.qty),
+                                          reason=reason_code.lower())
                 print(f"✓ {symbol} 已平仓 (盈亏: {float(pos.unrealized_plpc)*100:+.2f}%)")
 
                 executed.append({

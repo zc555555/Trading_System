@@ -128,7 +128,48 @@ def _close_position(trader: AlpacaAutoTrader, symbol: str, qty: int, side: str,
     if dry_run:
         print(f"  [DRY-RUN] would close: {side.upper()} {qty} {symbol}")
         return True
+    # Resting bracket legs (stop/take) hold the position's qty; cancel them
+    # first or the closing market order is rejected.
+    trader.cancel_open_orders(symbol)
     return trader.place_market_order(symbol, qty, side)
+
+
+def reconcile_registry_with_broker(trader: AlpacaAutoTrader,
+                                   registry: TrancheRegistry,
+                                   dry_run: bool) -> int:
+    """Drop registry legs the broker no longer holds.
+
+    A broker-side bracket leg may have fired overnight (stop or take), or a
+    position may have been closed manually / by the monitor. The registry
+    must converge to broker truth, otherwise the close leg retries dead
+    positions forever. Compares per (symbol, side) share totals and removes
+    surplus registry legs oldest-tranche-first.
+    """
+    positions = {p['symbol']: p for p in trader.get_positions()}
+    removed = 0
+    for tranche in registry.open_tranches():
+        for pos in list(tranche.longs) + list(tranche.shorts):
+            broker = positions.get(pos.symbol)
+            broker_qty = float(broker['qty']) if broker else 0.0
+            held = broker_qty if pos.side == "long" else -broker_qty
+            # Sum of registry qty for this symbol+side across open tranches
+            reg_qty = sum(
+                p.qty for t in registry.open_tranches()
+                for p in (t.longs if pos.side == "long" else t.shorts)
+                if p.symbol == pos.symbol)
+            if held >= reg_qty:
+                continue
+            print(f"  [reconcile] {pos.symbol} {pos.side}: registry={reg_qty} "
+                  f"broker={held:.0f} -- removing {tranche.id} leg "
+                  f"(bracket fired or external close)")
+            if not dry_run:
+                registry.remove_position(tranche.id, pos.symbol, pos.side,
+                                         reason="reconciled_missing_at_broker")
+                registry.save()
+            removed += 1
+    if not removed:
+        print("  [reconcile] registry matches broker")
+    return removed
 
 
 # ---------------------------------------------------------------------------
@@ -225,6 +266,15 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
             print(f"  [SKIP] {symbol}: qty<1 (alloc=${alloc:.2f} / price=${cur_price:.2f})")
             continue
 
+        # P2: never submit more notional than the account can carry.
+        if not dry_run:
+            fresh = trader.get_account_info()
+            buying_power = float(fresh["buying_power"]) if fresh else 0.0
+            if qty * cur_price > buying_power:
+                print(f"  [SKIP] {symbol}: insufficient buying power "
+                      f"(need ${qty * cur_price:,.0f}, have ${buying_power:,.0f})")
+                continue
+
         client_id = f"open_{tranche_id}_{symbol}"
         order_side = "buy" if side == "long" else "sell"
 
@@ -242,14 +292,18 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
                   f"take=${risk.take_price:>7.2f}({risk.take_pct*100:.1f}%) "
                   f"[{risk.basis}]")
         else:
-            ok = trader.place_market_order(symbol, qty, order_side)
+            # P2: bracket order -- stop & take live at the BROKER (GTC), so
+            # multi-day positions stay protected overnight and across crashes.
+            ok = trader.place_bracket_order(symbol, qty, order_side,
+                                            stop_price=risk.stop_price,
+                                            take_price=risk.take_price)
             if ok:
                 print(f"  [OK]      {order_side.upper():<4} {side:<5} "
                       f"{symbol:<6} qty={qty:>4} @ ${cur_price:>7.2f} "
                       f"= ${qty*cur_price:>9,.2f}  "
                       f"stop=${risk.stop_price:>7.2f}({risk.stop_pct*100:.1f}%) "
                       f"take=${risk.take_price:>7.2f}({risk.take_pct*100:.1f}%) "
-                      f"[{risk.basis}]")
+                      f"[{risk.basis}, bracket@broker]")
             else:
                 print(f"  [FAIL]    {order_side.upper():<4} {side:<5} {symbol}")
                 continue
@@ -328,6 +382,11 @@ def main():
 
     summary_pre = registry.summary()
     print(f"\nRegistry pre: {summary_pre}")
+
+    # P2: converge registry to broker truth before acting (bracket legs may
+    # have fired overnight; the monitor may have force-closed something).
+    print("\n[reconcile] checking registry vs broker positions...")
+    reconcile_registry_with_broker(trader, registry, dry_run=args.dry_run)
 
     n_closed = 0
     if not args.open_only:
