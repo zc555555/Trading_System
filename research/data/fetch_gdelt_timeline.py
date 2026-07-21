@@ -41,11 +41,11 @@ START = "20170101000000"          # timeline modes cover 2017+
 DATA_DIR = Path(__file__).parent
 NAMES_CACHE = DATA_DIR / "company_names.json"
 OUTPUT = DATA_DIR / "gdelt_daily.parquet"
-# GDELT advertises one request per 5s, but during high-traffic periods the
-# effective throttle is harsher and 429 bursts cascade. Generous spacing +
-# long backoff + a cooldown after total failure keeps throughput steady.
-SLEEP_S = 8.0
-FAIL_COOLDOWN_S = 60
+# GDELT advertises one request per 5s, but the effective per-IP throttle is
+# much harsher and retry bursts get the IP temporarily blocked (429 + empty
+# responses). Very slow steady pacing beats fast pacing with retries.
+SLEEP_S = 20.0
+FAIL_COOLDOWN_S = 120
 GENERIC = {"inc", "corp", "corporation", "company", "co", "ltd", "plc",
            "group", "holdings", "class", "the"}
 
@@ -98,7 +98,7 @@ def build_query(variants: list[str]) -> str:
     return phrases[0] if len(phrases) == 1 else "(" + " OR ".join(dict.fromkeys(phrases)) + ")"
 
 
-def fetch_timeline(query: str, mode: str, retries: int = 4) -> pd.Series | None:
+def fetch_timeline(query: str, mode: str, retries: int = 2) -> pd.Series | None:
     params = {"query": query, "mode": mode, "format": "json",
               "startdatetime": START,
               "enddatetime": pd.Timestamp.now().strftime("%Y%m%d%H%M%S")}
