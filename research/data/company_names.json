@@ -1,0 +1,1056 @@
+{
+ "AAPL": [
+  "Apple Inc",
+  "Apple Computer",
+  "Apple Corp",
+  "Apple Inc."
+ ],
+ "MSFT": [
+  "Microsoft Corp",
+  "Microsoft Corporation"
+ ],
+ "NVDA": [
+  "NVIDIA Corp",
+  "Nvidia Corporation",
+  "NVIDIA Corporation"
+ ],
+ "GOOGL": [
+  "Google",
+  "Alphabet Inc",
+  "Alphabet Corp",
+  "Alphabet Inc."
+ ],
+ "GOOG": [
+  "Alphabet Inc."
+ ],
+ "AMZN": [
+  "Amazon.com",
+  "Amazon Inc",
+  "Amazon Corp",
+  "Amazon.com, Inc."
+ ],
+ "META": [
+  "Meta Platforms",
+  "Facebook Inc",
+  "Facebook",
+  "Meta Platforms, Inc."
+ ],
+ "TSLA": [
+  "Tesla Inc",
+  "Tesla Motors",
+  "Tesla, Inc."
+ ],
+ "AVGO": [
+  "Broadcom Inc."
+ ],
+ "ORCL": [
+  "Oracle Corporation"
+ ],
+ "CRM": [
+  "Salesforce, Inc."
+ ],
+ "ADBE": [
+  "Adobe Inc."
+ ],
+ "CSCO": [
+  "Cisco Systems, Inc."
+ ],
+ "INTC": [
+  "Intel Corporation"
+ ],
+ "AMD": [
+  "Advanced Micro Devices, Inc."
+ ],
+ "IBM": [
+  "International Business Machines Corporation",
+  "International Business Machines"
+ ],
+ "NFLX": [
+  "Netflix, Inc."
+ ],
+ "TXN": [
+  "Texas Instruments Incorporated"
+ ],
+ "AMAT": [
+  "Applied Materials, Inc."
+ ],
+ "INTU": [
+  "Intuit Inc."
+ ],
+ "NOW": [
+  "ServiceNow, Inc."
+ ],
+ "QCOM": [
+  "QUALCOMM Incorporated"
+ ],
+ "MU": [
+  "Micron Technology, Inc."
+ ],
+ "VZ": [
+  "Verizon Communications Inc."
+ ],
+ "T": [
+  "AT&T Inc."
+ ],
+ "CMCSA": [
+  "Comcast Corporation"
+ ],
+ "DIS": [
+  "The Walt Disney Company",
+  "Walt Disney Company (The)"
+ ],
+ "TMUS": [
+  "T-Mobile US, Inc."
+ ],
+ "LLY": [
+  "Eli Lilly",
+  "Eli Lilly and Company"
+ ],
+ "UNH": [
+  "UnitedHealth Group",
+  "United Health",
+  "UnitedHealth Group Incorporated"
+ ],
+ "JNJ": [
+  "Johnson & Johnson",
+  "J&J"
+ ],
+ "ABBV": [
+  "AbbVie Inc",
+  "AbbVie Inc."
+ ],
+ "MRK": [
+  "Merck & Co",
+  "Merck & Co., Inc.",
+  "Merck & Company, Inc."
+ ],
+ "TMO": [
+  "Thermo Fisher Scientific Inc.",
+  "Thermo Fisher Scientific Inc"
+ ],
+ "ABT": [
+  "Abbott Laboratories"
+ ],
+ "AMGN": [
+  "Amgen Inc."
+ ],
+ "DHR": [
+  "Danaher Corporation"
+ ],
+ "PFE": [
+  "Pfizer Inc.",
+  "Pfizer, Inc."
+ ],
+ "BMY": [
+  "Bristol-Myers Squibb Company"
+ ],
+ "GILD": [
+  "Gilead Sciences, Inc."
+ ],
+ "SYK": [
+  "Stryker Corporation"
+ ],
+ "ISRG": [
+  "Intuitive Surgical, Inc."
+ ],
+ "ELV": [
+  "Elevance Health, Inc."
+ ],
+ "REGN": [
+  "Regeneron Pharmaceuticals, Inc."
+ ],
+ "ZTS": [
+  "Zoetis Inc."
+ ],
+ "BDX": [
+  "Becton, Dickinson and Company"
+ ],
+ "BSX": [
+  "Boston Scientific Corporation"
+ ],
+ "CI": [
+  "The Cigna Group"
+ ],
+ "VRTX": [
+  "Vertex Pharmaceuticals Incorporated",
+  "Vertex Pharmaceuticals Incorpor"
+ ],
+ "MDT": [
+  "Medtronic plc",
+  "Medtronic plc."
+ ],
+ "JPM": [
+  "JPMorgan Chase",
+  "JP Morgan",
+  "JPMorgan Chase & Co.",
+  "JP Morgan Chase & Co."
+ ],
+ "V": [
+  "Visa Inc",
+  "Visa",
+  "Visa Inc."
+ ],
+ "MA": [
+  "Mastercard",
+  "Mastercard Incorporated"
+ ],
+ "BAC": [
+  "Bank of America Corporation"
+ ],
+ "GS": [
+  "The Goldman Sachs Group, Inc.",
+  "Goldman Sachs Group, Inc. (The)"
+ ],
+ "BLK": [
+  "BlackRock, Inc."
+ ],
+ "MS": [
+  "Morgan Stanley"
+ ],
+ "AXP": [
+  "American Express Company"
+ ],
+ "WFC": [
+  "Wells Fargo & Company"
+ ],
+ "C": [
+  "Citigroup Inc.",
+  "Citigroup, Inc."
+ ],
+ "SCHW": [
+  "The Charles Schwab Corporation",
+  "Charles Schwab Corporation (The"
+ ],
+ "CB": [
+  "Chubb Limited"
+ ],
+ "MMC": [
+  "MMC"
+ ],
+ "USB": [
+  "U.S. Bancorp"
+ ],
+ "COF": [
+  "Capital One Financial Corporation",
+  "Capital One Financial Corporati"
+ ],
+ "PNC": [
+  "The PNC Financial Services Group, Inc.",
+  "PNC Financial Services Group, I"
+ ],
+ "ICE": [
+  "Intercontinental Exchange, Inc.",
+  "Intercontinental Exchange Inc."
+ ],
+ "SPGI": [
+  "S&P Global Inc."
+ ],
+ "CME": [
+  "CME Group Inc."
+ ],
+ "BX": [
+  "Blackstone Inc."
+ ],
+ "AON": [
+  "Aon plc"
+ ],
+ "HD": [
+  "Home Depot",
+  "The Home Depot, Inc.",
+  "Home Depot, Inc. (The)"
+ ],
+ "MCD": [
+  "McDonald's Corporation"
+ ],
+ "NKE": [
+  "NIKE, Inc.",
+  "Nike, Inc."
+ ],
+ "LOW": [
+  "Lowe's Companies, Inc."
+ ],
+ "SBUX": [
+  "Starbucks Corporation"
+ ],
+ "TJX": [
+  "The TJX Companies, Inc.",
+  "TJX Companies, Inc. (The)"
+ ],
+ "BKNG": [
+  "Booking Holdings Inc.",
+  "Booking Holdings Inc. Common St"
+ ],
+ "WMT": [
+  "Walmart",
+  "Wal-Mart",
+  "Walmart Inc."
+ ],
+ "PG": [
+  "Procter & Gamble",
+  "P&G",
+  "The Procter & Gamble Company",
+  "Procter & Gamble Company (The)"
+ ],
+ "COST": [
+  "Costco",
+  "Costco Wholesale Corporation"
+ ],
+ "KO": [
+  "Coca-Cola",
+  "Coca Cola",
+  "The Coca-Cola Company",
+  "Coca-Cola Company (The)"
+ ],
+ "PEP": [
+  "PepsiCo",
+  "PepsiCo, Inc.",
+  "Pepsico, Inc."
+ ],
+ "PM": [
+  "Philip Morris International Inc.",
+  "Philip Morris International Inc"
+ ],
+ "MO": [
+  "Altria Group, Inc."
+ ],
+ "MDLZ": [
+  "Mondelez International, Inc."
+ ],
+ "CL": [
+  "Colgate-Palmolive Company"
+ ],
+ "TGT": [
+  "Target Corporation"
+ ],
+ "CAT": [
+  "Caterpillar Inc.",
+  "Caterpillar, Inc."
+ ],
+ "GE": [
+  "GE Aerospace"
+ ],
+ "RTX": [
+  "RTX Corporation"
+ ],
+ "HON": [
+  "Honeywell International Inc."
+ ],
+ "DE": [
+  "Deere & Company"
+ ],
+ "LMT": [
+  "Lockheed Martin Corporation"
+ ],
+ "BA": [
+  "The Boeing Company",
+  "Boeing Company (The)"
+ ],
+ "UPS": [
+  "United Parcel Service, Inc."
+ ],
+ "UNP": [
+  "Union Pacific Corporation"
+ ],
+ "ETN": [
+  "Eaton Corporation plc",
+  "Eaton Corporation, PLC"
+ ],
+ "ADP": [
+  "Automatic Data Processing, Inc."
+ ],
+ "MMM": [
+  "3M Company"
+ ],
+ "XOM": [
+  "Exxon Mobil",
+  "ExxonMobil",
+  "ExxonMobil Holdings Corporation"
+ ],
+ "CVX": [
+  "Chevron Corp",
+  "Chevron Corporation"
+ ],
+ "COP": [
+  "ConocoPhillips"
+ ],
+ "EOG": [
+  "EOG Resources, Inc."
+ ],
+ "SLB": [
+  "SLB N.V.",
+  "SLB Limited"
+ ],
+ "NEE": [
+  "NextEra Energy, Inc."
+ ],
+ "DUK": [
+  "Duke Energy Corporation",
+  "Duke Energy Corporation (Holdin"
+ ],
+ "SO": [
+  "The Southern Company",
+  "Southern Company (The)"
+ ],
+ "LIN": [
+  "Linde plc"
+ ],
+ "SHW": [
+  "The Sherwin-Williams Company",
+  "Sherwin-Williams Company (The)"
+ ],
+ "APD": [
+  "Air Products and Chemicals, Inc.",
+  "Air Products and Chemicals, Inc"
+ ],
+ "PLD": [
+  "Prologis, Inc."
+ ],
+ "PANW": [
+  "Palo Alto Networks, Inc."
+ ],
+ "SNPS": [
+  "Synopsys, Inc."
+ ],
+ "CDNS": [
+  "Cadence Design Systems, Inc."
+ ],
+ "FTNT": [
+  "Fortinet, Inc."
+ ],
+ "ADSK": [
+  "Autodesk, Inc."
+ ],
+ "WDAY": [
+  "Workday, Inc."
+ ],
+ "ANET": [
+  "Arista Networks, Inc."
+ ],
+ "DELL": [
+  "Dell Technologies Inc."
+ ],
+ "HPQ": [
+  "HP Inc."
+ ],
+ "HPE": [
+  "Hewlett Packard Enterprise Company",
+  "Hewlett Packard Enterprise Comp"
+ ],
+ "MSI": [
+  "Motorola Solutions, Inc."
+ ],
+ "ROP": [
+  "Roper Technologies, Inc."
+ ],
+ "GEN": [
+  "Gen Digital Inc."
+ ],
+ "ZBRA": [
+  "Zebra Technologies Corporation"
+ ],
+ "NET": [
+  "Cloudflare, Inc."
+ ],
+ "DDOG": [
+  "Datadog, Inc."
+ ],
+ "CRWD": [
+  "CrowdStrike Holdings, Inc."
+ ],
+ "MDB": [
+  "MongoDB, Inc."
+ ],
+ "SNOW": [
+  "Snowflake Inc."
+ ],
+ "TEAM": [
+  "Atlassian Corporation"
+ ],
+ "OKTA": [
+  "Okta, Inc."
+ ],
+ "ZS": [
+  "Zscaler, Inc."
+ ],
+ "MRVL": [
+  "Marvell Technology, Inc."
+ ],
+ "ON": [
+  "ON Semiconductor Corporation"
+ ],
+ "MPWR": [
+  "Monolithic Power Systems, Inc."
+ ],
+ "LRCX": [
+  "Lam Research Corporation"
+ ],
+ "KLAC": [
+  "KLA Corporation"
+ ],
+ "ASML": [
+  "ASML Holding N.V.",
+  "ASML Holding N.V. - New York Re"
+ ],
+ "ARM": [
+  "Arm Holdings plc"
+ ],
+ "MCK": [
+  "McKesson Corporation"
+ ],
+ "CVS": [
+  "CVS Health Corporation"
+ ],
+ "HCA": [
+  "HCA Healthcare, Inc."
+ ],
+ "HUM": [
+  "Humana Inc."
+ ],
+ "CNC": [
+  "Centene Corporation"
+ ],
+ "DXCM": [
+  "DexCom, Inc."
+ ],
+ "EW": [
+  "Edwards Lifesciences Corporation",
+  "Edwards Lifesciences Corporatio"
+ ],
+ "IDXX": [
+  "IDEXX Laboratories, Inc."
+ ],
+ "WST": [
+  "West Pharmaceutical Services, Inc.",
+  "West Pharmaceutical Services, I"
+ ],
+ "RMD": [
+  "ResMed Inc."
+ ],
+ "ALGN": [
+  "Align Technology, Inc."
+ ],
+ "MTD": [
+  "Mettler-Toledo International Inc.",
+  "Mettler-Toledo International, I"
+ ],
+ "IQV": [
+  "IQVIA Holdings Inc.",
+  "IQVIA Holdings, Inc."
+ ],
+ "WAT": [
+  "Waters Corporation"
+ ],
+ "ZBH": [
+  "Zimmer Biomet Holdings, Inc."
+ ],
+ "BAX": [
+  "Baxter International Inc."
+ ],
+ "BIIB": [
+  "Biogen Inc."
+ ],
+ "GEHC": [
+  "GE HealthCare Technologies Inc."
+ ],
+ "PYPL": [
+  "PayPal Holdings, Inc."
+ ],
+ "FI": [
+  "FI"
+ ],
+ "FIS": [
+  "Fidelity National Information Services, Inc.",
+  "Fidelity National Information S"
+ ],
+ "AIG": [
+  "American International Group, Inc.",
+  "American International Group, I"
+ ],
+ "PRU": [
+  "Prudential Financial, Inc."
+ ],
+ "MET": [
+  "MetLife, Inc."
+ ],
+ "ALL": [
+  "The Allstate Corporation",
+  "Allstate Corporation (The)"
+ ],
+ "TRV": [
+  "The Travelers Companies, Inc."
+ ],
+ "AFL": [
+  "Aflac Incorporated",
+  "AFLAC Incorporated"
+ ],
+ "AMP": [
+  "Ameriprise Financial, Inc."
+ ],
+ "DFS": [
+  "DFS"
+ ],
+ "STT": [
+  "State Street Corporation"
+ ],
+ "BK": [
+  "Bank of New York Mellon Corp",
+  "The Bank of New York Mellon Cor"
+ ],
+ "NTRS": [
+  "Northern Trust Corporation"
+ ],
+ "MTB": [
+  "M&T Bank Corporation"
+ ],
+ "FITB": [
+  "Fifth Third Bancorp"
+ ],
+ "RF": [
+  "Regions Financial Corporation"
+ ],
+ "HBAN": [
+  "Huntington Bancshares Incorporated",
+  "Huntington Bancshares Incorpora"
+ ],
+ "KEY": [
+  "KeyCorp"
+ ],
+ "WTW": [
+  "Willis Towers Watson Public Limited Company",
+  "Willis Towers Watson Public Lim"
+ ],
+ "MCO": [
+  "Moody's Corporation"
+ ],
+ "MSCI": [
+  "MSCI Inc."
+ ],
+ "NDAQ": [
+  "Nasdaq, Inc."
+ ],
+ "MAR": [
+  "Marriott International, Inc.",
+  "Marriott International"
+ ],
+ "HLT": [
+  "Hilton Worldwide Holdings Inc."
+ ],
+ "ABNB": [
+  "Airbnb, Inc."
+ ],
+ "DRI": [
+  "Darden Restaurants, Inc."
+ ],
+ "CMG": [
+  "Chipotle Mexican Grill, Inc."
+ ],
+ "YUM": [
+  "Yum! Brands, Inc."
+ ],
+ "ORLY": [
+  "O'Reilly Automotive, Inc."
+ ],
+ "AZO": [
+  "AutoZone, Inc."
+ ],
+ "ROST": [
+  "Ross Stores, Inc."
+ ],
+ "DG": [
+  "Dollar General Corporation"
+ ],
+ "DLTR": [
+  "Dollar Tree, Inc."
+ ],
+ "BBY": [
+  "Best Buy Co., Inc."
+ ],
+ "F": [
+  "Ford Motor Company"
+ ],
+ "GM": [
+  "General Motors Company"
+ ],
+ "LVS": [
+  "Las Vegas Sands Corp."
+ ],
+ "MGM": [
+  "MGM Resorts International"
+ ],
+ "KMB": [
+  "Kimberly-Clark Corporation"
+ ],
+ "GIS": [
+  "General Mills, Inc."
+ ],
+ "K": [
+  "K"
+ ],
+ "HSY": [
+  "The Hershey Company"
+ ],
+ "STZ": [
+  "Constellation Brands, Inc."
+ ],
+ "MNST": [
+  "Monster Beverage Corporation"
+ ],
+ "KDP": [
+  "Keurig Dr Pepper Inc."
+ ],
+ "KHC": [
+  "The Kraft Heinz Company"
+ ],
+ "CHD": [
+  "Church & Dwight Co., Inc.",
+  "Church & Dwight Company, Inc."
+ ],
+ "MKC": [
+  "McCormick & Company, Incorporated",
+  "McCormick & Company, Incorporat"
+ ],
+ "CLX": [
+  "The Clorox Company",
+  "Clorox Company (The)"
+ ],
+ "EMR": [
+  "Emerson Electric Co.",
+  "Emerson Electric Company"
+ ],
+ "ITW": [
+  "Illinois Tool Works Inc."
+ ],
+ "PH": [
+  "Parker-Hannifin Corporation"
+ ],
+ "ROK": [
+  "Rockwell Automation, Inc."
+ ],
+ "GD": [
+  "General Dynamics Corporation"
+ ],
+ "NOC": [
+  "Northrop Grumman Corporation"
+ ],
+ "TDG": [
+  "TransDigm Group Incorporated",
+  "Transdigm Group Incorporated"
+ ],
+ "HEI": [
+  "HEICO Corporation",
+  "Heico Corporation"
+ ],
+ "FDX": [
+  "FedEx Corporation"
+ ],
+ "WM": [
+  "Waste Management, Inc."
+ ],
+ "RSG": [
+  "Republic Services, Inc."
+ ],
+ "CSX": [
+  "CSX Corporation"
+ ],
+ "NSC": [
+  "Norfolk Southern Corporation"
+ ],
+ "ODFL": [
+  "Old Dominion Freight Line, Inc."
+ ],
+ "JBHT": [
+  "J.B. Hunt Transport Services, Inc.",
+  "J.B. Hunt Transport Services, I"
+ ],
+ "PCAR": [
+  "PACCAR Inc",
+  "PACCAR Inc."
+ ],
+ "URI": [
+  "United Rentals, Inc."
+ ],
+ "AME": [
+  "AMETEK, Inc."
+ ],
+ "OTIS": [
+  "Otis Worldwide Corporation"
+ ],
+ "DOV": [
+  "Dover Corporation"
+ ],
+ "PWR": [
+  "Quanta Services, Inc."
+ ],
+ "TT": [
+  "Trane Technologies plc"
+ ],
+ "CARR": [
+  "Carrier Global Corporation"
+ ],
+ "PSX": [
+  "Phillips 66"
+ ],
+ "VLO": [
+  "Valero Energy Corporation"
+ ],
+ "MPC": [
+  "Marathon Petroleum Corporation"
+ ],
+ "OXY": [
+  "Occidental Petroleum Corporation",
+  "Occidental Petroleum Corporatio"
+ ],
+ "HES": [
+  "HES"
+ ],
+ "DVN": [
+  "Devon Energy Corporation"
+ ],
+ "FANG": [
+  "Diamondback Energy, Inc."
+ ],
+ "WMB": [
+  "The Williams Companies, Inc.",
+  "Williams Companies, Inc. (The)"
+ ],
+ "KMI": [
+  "Kinder Morgan, Inc."
+ ],
+ "OKE": [
+  "ONEOK, Inc."
+ ],
+ "TRGP": [
+  "Targa Resources Corp.",
+  "Targa Resources, Inc."
+ ],
+ "BKR": [
+  "Baker Hughes Company"
+ ],
+ "HAL": [
+  "Halliburton Company"
+ ],
+ "AEP": [
+  "American Electric Power Company, Inc.",
+  "American Electric Power Company"
+ ],
+ "SRE": [
+  "Sempra",
+  "DBA Sempra"
+ ],
+ "XEL": [
+  "Xcel Energy Inc."
+ ],
+ "D": [
+  "Dominion Energy, Inc."
+ ],
+ "EXC": [
+  "Exelon Corporation"
+ ],
+ "ED": [
+  "Consolidated Edison, Inc."
+ ],
+ "WEC": [
+  "WEC Energy Group, Inc."
+ ],
+ "ES": [
+  "Eversource Energy",
+  "Eversource Energy (D/B/A)"
+ ],
+ "PCG": [
+  "PG&E Corporation",
+  "Pacific Gas & Electric Co."
+ ],
+ "PEG": [
+  "Public Service Enterprise Group Incorporated",
+  "Public Service Enterprise Group"
+ ],
+ "AWK": [
+  "American Water Works Company, Inc.",
+  "American Water Works Company, I"
+ ],
+ "PPL": [
+  "PPL Corporation"
+ ],
+ "CMS": [
+  "CMS Energy Corporation"
+ ],
+ "DTE": [
+  "DTE Energy Company"
+ ],
+ "FCX": [
+  "Freeport-McMoRan Inc.",
+  "Freeport-McMoRan, Inc."
+ ],
+ "NEM": [
+  "Newmont Corporation"
+ ],
+ "ECL": [
+  "Ecolab Inc."
+ ],
+ "DOW": [
+  "Dow Inc."
+ ],
+ "DD": [
+  "DuPont de Nemours, Inc."
+ ],
+ "PPG": [
+  "PPG Industries, Inc."
+ ],
+ "NUE": [
+  "Nucor Corporation"
+ ],
+ "CTVA": [
+  "Corteva, Inc."
+ ],
+ "LYB": [
+  "LyondellBasell Industries N.V.",
+  "LyondellBasell Industries NV"
+ ],
+ "STLD": [
+  "Steel Dynamics, Inc."
+ ],
+ "VMC": [
+  "Vulcan Materials Company",
+  "Vulcan Materials Company (Holdi"
+ ],
+ "MLM": [
+  "Martin Marietta Materials, Inc."
+ ],
+ "AMT": [
+  "American Tower Corporation",
+  "American Tower Corporation (REI"
+ ],
+ "EQIX": [
+  "Equinix, Inc."
+ ],
+ "PSA": [
+  "Public Storage"
+ ],
+ "O": [
+  "Realty Income Corporation"
+ ],
+ "WELL": [
+  "Welltower Inc."
+ ],
+ "CCI": [
+  "Crown Castle Inc."
+ ],
+ "DLR": [
+  "Digital Realty Trust, Inc."
+ ],
+ "SPG": [
+  "Simon Property Group, Inc."
+ ],
+ "VICI": [
+  "VICI Properties Inc."
+ ],
+ "EXR": [
+  "Extra Space Storage Inc.",
+  "Extra Space Storage Inc"
+ ],
+ "AVB": [
+  "AvalonBay Communities, Inc."
+ ],
+ "EQR": [
+  "Equity Residential"
+ ],
+ "INVH": [
+  "Invitation Homes Inc."
+ ],
+ "CHTR": [
+  "Charter Communications, Inc."
+ ],
+ "EA": [
+  "Electronic Arts Inc."
+ ],
+ "TTWO": [
+  "Take-Two Interactive Software, Inc.",
+  "Take-Two Interactive Software, "
+ ],
+ "WBD": [
+  "Warner Bros. Discovery, Inc.",
+  "Warner Bros. Discovery, Inc. - "
+ ],
+ "PARA": [
+  "PARA"
+ ],
+ "SPY": [
+  "State Street SPDR S&P 500 ETF Trust",
+  "State Street SPDR S&P 500 ETF T"
+ ],
+ "QQQ": [
+  "Invesco QQQ Trust",
+  "Invesco QQQ Trust, Series 1"
+ ],
+ "DIA": [
+  "State Street SPDR Dow Jones Industrial Average ETF Trust",
+  "State Street SPDR Dow Jones Ind"
+ ],
+ "IWM": [
+  "iShares Russell 2000 ETF",
+  "iShares Russell 2000 Index Fund"
+ ],
+ "VTI": [
+  "Vanguard Total Stock Market Index Fund ETF Shares",
+  "Vanguard Total Stock Market ETF"
+ ],
+ "XLK": [
+  "State Street Technology Select Sector SPDR ETF",
+  "State Street Technology Select "
+ ],
+ "XLF": [
+  "State Street Financial Select Sector SPDR ETF",
+  "State Street Financial Select S"
+ ],
+ "XLE": [
+  "State Street Energy Select Sector SPDR ETF",
+  "State Street Energy Select Sect"
+ ],
+ "XLV": [
+  "State Street Health Care Select Sector SPDR ETF",
+  "State Street Health Care Select"
+ ],
+ "XLY": [
+  "State Street Consumer Discretionary Select Sector SPDR ETF",
+  "State Street Consumer Discretio"
+ ],
+ "XLP": [
+  "State Street Consumer Staples Select Sector SPDR ETF",
+  "State Street Consumer Staples S"
+ ],
+ "XLI": [
+  "State Street Industrial Select Sector SPDR ETF",
+  "State Street Industrial Select "
+ ],
+ "XLU": [
+  "State Street Utilities Select Sector SPDR ETF",
+  "State Street Utilities Select S"
+ ],
+ "XLB": [
+  "State Street Materials Select Sector SPDR ETF",
+  "State Street Materials Select S"
+ ],
+ "XLRE": [
+  "State Street Real Estate Select Sector SPDR ETF",
+  "State Street Real Estate Select"
+ ],
+ "XLC": [
+  "State Street Communication Services Select Sector SPDR ETF",
+  "State Street Communication Serv"
+ ],
+ "TLT": [
+  "iShares 20+ Year Treasury Bond ETF",
+  "iShares 20+ Year Treasury Bond "
+ ],
+ "GLD": [
+  "SPDR Gold Shares"
+ ],
+ "USO": [
+  "United States Oil Fund, LP",
+  "United States Oil Fund"
+ ],
+ "UUP": [
+  "Invesco DB US Dollar Index Bullish Fund",
+  "Invesco DB USD Index Bullish Fu"
+ ]
+}
