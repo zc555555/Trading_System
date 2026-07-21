@@ -50,16 +50,23 @@ GENERIC = {"inc", "inc.", "corp", "corp.", "corporation", "company", "co",
 
 def _norm_variants(variants: list[str]) -> list[str]:
     """Lowercased org-name variants incl. suffix-stripped forms, as GDELT
-    normalizes organization names to lowercase full names."""
+    normalizes organization names to lowercase without punctuation.
+
+    Punctuation must be removed BEFORE tokenizing: yfinance longNames like
+    "Salesforce, Inc." otherwise leave a "salesforce," token that never
+    matches GDELT's "salesforce".
+    """
     out = set()
     for v in variants:
-        v = re.sub(r'["()]', "", v).strip().lower()
-        if len(v) >= 3:
-            out.add(v)
-        words = [w for w in v.split() if w not in GENERIC]
-        stripped = " ".join(words)
-        if len(stripped) >= 4:
-            out.add(stripped)
+        v = re.sub(r'["().,]', "", v).strip().lower()
+        for candidate in (v, v.replace("&", " ")):
+            candidate = re.sub(r"\s+", " ", candidate).strip()
+            if len(candidate) >= 3:
+                out.add(candidate)
+            words = [w for w in candidate.split() if w not in GENERIC]
+            stripped = " ".join(words)
+            if len(stripped) >= 4:
+                out.add(stripped)
     return sorted(out)
 
 
@@ -132,9 +139,12 @@ def ingest_csv(folder: Path):
     _merge_and_save(frames)
 
 
-def run_queries(years: list[int], dry_run: bool):
+def run_queries(years: list[int], dry_run: bool,
+                project: str | None = None):
+    import os
     from google.cloud import bigquery
-    client = bigquery.Client()
+    client = bigquery.Client(
+        project=project or os.environ.get("GOOGLE_CLOUD_PROJECT"))
     frames = []
     if OUTPUT.exists() and not dry_run:
         existing = pd.read_parquet(OUTPUT)
@@ -170,6 +180,7 @@ if __name__ == "__main__":
     ap.add_argument("--ingest-csv", type=Path, default=None)
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--years", type=int, nargs="*", default=None)
+    ap.add_argument("--project", type=str, default="stockpredict-503112")
     args = ap.parse_args()
 
     if args.emit_sql:
@@ -177,4 +188,5 @@ if __name__ == "__main__":
     elif args.ingest_csv:
         ingest_csv(args.ingest_csv)
     else:
-        run_queries(args.years or YEARS, dry_run=args.dry_run)
+        run_queries(args.years or YEARS, dry_run=args.dry_run,
+                    project=args.project)
