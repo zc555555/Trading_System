@@ -92,3 +92,4 @@ config_alpaca.py
 config_finnhub.py
 research/config_alpaca.py
 research/config_finnhub.py
+research/data/gdelt_sql/
