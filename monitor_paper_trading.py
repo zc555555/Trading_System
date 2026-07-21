@@ -55,7 +55,7 @@ class PaperTradingMonitor:
                 'portfolio_value': float(account.portfolio_value),
                 'buying_power': float(account.buying_power),
                 'initial_equity': float(account.last_equity),
-                'daytrade_count': int(account.daytrade_count),
+                'daytrade_count': int(account.daytrade_count or 0),
                 'status': account.status
             }
         except Exception as e:

@@ -277,7 +277,7 @@ try:
 
         # 持仓数量
         'n_positions': len(positions),
-        'day_trade_count': int(account.daytrade_count),
+        'day_trade_count': int(account.daytrade_count or 0),
     }
 
     # 保存账户记录
