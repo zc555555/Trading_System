@@ -48,7 +48,10 @@ def build_news_features(stock_dates: pd.Series) -> pd.DataFrame:
     trailing features per symbol. Returns [date, symbol, news_*]."""
     g = pd.read_parquet(GDELT_PATH)
     g = g.dropna(subset=['gdelt_tone'], how='all')
-    g['gdelt_articles'] = pd.to_numeric(g['gdelt_articles'], errors='coerce')
+    # BigQuery exports nullable extension dtypes (Float64Dtype) which numpy
+    # can't interpret downstream; force plain float64.
+    g['gdelt_tone'] = pd.to_numeric(g['gdelt_tone'], errors='coerce').astype('float64')
+    g['gdelt_articles'] = pd.to_numeric(g['gdelt_articles'], errors='coerce').astype('float64')
 
     # Map each calendar day to the next trading day (>= that day).
     tdays = np.sort(stock_dates.dt.tz_localize(None).unique())

@@ -119,8 +119,9 @@ def emit_sql_files():
 def _merge_and_save(frames: list[pd.DataFrame]):
     df = pd.concat(frames, ignore_index=True)
     df['date'] = pd.to_datetime(df['date'])
-    df['gdelt_tone'] = pd.to_numeric(df['gdelt_tone'], errors='coerce')
-    df['gdelt_articles'] = pd.to_numeric(df['gdelt_articles'], errors='coerce')
+    # cast away BigQuery's nullable extension dtypes (Float64Dtype etc.)
+    df['gdelt_tone'] = pd.to_numeric(df['gdelt_tone'], errors='coerce').astype('float64')
+    df['gdelt_articles'] = pd.to_numeric(df['gdelt_articles'], errors='coerce').astype('float64')
     df = (df.groupby(['date', 'symbol'], as_index=False)
             .agg(gdelt_tone=('gdelt_tone', 'mean'),
                  gdelt_articles=('gdelt_articles', 'sum'))
