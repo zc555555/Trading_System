@@ -9,8 +9,11 @@ import subprocess
 from datetime import datetime
 from pathlib import Path
 
-# 设置UTF-8编码
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+# 设置UTF-8编码 (errors='replace': 任务计划重定向下不因特殊字符崩溃)
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+
+# 子进程用与本进程相同的解释器(venv), 裸 'python' 会解析到系统 Python
+PY = f'"{sys.executable}"'
 
 def run_command(command, description):
     """运行命令并打印结果"""
@@ -67,7 +70,7 @@ def main():
     os.chdir('research')
 
     # 使用正确的文件路径
-    data_download_cmd = f'python {os.path.join("data", "fetch_ohlcv.py")}'
+    data_download_cmd = f'{PY} {os.path.join("data", "fetch_ohlcv.py")}'
 
     if not run_command(data_download_cmd, "下载市场数据"):
         print("\n[ERROR] Data download failed!")
@@ -76,13 +79,13 @@ def main():
 
     # 流动性过滤 + 特征重建。此前重训流程抓完原始数据后直接训练,
     # 模型学的是上一次构建的旧特征 —— 必须先重建特征再训练。
-    if not run_command(f'python {os.path.join("data", "apply_liquidity_filter.py")}',
+    if not run_command(f'{PY} {os.path.join("data", "apply_liquidity_filter.py")}',
                        "流动性过滤"):
         print("\n[ERROR] Liquidity filter failed!")
         os.chdir('..')
         return False
 
-    if not run_command('python prepare_prediction_data.py', "重建特征"):
+    if not run_command(f'{PY} prepare_prediction_data.py', "重建特征"):
         print("\n[ERROR] Feature rebuild failed!")
         os.chdir('..')
         return False
@@ -100,7 +103,7 @@ def main():
     print("每个因子使用XGBoost + LightGBM + CatBoost集成")
     print("这一步可能需要10-30分钟，请耐心等待...\n")
 
-    train_cmd = f'python {os.path.join("research", "train_multi_factor_models.py")}'
+    train_cmd = f'{PY} {os.path.join("research", "train_multi_factor_models.py")}'
 
     if not run_command(train_cmd, "训练多因子集成模型"):
         print("\n[ERROR] Model training failed!")
