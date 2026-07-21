@@ -59,20 +59,22 @@ def summarize_panel(panel: pd.DataFrame, col: str) -> dict:
     return out
 
 
-def main():
+def main(variant_tag: str = "volC_ext", factor_col: str = "factor_vol_ext"):
     base = pd.read_parquet(RESULTS / "oos_predictions_h5_ext.parquet")
-    volc = pd.read_parquet(RESULTS / "oos_predictions_h5_volC_ext.parquet")
+    volc = pd.read_parquet(RESULTS / f"oos_predictions_h5_{variant_tag}.parquet")
 
     rows = []
     base_pred = summarize_panel(base, 'pred')
     volc_pred = summarize_panel(volc, 'pred')
-    ext_factor = summarize_panel(volc, 'factor_vol_ext')
+    ext_factor = summarize_panel(volc, factor_col)
 
     print("=" * 86)
-    print("VOL_EXT VERDICT BY EVIDENCE TIER  (h=5 blended rank IC, NW lags 4)")
+    print(f"{factor_col.upper()} VERDICT BY EVIDENCE TIER  "
+          f"(h=5 blended rank IC, NW lags 4)")
     print("=" * 86)
-    print(f"{'segment':<14}{'days':>6} | {'baseline':>18} | {'with vol_ext':>18} | "
-          f"{'vol_ext alone':>18}")
+    short = factor_col.replace('factor_', '')
+    print(f"{'segment':<14}{'days':>6} | {'baseline':>18} | "
+          f"{'with ' + short:>18} | {short + ' alone':>18}")
     print("-" * 86)
     for name, _, _ in SEGMENTS:
         b, v, f = base_pred[name], volc_pred[name], ext_factor[name]
@@ -87,13 +89,19 @@ def main():
                      'volc_ic': v['ic_mean'], 'volc_t': v['t_stat'],
                      'ext_ic': f['ic_mean'], 'ext_t': f['t_stat']})
 
-    pd.DataFrame(rows).to_csv(RESULTS / "vol_ext_verdict_segments.csv", index=False)
+    out_csv = RESULTS / f"{factor_col}_verdict_segments.csv"
+    pd.DataFrame(rows).to_csv(out_csv, index=False)
     print("-" * 86)
-    print("decision guide: adopt if vol_ext is not systematically negative in "
-          "virgin_early AND\nthe blend does not degrade there, AND fresh-tier "
-          "evidence is favorable (small n -- weigh direction, not t).")
-    print(f"saved: {RESULTS / 'vol_ext_verdict_segments.csv'}")
+    print(f"decision guide: adopt if {factor_col} is not systematically "
+          "negative in virgin_early AND\nthe blend does not degrade there, "
+          "AND fresh-tier evidence is favorable (small n -- weigh direction).")
+    print(f"saved: {out_csv}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--variant-tag", default="volC_ext")
+    ap.add_argument("--factor-col", default="factor_vol_ext")
+    args = ap.parse_args()
+    main(variant_tag=args.variant_tag, factor_col=args.factor_col)

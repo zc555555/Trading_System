@@ -82,7 +82,7 @@ def build_news_features(stock_dates: pd.Series) -> pd.DataFrame:
     return agg[['date', 'symbol'] + NEWS_FEATURES]
 
 
-def main(max_folds: int | None = None):
+def main(max_folds: int | None = None, horizon: int = 5):
     print("loading stock dataset...")
     df = pd.read_parquet(DATA_PATH)
 
@@ -108,16 +108,17 @@ def main(max_folds: int | None = None):
     groups['news'] = NEWS_FEATURES + XS_NEWS_FEATURES
 
     run_walk_forward(
-        WalkForwardConfig(horizon=5),
+        WalkForwardConfig(horizon=horizon),
         max_folds=max_folds,
         df=df,
         factor_groups=groups,
-        tag="newsN_ext",
+        tag="newsN_ext" if horizon == 5 else f"newsN_ext_h{horizon}sig",
     )
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-folds", type=int, default=None)
+    ap.add_argument("--horizon", type=int, default=5, choices=[1, 5, 20])
     args = ap.parse_args()
-    main(max_folds=args.max_folds)
+    main(max_folds=args.max_folds, horizon=args.horizon)
