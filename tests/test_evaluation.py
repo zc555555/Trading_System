@@ -81,6 +81,28 @@ class TestPurgedSplits:
                 assert test[0] > prev_test_end
             prev_test_end = test[-1]
 
+    def test_partial_tail_fold(self):
+        """min_tail_test appends one partial window over leftover dates
+        without disturbing the full folds before it."""
+        base = WalkForwardConfig(train_window=252, test_window=63, step=63,
+                                 horizon=20, embargo_days=5)
+        tail = WalkForwardConfig(train_window=252, test_window=63, step=63,
+                                 horizon=20, embargo_days=5, min_tail_test=15)
+        dates = pd.date_range("2019-01-01", periods=252 + 63 * 3 + 30,
+                              freq="B").values
+        f_base = generate_folds(dates, base)
+        f_tail = generate_folds(dates, tail)
+        assert len(f_tail) == len(f_base) + 1
+        for (tr_a, te_a), (tr_b, te_b) in zip(f_base, f_tail):
+            assert np.array_equal(tr_a, tr_b) and np.array_equal(te_a, te_b)
+        last_train, last_test = f_tail[-1]
+        assert 15 <= len(last_test) < 63
+        # purge geometry still holds for the tail fold
+        all_sorted = np.sort(dates)
+        gap = (np.searchsorted(all_sorted, last_test[0])
+               - np.searchsorted(all_sorted, last_train[-1]) - 1)
+        assert gap == 25
+
     def test_no_train_label_reaches_test(self):
         """A label at train date t uses close(t + horizon); with the purge in
         place, t + horizon must still be strictly before the test start."""

@@ -51,6 +51,11 @@ class WalkForwardConfig:
     horizon: int = 1             # label horizon (days)
     embargo_days: int = 5        # extra gap beyond horizon at every boundary
     seed: int = 42
+    # If > 0, append one final PARTIAL test window covering the tail dates
+    # that don't fill a whole test_window yet (included only when at least
+    # this many sessions long). Lets the 'fresh' evidence tier fill in as
+    # labels mature instead of waiting a full quarter for the next fold.
+    min_tail_test: int = 0
 
 
 def generate_folds(dates: np.ndarray, cfg: WalkForwardConfig):
@@ -71,6 +76,12 @@ def generate_folds(dates: np.ndarray, cfg: WalkForwardConfig):
         test = dates[i: i + cfg.test_window]
         folds.append((train, test))
         i += cfg.step
+    # Optional partial tail fold over the not-yet-full final window.
+    if cfg.min_tail_test > 0 and i < len(dates):
+        tail = dates[i:]
+        if len(tail) >= cfg.min_tail_test:
+            train = dates[i - cfg.train_window: i - purge]
+            folds.append((train, tail))
     return folds
 
 
