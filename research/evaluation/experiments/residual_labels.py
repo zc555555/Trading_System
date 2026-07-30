@@ -76,6 +76,14 @@ def build_labels(df: pd.DataFrame) -> pd.DataFrame:
     # No trailing beta yet (warm-up) -> fall back to unit beta.
     df['resid_B'] = df['resid_B'].fillna(df['resid_A'])
 
+    # Variant C: vol-scaled label y = fret / trailing vol. Unlike A (a
+    # per-date constant shift), dividing by PER-STOCK vol genuinely
+    # reorders names within a date -- the model is asked to rank
+    # risk-adjusted moves, matching the inverse-vol book it now trades.
+    trail_vol = g['_ret'].transform(
+        lambda s: s.rolling(20, min_periods=10).std())
+    df['resid_C'] = df[raw] / (trail_vol * np.sqrt(HORIZON)).clip(lower=0.01)
+
     return df.drop(columns=['_ret', '_mkt'])
 
 
@@ -137,7 +145,7 @@ def main(variants: list[str], max_folds: int | None):
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--variant", choices=["A", "B", "both"], default="both")
+    ap.add_argument("--variant", choices=["A", "B", "C", "both"], default="both")
     ap.add_argument("--max-folds", type=int, default=None)
     args = ap.parse_args()
     main(["A", "B"] if args.variant == "both" else [args.variant],
