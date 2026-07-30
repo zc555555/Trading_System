@@ -78,6 +78,7 @@ def run_walk_forward(cfg: WalkForwardConfig, max_folds: int | None = None,
                      data_path: Path = DATA_PATH,
                      df: pd.DataFrame | None = None,
                      factor_groups: dict | None = None,
+                     target_override: str | None = None,
                      tag: str = "") -> dict:
     """Run the walk-forward. Experiments can pass a pre-augmented ``df``,
     custom ``factor_groups``, and a ``tag`` appended to result filenames;
@@ -96,9 +97,17 @@ def run_walk_forward(cfg: WalkForwardConfig, max_folds: int | None = None,
     # Compute the horizon label on the fly from close prices; the stored
     # `future_return` column is 1-day only. Same formula the labels have
     # always used: log(close[t+h] / close[t]) per symbol.
-    target_col = f'future_return_{cfg.horizon}d'
-    df[target_col] = df.groupby('symbol')['close'].transform(
-        lambda x: np.log(x.shift(-cfg.horizon) / x))
+    # Experiments may pass target_override: a label column already present
+    # in df (e.g. a market-residualized return). The purge/embargo geometry
+    # assumes the label looks at most `horizon` days forward -- overrides
+    # must respect that.
+    if target_override is not None:
+        target_col = target_override
+        assert target_col in df.columns, f"{target_col} not in df"
+    else:
+        target_col = f'future_return_{cfg.horizon}d'
+        df[target_col] = df.groupby('symbol')['close'].transform(
+            lambda x: np.log(x.shift(-cfg.horizon) / x))
     if cfg.horizon == 1 and 'future_return' in df.columns:
         both = df[['future_return', target_col]].dropna()
         max_diff = float((both['future_return'] - both[target_col]).abs().max())
