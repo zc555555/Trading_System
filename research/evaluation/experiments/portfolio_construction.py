@@ -34,12 +34,12 @@ from evaluation.metrics import portfolio_metrics  # noqa: E402
 RESULTS = Path(__file__).resolve().parent.parent / "results"
 DATA = Path(__file__).resolve().parent.parent.parent / "data" / "stocks_with_time_windows.parquet"
 HOLDOUT = "2025-07-01"
-HOLD_DAYS = 5
+HOLD_DAYS = 5  # overridden by --horizon
 MIN_STOCKS = 3
 
 
-def load_inputs():
-    panel = pd.read_parquet(RESULTS / "oos_predictions_h5_ext.parquet")
+def load_inputs(horizon: int = 5):
+    panel = pd.read_parquet(RESULTS / f"oos_predictions_h{horizon}_ext.parquet")
     prices = pd.read_parquet(DATA, columns=["date", "symbol", "open", "close"])
     prices = prices.sort_values(["symbol", "date"])
     g = prices.groupby("symbol")
@@ -118,9 +118,11 @@ def simulate(panel: pd.DataFrame, wide: dict, top_n: int, inv_vol: bool,
     return pd.Series(dict(daily)).sort_index()
 
 
-def main():
-    panel, wide = load_inputs()
-    print(f"panel: {len(panel):,} rows, "
+def main(horizon: int = 5):
+    global HOLD_DAYS
+    HOLD_DAYS = horizon
+    panel, wide = load_inputs(horizon)
+    print(f"panel (h={horizon}, hold={HOLD_DAYS}): {len(panel):,} rows, "
           f"{panel['date'].min().date()} .. {panel['date'].max().date()}")
 
     grid = []
@@ -154,10 +156,14 @@ def main():
             print(f"{name:<34}{seg:<9}{m['sharpe']:>7.2f}"
                   f"{m['ann_return']:>8.1%}{m['max_drawdown']:>8.1%}")
 
-    out = RESULTS / "portfolio_construction_grid.csv"
+    out = RESULTS / f"portfolio_construction_grid_h{horizon}.csv"
     pd.DataFrame(rows).to_csv(out, index=False)
     print(f"\nsaved: {out}")
 
 
 if __name__ == "__main__":
-    main()
+    import argparse
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--horizon", type=int, default=5, choices=[5, 20])
+    args = ap.parse_args()
+    main(horizon=args.horizon)

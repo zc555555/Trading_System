@@ -578,8 +578,19 @@ def main():
             print(f"  SELL signals: {win_rates['sell_win_rate']*100:.1f}% ({win_rates['sell_total']} SELL predictions)")
             print()
 
-        # Use adjusted confidence for position allocation
-        total_conf = selected['adjusted_confidence'].sum()
+        # Position allocation: inverse-volatility scaled confidence.
+        # Construction grid (2026-07, portfolio_construction_grid_h20.csv):
+        # vol-stabilized weights are consistently more robust out-of-sample
+        # (holdout Sharpe 0.74/0.67/0.63 vs 0.43/0.42/0.37 signal-weighted,
+        # with shallower drawdowns) -- high-vol names stop dominating risk.
+        if 'volatility_20d' in selected.columns:
+            _vol = selected['volatility_20d'].clip(lower=0.006)
+            _fill = _vol.median() if _vol.notna().any() else 0.02
+            selected['sizing_weight'] = (
+                selected['adjusted_confidence'] / _vol.fillna(_fill))
+        else:
+            selected['sizing_weight'] = selected['adjusted_confidence']
+        total_conf = selected['sizing_weight'].sum()
 
         print(f"{'Rank':<6} {'Stock':<8} {'Direction':<10} {'Tech%':<8} {'News':<8} {'Final%':<8} {'Position %':<10}")
         print("-" * 80)
@@ -590,7 +601,7 @@ def main():
             orig_conf = row['original_confidence']
             sentiment = row['news_sentiment']
             adj_conf = row['adjusted_confidence']
-            pos_pct = (adj_conf / total_conf) * 100
+            pos_pct = (row['sizing_weight'] / total_conf) * 100
 
             direction = "BUY" if pred > 0 else "SELL"
 
@@ -631,9 +642,8 @@ def main():
 
         for _, row in selected.iterrows():
             symbol = row['symbol']
-            conf = row['confidence']
             pred = row['prediction']
-            pos_pct = (conf / total_conf)
+            pos_pct = (row['sizing_weight'] / total_conf)
             amount = capital * pos_pct
             action = "BUY" if pred > 0 else "SELL"
 
@@ -681,7 +691,7 @@ def main():
                 'prediction': float(row['prediction']),
                 'confidence': float(row['original_confidence']),
                 'adjusted_confidence': float(row['adjusted_confidence']),
-                'position_pct': float((row['adjusted_confidence'] / total_conf) * 100),
+                'position_pct': float((row['sizing_weight'] / total_conf) * 100),
                 'news_sentiment': float(row.get('news_sentiment', 0.0)),
                 'news_count': int(row.get('news_count', 0)),
                 'sentiment_boost': float(row.get('sentiment_boost', 0.0)),
