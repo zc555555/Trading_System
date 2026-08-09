@@ -1,5 +1,7 @@
 """完整交易记录系统 - 记录所有信息用于模型精调"""
+import io
 import json
+import sys
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -7,6 +9,11 @@ from datetime import datetime
 import yfinance as yf
 from alpaca.trading.client import TradingClient
 from config_alpaca import ALPACA_API_KEY, ALPACA_SECRET_KEY
+
+# 任务计划下 stdout 是管道, Windows 默认 cp1252, 中文输出会直接崩溃
+if sys.platform == 'win32' and hasattr(sys.stdout, 'buffer'):
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
 project_dir = Path(__file__).parent
 logs_dir = project_dir / "trading_logs"

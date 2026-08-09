@@ -115,7 +115,19 @@ class TrancheRegistry:
         tmp = self.path.with_suffix(self.path.suffix + ".tmp")
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(self._payload, f, indent=2)
-        tmp.replace(self.path)
+        # The project lives in a OneDrive-synced folder; the sync client
+        # briefly locks files it is uploading and os.replace then raises
+        # PermissionError (killed the 2026-08-08 nightly run). The lock is
+        # transient -- retry with backoff before giving up.
+        import time as _time
+        for attempt in range(6):
+            try:
+                tmp.replace(self.path)
+                return
+            except PermissionError:
+                if attempt == 5:
+                    raise
+                _time.sleep(0.5 * (attempt + 1))
 
     # ----- introspection -----
     @property
