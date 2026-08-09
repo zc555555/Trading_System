@@ -49,6 +49,8 @@ class TranchePosition:
     # Diagnostics for the audit log
     atr_at_entry: Optional[float] = None
     stop_basis: Optional[str] = None      # 'atr' | 'fixed_pct_fallback'
+    # Execution A/B (2026-08): 'market' | 'limit' | None (pre-A/B legs)
+    exec_arm: Optional[str] = None
 
 
 @dataclass

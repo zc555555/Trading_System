@@ -83,6 +83,20 @@ TAKE_PCT_CEILING = 0.25
 MAX_DAILY_LOSS_PCT = 0.03
 
 # ----------------------------------------------------------------------
+# Execution A/B test (2026-08, merged-B item 1)
+# ----------------------------------------------------------------------
+# When True, each new entry order is deterministically assigned by
+# hash(symbol+date) to:
+#   arm A ("market"): market bracket (the incumbent execution)
+#   arm B ("limit") : limit bracket at the arrival price; the monitor
+#                     converts non-fills to market LIMIT_TIMEOUT_MIN
+#                     minutes into the regular session.
+# Realized slippage per arm is compared by the recurring
+# slippage_calibration report. Verdict needs ~1-2 months of fills.
+EXECUTION_AB_TEST = True
+LIMIT_TIMEOUT_MIN = 30
+
+# ----------------------------------------------------------------------
 # Monitor behavior
 # ----------------------------------------------------------------------
 # If True, monitor closes ALL positions at EOD_CLOSE_TIME ET. This is the

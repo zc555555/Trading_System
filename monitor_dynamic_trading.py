@@ -162,6 +162,65 @@ class DynamicTradingMonitor:
         except Exception as e:
             print(f"  [WARN] 注册表同步失败 {symbol}: {e}")
 
+    def _convert_stale_limit_entries(self, now_et):
+        """执行 A/B: B 组限价进场单在开盘 LIMIT_TIMEOUT_MIN 分钟后仍未成交
+        则撤销并转市价 bracket(止损/止盈价从注册表原样继承)。"""
+        try:
+            import config_trading as _tcfg
+            if not getattr(_tcfg, 'EXECUTION_AB_TEST', False):
+                return
+            timeout_min = getattr(_tcfg, 'LIMIT_TIMEOUT_MIN', 30)
+            market_open = now_et.replace(hour=9, minute=30, second=0, microsecond=0)
+            if now_et < market_open or \
+               (now_et - market_open).total_seconds() < timeout_min * 60:
+                return
+
+            open_orders = self.client.get_orders(
+                GetOrdersRequest(status=QueryOrderStatus.OPEN))
+            stale = [o for o in open_orders
+                     if str(getattr(o, 'type', '')).split('.')[-1].lower() == 'limit'
+                     and str(getattr(o, 'order_class', '')).split('.')[-1].lower() == 'bracket'
+                     and (o.client_order_id or '').startswith('open_')
+                     and o.filled_at is None]
+            if not stale:
+                return
+
+            from trading.tranche_registry import TrancheRegistry
+            reg_path = Path(__file__).parent / _tcfg.TRANCHE_REGISTRY_PATH
+            reg = TrancheRegistry(reg_path) if reg_path.exists() else None
+
+            from alpaca_trader import AlpacaAutoTrader
+            trader = AlpacaAutoTrader()
+
+            for o in stale:
+                symbol = o.symbol
+                side = str(o.side).split('.')[-1].lower()
+                qty = int(float(o.qty))
+                # 从注册表找到这条腿的原始止损/止盈
+                stop_price = take_price = None
+                if reg:
+                    book = 'longs' if side == 'buy' else 'shorts'
+                    for t in reg.open_tranches():
+                        for p in getattr(t, book):
+                            if p.client_order_id == o.client_order_id:
+                                stop_price, take_price = p.stop_price, p.take_price
+                if stop_price is None or take_price is None:
+                    print(f"  [A/B] {symbol}: 未在注册表找到风险价格, 跳过转换")
+                    continue
+                print(f"  [A/B] {symbol} 限价单超时未成交, 撤销转市价 "
+                      f"(qty={qty}, {side})")
+                try:
+                    self.client.cancel_order_by_id(o.id)
+                except Exception as e:
+                    print(f"  [A/B] 撤单失败 {symbol}: {e}")
+                    continue
+                trader.place_bracket_order(
+                    symbol, qty, side, stop_price=stop_price,
+                    take_price=take_price,
+                    client_order_id=(o.client_order_id or '') + '_mkt')
+        except Exception as e:
+            print(f"  [WARN] A/B 限价转换检查失败: {e}")
+
     def check_and_execute(self):
         """检查持仓并执行动态交易策略"""
         now_local = datetime.now()
@@ -172,6 +231,10 @@ class DynamicTradingMonitor:
         print(f"动态交易监控 - 本地 {now_local.strftime('%Y-%m-%d %H:%M:%S')} / ET {now_et.strftime('%H:%M:%S')}")
         print("="*80)
         print()
+
+        # 执行 A/B: 先处理超时未成交的限价进场单(此时可能还没有持仓,
+        # 必须在下面的无持仓早退之前执行)
+        self._convert_stale_limit_entries(now_et)
 
         # 获取账户和持仓
         account = self.client.get_account()

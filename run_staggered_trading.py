@@ -47,6 +47,14 @@ def _today_str() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
+def exec_arm_for(symbol: str, date_str: str) -> str:
+    """Deterministic A/B assignment: reproducible, balanced-in-expectation,
+    uncorrelated with the signal (hash of symbol+date)."""
+    import hashlib
+    h = hashlib.sha256(f"{symbol}|{date_str}".encode()).digest()
+    return "limit" if h[0] % 2 else "market"
+
+
 def _today_id_stamp() -> str:
     return datetime.now().strftime("%Y%m%d")
 
@@ -282,6 +290,8 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
         # log them alongside the entry. Risk levels are persisted with the
         # tranche so the monitor reads exact prices, not recomputed thresholds.
         risk = compute_risk_levels(symbol, float(cur_price), side)
+        arm = (exec_arm_for(symbol, _today_str())
+               if config_trading.EXECUTION_AB_TEST else "market")
 
         if dry_run:
             ok = True
@@ -290,20 +300,29 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
                   f"= ${qty*cur_price:>9,.2f}  "
                   f"stop=${risk.stop_price:>7.2f}({risk.stop_pct*100:.1f}%) "
                   f"take=${risk.take_price:>7.2f}({risk.take_pct*100:.1f}%) "
-                  f"[{risk.basis}]")
+                  f"[{risk.basis}, {arm}]")
         else:
             # P2: bracket order -- stop & take live at the BROKER (GTC), so
             # multi-day positions stay protected overnight and across crashes.
-            ok = trader.place_bracket_order(symbol, qty, order_side,
-                                            stop_price=risk.stop_price,
-                                            take_price=risk.take_price)
+            # Execution A/B (2026-08): arm B posts a LIMIT at the arrival
+            # price instead of paying the open; monitor converts non-fills.
+            if arm == "limit":
+                ok = trader.place_limit_bracket_order(
+                    symbol, qty, order_side, limit_price=float(cur_price),
+                    stop_price=risk.stop_price, take_price=risk.take_price,
+                    client_order_id=client_id)
+            else:
+                ok = trader.place_bracket_order(
+                    symbol, qty, order_side,
+                    stop_price=risk.stop_price, take_price=risk.take_price,
+                    client_order_id=client_id)
             if ok:
                 print(f"  [OK]      {order_side.upper():<4} {side:<5} "
                       f"{symbol:<6} qty={qty:>4} @ ${cur_price:>7.2f} "
                       f"= ${qty*cur_price:>9,.2f}  "
                       f"stop=${risk.stop_price:>7.2f}({risk.stop_pct*100:.1f}%) "
                       f"take=${risk.take_price:>7.2f}({risk.take_pct*100:.1f}%) "
-                      f"[{risk.basis}, bracket@broker]")
+                      f"[{risk.basis}, {arm}@broker]")
             else:
                 print(f"  [FAIL]    {order_side.upper():<4} {side:<5} {symbol}")
                 continue
@@ -321,6 +340,7 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
             take_price=float(risk.take_price),
             atr_at_entry=float(risk.atr) if risk.atr is not None else None,
             stop_basis=risk.basis,
+            exec_arm=arm,
         )
         (longs if side == "long" else shorts).append(pos)
 

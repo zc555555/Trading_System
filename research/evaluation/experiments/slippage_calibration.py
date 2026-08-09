@@ -141,12 +141,37 @@ def main():
             df.at[i, "bench_px"] = q
             df.at[i, "slip_bp"] = sign * (df.at[i, "fill"] - q) / q * 1e4
 
+    # Execution A/B: map fills to their arm via the registry's
+    # client_order_id ('open_...' = limit arm original; '..._mkt' =
+    # converted-to-market after timeout; market-arm ids carry no suffix
+    # but the registry's exec_arm field is authoritative).
+    arm_map = {}
+    for t in reg["tranches"]:
+        for p in t["longs"] + t["shorts"]:
+            if p.get("client_order_id"):
+                arm_map[p["client_order_id"]] = p.get("exec_arm") or "pre_ab"
+    df["exec_arm"] = [
+        arm_map.get(getattr(o, "client_order_id", None) or "",
+                    arm_map.get(((getattr(o, "client_order_id", None) or "")
+                                 .removesuffix("_mkt")), None))
+        for o in orders]
+
     RESULTS.mkdir(exist_ok=True)
     df.to_csv(RESULTS / "slippage_calibration.csv", index=False)
 
     print("\n" + "=" * 78)
     print("IMPLEMENTATION SHORTFALL vs MODEL ASSUMPTIONS  (positive = paid more)")
     print("=" * 78)
+
+    ab = df[(df["kind"] == "entry") & df["exec_arm"].isin(["market", "limit"])]
+    if len(ab):
+        print("\nEXECUTION A/B (entries with an arm assignment):")
+        for arm, g in ab.groupby("exec_arm"):
+            with_slip = g.dropna(subset=["slip_bp"])
+            print(f"  {arm:<7} n={len(g):>3}  "
+                  f"mean {with_slip['slip_bp'].mean():+7.2f} bp  "
+                  f"median {with_slip['slip_bp'].median():+7.2f} bp"
+                  if len(with_slip) else f"  {arm:<7} n={len(g):>3}  (no benchmark)")
     for (kind, bench), g in df.dropna(subset=["slip_bp"]).groupby(["kind", "benchmark"]):
         print(f"\n{kind} vs {bench}  (n={len(g)}):")
         print(f"  mean {g['slip_bp'].mean():+7.2f} bp   "

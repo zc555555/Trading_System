@@ -208,7 +208,8 @@ class AlpacaAutoTrader:
         return n
 
     def place_bracket_order(self, symbol: str, qty: int, side: str,
-                            stop_price: float, take_price: float) -> bool:
+                            stop_price: float, take_price: float,
+                            client_order_id: str | None = None) -> bool:
         """Market entry with broker-side GTC stop-loss and take-profit legs.
 
         P2 (2026-07): stops previously existed only in the 5-minute monitor
@@ -226,6 +227,7 @@ class AlpacaAutoTrader:
                 order_class=OrderClass.BRACKET,
                 stop_loss=StopLossRequest(stop_price=round(stop_price, 2)),
                 take_profit=TakeProfitRequest(limit_price=round(take_price, 2)),
+                client_order_id=client_order_id,
             )
             order = self.trading_client.submit_order(request)
 
@@ -249,6 +251,55 @@ class AlpacaAutoTrader:
             return True
         except Exception as e:
             print(f"[ERROR] Bracket order failed for {symbol}: {e}")
+            return False
+
+    def place_limit_bracket_order(self, symbol: str, qty: int, side: str,
+                                  limit_price: float, stop_price: float,
+                                  take_price: float,
+                                  client_order_id: str | None = None) -> bool:
+        """LIMIT entry with GTC stop/take children (execution A/B, arm B).
+
+        Posts at the arrival price instead of paying the spread/gap at the
+        open. Non-fills are converted to market by the monitor after
+        config_trading.LIMIT_TIMEOUT_MIN minutes of regular trading.
+        """
+        try:
+            from alpaca.trading.requests import LimitOrderRequest
+            order_side = OrderSide.BUY if side.lower() == 'buy' else OrderSide.SELL
+
+            request = LimitOrderRequest(
+                symbol=symbol,
+                qty=qty,
+                side=order_side,
+                limit_price=round(limit_price, 2),
+                time_in_force=TimeInForce.GTC,
+                order_class=OrderClass.BRACKET,
+                stop_loss=StopLossRequest(stop_price=round(stop_price, 2)),
+                take_profit=TakeProfitRequest(limit_price=round(take_price, 2)),
+                client_order_id=client_order_id,
+            )
+            order = self.trading_client.submit_order(request)
+
+            order_id = getattr(order, 'id', None)
+            if order_id is None:
+                print(f"[ERROR] Limit bracket for {symbol}: no order id returned")
+                return False
+
+            bad_statuses = {'rejected', 'canceled', 'expired', 'suspended'}
+            for _ in range(5):
+                refreshed = self.trading_client.get_order_by_id(order_id)
+                status = str(getattr(refreshed, 'status', '')).lower().split('.')[-1]
+                if status in bad_statuses:
+                    reason = getattr(refreshed, 'reject_reason', None) or status
+                    print(f"[ERROR] Limit bracket {symbol} {status}: {reason}")
+                    return False
+                if status in ('accepted', 'new', 'partially_filled', 'filled',
+                              'pending_new', 'held'):
+                    return True
+                time.sleep(1)
+            return True
+        except Exception as e:
+            print(f"[ERROR] Limit bracket failed for {symbol}: {e}")
             return False
 
     def place_market_order(self, symbol: str, qty: int, side: str = 'buy') -> bool:
