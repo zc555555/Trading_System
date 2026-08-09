@@ -153,7 +153,7 @@ def verdict(tag: str):
     print(f"saved: {out}")
 
 
-def main(max_folds: int | None):
+def main(max_folds: int | None, tail: int = 0):
     print("loading dataset + building PEAD features...")
     df = pd.read_parquet(DATA_PATH)
     df = build_pead_features(df)
@@ -164,7 +164,7 @@ def main(max_folds: int | None):
     groups['pead'] = PEAD_FEATURES + XS_FEATURES
 
     run_walk_forward(
-        WalkForwardConfig(horizon=HORIZON),
+        WalkForwardConfig(horizon=HORIZON, min_tail_test=tail),
         max_folds=max_folds,
         df=df,
         factor_groups=groups,
@@ -177,5 +177,6 @@ def main(max_folds: int | None):
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-folds", type=int, default=None)
+    ap.add_argument("--tail", type=int, default=0)
     args = ap.parse_args()
-    main(max_folds=args.max_folds)
+    main(max_folds=args.max_folds, tail=args.tail)

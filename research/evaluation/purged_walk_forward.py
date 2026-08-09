@@ -230,6 +230,10 @@ if __name__ == "__main__":
                     help="Label horizon in trading days")
     ap.add_argument("--tag", type=str, default="",
                     help="Variant tag appended to result filenames")
+    ap.add_argument("--tail", type=int, default=0,
+                    help="min_tail_test: include a final partial test window "
+                         "of at least this many sessions")
     args = ap.parse_args()
-    run_walk_forward(WalkForwardConfig(horizon=args.horizon),
+    run_walk_forward(WalkForwardConfig(horizon=args.horizon,
+                                       min_tail_test=args.tail),
                      max_folds=args.max_folds, tag=args.tag)
