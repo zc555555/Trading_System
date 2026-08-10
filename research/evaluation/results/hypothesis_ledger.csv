@@ -1,0 +1,17 @@
+date,hypothesis,verdict
+2026-07-20,horizon_h5_vs_h1,finding: signal peaks at h=5
+2026-07-20,horizon_h20_vs_h1,finding: costs amortize at h=20
+2026-07-20,vol_ext_factor,rejected: virgin-negative (regime luck)
+2026-07-21,news_factor_h5,"passed h5, not adopted (prod is h20)"
+2026-07-21,news_factor_h20,rejected: zero IC at prod horizon
+2026-07-30,label_demarket,rejected: redundant w/ per-date zscore
+2026-07-30,label_debeta,rejected: beta estimation noise
+2026-07-30,label_volscale,rejected: double-counts vol sizing
+2026-07-30,ivol_position_sizing,ADOPTED: holdout-robust
+2026-08-09,pead_factor,rejected: fresh tier voted no
+2026-08-10,member_universe_filter,ADOPTED: dev IC doubles
+2026-08-10,optimizer_v1,rejected: turnover mismatch
+2026-08-10,factor_amihud,rejected: sign-oscillator (virgin + / holdout & fresh -)
+2026-08-10,factor_reversal,rejected: sign-oscillator (recent-regime only)
+2026-08-10,factor_high52,"candidate: best profile in project (dev blend 0.013->0.031, 3/4 tiers +, family-t borderline)"
+2026-08-10,factor_seasonal,"rejected: dev harm; fresh spike = one seasonal month, ~2 indep obs"

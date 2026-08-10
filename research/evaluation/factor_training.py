@@ -119,6 +119,15 @@ def train_factor_ensembles(
         X = df[feats].to_numpy(dtype=np.float32, na_value=0.0)
         X_tr, X_va = X[train_mask.to_numpy()], X[val_mask.to_numpy()]
 
+        # A factor whose features are all constant in this fold's training
+        # window (e.g. a feature needing more history than the early folds
+        # have) cannot be fit -- CatBoost raises. Skip the factor for the
+        # fold; the blend weighting treats it as absent.
+        if np.nanstd(X_tr, axis=0).max() == 0:
+            if verbose:
+                print(f"  [SKIP] {factor_name}: features constant in this fold")
+            continue
+
         models, model_ics, val_preds = {}, {}, {}
         for name, model in _make_models(seed).items():
             model.fit(X_tr, y_train)
