@@ -40,7 +40,9 @@ def _avail_series(g: pd.DataFrame, ttm: bool) -> pd.DataFrame:
         if len(g) < 4:
             return pd.DataFrame()
         vals = g["val"].rolling(4).sum()
-        avail = g["filed"].rolling(4, min_periods=4).max()
+        # rolling max over datetimes is unsupported -> via epoch ns
+        avail = pd.to_datetime(
+            g["filed"].astype("int64").rolling(4, min_periods=4).max())
         out = pd.DataFrame({"avail": avail, "value": vals,
                             "end": g["end"]}).dropna()
     else:
