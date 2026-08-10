@@ -200,6 +200,10 @@ features:
     - volume_increasing        # Volume above average (binary)
     - rsi_oversold             # RSI < 30 (binary)
     - bb_squeeze               # Bollinger Band squeeze (binary)
+    # 52-week-high anchoring (George & Hwang 2004) -- conditionally
+    # adopted 2026-08 as the `high52` factor (hypothesis #15)
+    - pct_52w_high
+    - days_from_high
 
   # Market environment features (EXPANDED for better market context)
   market_features:

@@ -401,6 +401,18 @@ class DatasetBuilder:
                     df[tech] = ops.rsi_oversold(df, window=14, threshold=30.0)
                 elif tech == 'bb_squeeze':
                     df[tech] = ops.bb_squeeze(df, window=20, threshold=0.01)
+                elif tech == 'pct_52w_high':
+                    # George & Hwang (2004): proximity to the 52-week high.
+                    # Conditionally adopted 2026-08 (hypothesis #15).
+                    roll_max = df.groupby('symbol', group_keys=False)['close'] \
+                        .apply(lambda s: s.rolling(252, min_periods=126).max())
+                    df[tech] = df['close'] / roll_max
+                elif tech == 'days_from_high':
+                    if 'pct_52w_high' not in df.columns:
+                        roll_max = df.groupby('symbol', group_keys=False)['close'] \
+                            .apply(lambda s: s.rolling(252, min_periods=126).max())
+                        df['pct_52w_high'] = df['close'] / roll_max
+                    df[tech] = 1.0 - df['pct_52w_high']
 
                 else:
                     print(f"Unknown technical feature: {tech}")

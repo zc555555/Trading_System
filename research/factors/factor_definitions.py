@@ -187,6 +187,19 @@ ALPHA_FEATURES = [
     'alpha_042',
 ]
 
+# 52-week-high anchoring (George & Hwang 2004). CONDITIONALLY ADOPTED
+# 2026-08-10 (hypothesis #15 in evaluation/results/hypothesis_ledger.csv):
+# dev blend IC 0.0129 -> 0.0314, holdout t=2.88 vs a Sidak family bar of
+# 2.93 -- below family-wise significance, adopted on the dev rule with a
+# pre-registered removal trigger: negative fresh tier at the ~2026-11
+# quarterly review removes it.
+HIGH52_FEATURES = [
+    'pct_52w_high',
+    'days_from_high',
+    'pct_52w_high_xs',
+    'days_from_high_xs',
+]
+
 # ============================================================================
 # ALL FACTORS DICTIONARY
 # ============================================================================
@@ -197,18 +210,21 @@ FACTOR_GROUPS = {
     'volume': VOLUME_FEATURES,
     'market': MARKET_FEATURES,
     'alpha': ALPHA_FEATURES,
+    'high52': HIGH52_FEATURES,
 }
 
 # ============================================================================
-# DEFAULT FACTOR WEIGHTS (can be adjusted)
+# DEFAULT FACTOR WEIGHTS (static FALLBACK only -- production uses the
+# IC-based resolver; see factors/factor_weighting.py)
 # ============================================================================
 FACTOR_WEIGHTS = {
-    'momentum': 0.25,      # 25% - Short-term price momentum
-    'trend': 0.20,         # 20% - Trend following
-    'volatility': 0.10,    # 10% - Volatility patterns
-    'volume': 0.10,        # 10% - Volume confirmation
-    'market': 0.25,        # 25% - Market environment (very important!)
-    'alpha': 0.10,         # 10% - Proprietary factors
+    'momentum': 0.23,      # Short-term price momentum
+    'trend': 0.19,         # Trend following
+    'volatility': 0.10,    # Volatility patterns
+    'volume': 0.09,        # Volume confirmation
+    'market': 0.24,        # Market environment
+    'alpha': 0.10,         # Proprietary factors
+    'high52': 0.05,        # 52w-high anchoring (conditional, 2026-08)
 }
 
 # Verify weights sum to 1.0

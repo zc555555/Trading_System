@@ -208,4 +208,7 @@ DEFAULT_XS_FEATURES: List[str] = [
     "roc_15d",
     "roc_30d",
     "momentum_50d",
+    # high52 factor (conditionally adopted 2026-08, hypothesis #15)
+    "pct_52w_high",
+    "days_from_high",
 ]

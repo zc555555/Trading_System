@@ -13,5 +13,5 @@ date,hypothesis,verdict
 2026-08-10,optimizer_v1,rejected: turnover mismatch
 2026-08-10,factor_amihud,rejected: sign-oscillator (virgin + / holdout & fresh -)
 2026-08-10,factor_reversal,rejected: sign-oscillator (recent-regime only)
-2026-08-10,factor_high52,"candidate: best profile in project (dev blend 0.013->0.031, 3/4 tiers +, family-t borderline)"
+2026-08-10,factor_high52,"CONDITIONALLY ADOPTED 2026-08-10: dev rule passed (blend 0.013->0.031), family-t 2.88 < 2.93 bar; removal trigger = negative fresh tier at ~2026-11 review"
 2026-08-10,factor_seasonal,"rejected: dev harm; fresh spike = one seasonal month, ~2 indep obs"
