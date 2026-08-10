@@ -22,6 +22,10 @@ scikit-learn>=1.4.0,<2.0
 catboost>=1.2.5,<2.0
 lightgbm>=4.3.0,<5.0
 xgboost>=2.0.3,<3.0
+cvxpy>=1.5.0,<2.0            # portfolio optimizer experiments
+
+# --- Scraping / parsing ------------------------------------------------------
+lxml>=5.0.0,<7.0             # yfinance earnings tables, Wikipedia scrapes
 
 # --- NLP / sentiment (FinBERT) ----------------------------------------------
 transformers>=4.40.0,<5.0
@@ -32,6 +36,10 @@ streamlit>=1.32.0,<2.0
 plotly>=5.20.0,<6.0
 matplotlib>=3.8.0,<4.0
 seaborn>=0.13.0,<1.0
+
+# --- GDELT news via BigQuery public dataset ----------------------------------
+google-cloud-bigquery>=3.20.0,<4.0
+db-dtypes>=1.2.0,<2.0
 
 # --- Scheduling / utilities --------------------------------------------------
 schedule>=1.2.0,<2.0
