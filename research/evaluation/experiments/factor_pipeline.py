@@ -124,11 +124,25 @@ def build_seasonal(df):
     return df, ['seasonal_month']
 
 
+def _make_fundamental_builder(group: str):
+    """Wave-2 candidates share one PIT feature build (EDGAR extract)."""
+    def build(df):
+        from features.fundamental_features import build_fundamental_features
+        df, feats = build_fundamental_features(df)
+        return df, feats[group]
+    return build
+
+
 CANDIDATES = {
     'amihud': build_amihud,
     'reversal': build_reversal,
     'high52': build_high52,
     'seasonal': build_seasonal,
+    # wave 2 (EDGAR fundamentals, pre-registered as a batch 2026-08-10)
+    'value': _make_fundamental_builder('value'),
+    'profitability': _make_fundamental_builder('profitability'),
+    'investment': _make_fundamental_builder('investment'),
+    'accruals': _make_fundamental_builder('accruals'),
 }
 
 
