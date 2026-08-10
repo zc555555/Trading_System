@@ -227,7 +227,18 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
         print(f"[open] {tranche_id} already exists -- already ran today. Skipping.")
         return None
 
+    # -------- no-debt principle: exposure snapshot for the hard guards ----
+    # (config_trading header block, 2026-08-11)
+    positions = trader.get_positions()
+    gross_now = sum(abs(p['market_value']) for p in positions)
+    short_now = sum(abs(p['market_value']) for p in positions
+                    if float(p['qty']) < 0)
+    placed_notional = 0.0
+    placed_short = 0.0
+
     print(f"\n{'=' * 70}\nOPENING NEW TRANCHE {tranche_id}\n{'=' * 70}")
+    print(f"  [no-debt] gross now ${gross_now:,.0f} "
+          f"(short ${short_now:,.0f}) vs equity ${equity:,.0f}")
     print(f"  account equity:     ${equity:>12,.2f}")
     print(f"  tranche capital:    ${tranche_capital:>12,.2f}  "
           f"({tranche_pct:.1f}% of equity)")
@@ -274,13 +285,32 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
             print(f"  [SKIP] {symbol}: qty<1 (alloc=${alloc:.2f} / price=${cur_price:.2f})")
             continue
 
+        # ---- no-debt principle hard guards (these are NOT buying-power
+        # checks: margin buying power allows leverage, equity does not) ----
+        order_notional = qty * cur_price
+        if gross_now + placed_notional + order_notional > equity:
+            print(f"  [BLOCK] {symbol}: would exceed 100% equity exposure "
+                  f"(gross ${gross_now + placed_notional:,.0f} + "
+                  f"${order_notional:,.0f} > ${equity:,.0f}) -- no leverage, ever")
+            continue
+        if side == "short":
+            if order_notional > equity * config_trading.SHORT_SINGLE_MAX_PCT / 100:
+                print(f"  [BLOCK] {symbol}: single short cap "
+                      f"({config_trading.SHORT_SINGLE_MAX_PCT}% equity)")
+                continue
+            if short_now + placed_short + order_notional > \
+                    equity * config_trading.SHORT_GROSS_MAX_PCT / 100:
+                print(f"  [BLOCK] {symbol}: aggregate short cap "
+                      f"({config_trading.SHORT_GROSS_MAX_PCT}% equity)")
+                continue
+
         # P2: never submit more notional than the account can carry.
         if not dry_run:
             fresh = trader.get_account_info()
             buying_power = float(fresh["buying_power"]) if fresh else 0.0
-            if qty * cur_price > buying_power:
+            if order_notional > buying_power:
                 print(f"  [SKIP] {symbol}: insufficient buying power "
-                      f"(need ${qty * cur_price:,.0f}, have ${buying_power:,.0f})")
+                      f"(need ${order_notional:,.0f}, have ${buying_power:,.0f})")
                 continue
 
         client_id = f"open_{tranche_id}_{symbol}"
@@ -343,6 +373,9 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
             exec_arm=arm,
         )
         (longs if side == "long" else shorts).append(pos)
+        placed_notional += order_notional
+        if side == "short":
+            placed_short += order_notional
 
         # Persist THIS leg before placing the next order. An exception on
         # stock N must never leave stocks 1..N-1 live at the broker but

@@ -4,6 +4,27 @@ Separated from research/config.yaml because trading params change
 independently of model params.
 
 Edit this file to switch strategies, change holding periods, or tune risk.
+
+============================================================================
+PERMANENT RISK PRINCIPLE (user directive, 2026-08-11) -- NO DEBT, EVER
+============================================================================
+Losing invested capital is an accepted trading outcome. Any path to
+losing MORE than equity (owing money) must be structurally eliminated.
+Shorting is PERMITTED, but only under these hard controls:
+
+  1. NO LEVERAGE. Total position notional never exceeds account equity.
+     Hard pre-order guard in run_staggered_trading -- margin buying
+     power is deliberately NOT the limit, equity is.
+  2. SHORT CAPS. Any single short <= SHORT_SINGLE_MAX_PCT of equity;
+     total short notional <= SHORT_GROSS_MAX_PCT of equity. Sized so
+     even extreme overnight gaps cannot approach negative equity.
+  3. Broker-side stop orders are MANDATORY on every position (brackets);
+     the monitor and kill switch are backups, not the primary defense.
+  4. Any future overlay that scales exposure (e.g. volatility targeting)
+     may only scale DOWN (cap 1.0), never up.
+
+tests/test_no_debt_principle.py pins these settings; CI fails if violated.
+============================================================================
 """
 
 # ----------------------------------------------------------------------
@@ -35,12 +56,20 @@ CAPITAL_PER_TRANCHE_PCT = None
 PER_STOCK_MAX_PCT = 30
 
 # Allow short positions for negative-prediction signals?
-# Requires Alpaca short-selling approval (free on paper accounts).
+# Shorts are permitted UNDER the risk controls of the no-debt principle
+# above: broker-side stops mandatory, per-short and aggregate-short hard
+# caps below, no leverage overall.
 ALLOW_SHORTS = True
 
 # If True, drop SELL signals entirely instead of shorting them.
-# Use when ALLOW_SHORTS is False or short approval is unavailable.
 LONG_ONLY_FILTER = False
+
+# Hard caps for short exposure (no-debt principle, 2026-08-11).
+# Worst plausible overnight gap on a single short (+200%) costs at most
+# 2 x SHORT_SINGLE_MAX_PCT of equity; every short doubling simultaneously
+# costs at most SHORT_GROSS_MAX_PCT -- painful, never debt (gross <= 1).
+SHORT_SINGLE_MAX_PCT = 2.0    # max % of equity in any single short
+SHORT_GROSS_MAX_PCT = 25.0    # max % of equity in total short notional
 
 # ----------------------------------------------------------------------
 # Risk parameters (apply to BOTH strategies)
