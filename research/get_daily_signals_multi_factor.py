@@ -311,6 +311,24 @@ def main():
 
     # Load data
     df = pd.read_parquet(data_dir / "stocks_with_time_windows.parquet")
+
+    # 2026-08: restrict signal selection to S&P-member equities. ETFs and
+    # never-members are baskets/odd names the cross-sectional factors
+    # cannot rank; excluding them doubled dev IC (0.0066 -> 0.0129) and
+    # holdout IC (0.026 -> 0.051, t=2.65) with no virgin-tier harm --
+    # see pit_universe_verdict / commit 09336d5. Same universe as the
+    # evaluated pitOFF configuration.
+    membership_path = data_dir / "sp500_membership.parquet"
+    if membership_path.exists():
+        members = set(pd.read_parquet(membership_path)['symbol'].unique())
+        n_before = df['symbol'].nunique()
+        df = df[df['symbol'].isin(members)]
+        print(f"[universe] S&P-member filter: {n_before} -> "
+              f"{df['symbol'].nunique()} symbols (ETFs/never-members excluded)")
+    else:
+        print("[universe][WARN] sp500_membership.parquet missing -- "
+              "run data/fetch_sp500_history.py; trading full universe")
+
     latest_date = df['date'].max()
 
     print(f"\nUsing data up to: {latest_date.date()}")
