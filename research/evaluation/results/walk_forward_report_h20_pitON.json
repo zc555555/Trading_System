@@ -1,0 +1,1004 @@
+{
+  "config": {
+    "train_window": 756,
+    "test_window": 63,
+    "step": 63,
+    "horizon": 20,
+    "embargo_days": 5,
+    "seed": 42,
+    "min_tail_test": 15
+  },
+  "generated_at": "2026-08-10T00:36:23.261288",
+  "holdout_start": "2025-07-01",
+  "n_folds": 34,
+  "folds": [
+    {
+      "fold": 1,
+      "train_start": "2014-12-30",
+      "train_end": "2017-11-21",
+      "test_start": "2017-12-29",
+      "test_end": "2018-04-02",
+      "factor_scores": {
+        "momentum": -0.026276613147734725,
+        "trend": 0.006694397792680448,
+        "volatility": -0.052464500759007,
+        "volume": 0.0005747469044489619,
+        "market": 0.0,
+        "alpha": -0.028055217118069145
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.7733891750335221,
+        "volatility": 0.0,
+        "volume": 0.22661082496647786,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 2,
+      "train_start": "2015-04-01",
+      "train_end": "2018-02-23",
+      "test_start": "2018-04-03",
+      "test_end": "2018-06-29",
+      "factor_scores": {
+        "momentum": 0.006118322380801926,
+        "trend": 0.004748789047445897,
+        "volatility": -0.04667441447887055,
+        "volume": 0.004682380343477566,
+        "market": 0.0,
+        "alpha": -0.017773460059460584
+      },
+      "factor_weights": {
+        "momentum": 0.3628689830500864,
+        "trend": 0.3196870971086994,
+        "volatility": 0.0,
+        "volume": 0.3174439198412142,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 3,
+      "train_start": "2015-07-01",
+      "train_end": "2018-05-24",
+      "test_start": "2018-07-02",
+      "test_end": "2018-09-28",
+      "factor_scores": {
+        "momentum": 0.048411370340941375,
+        "trend": -0.004221949662741016,
+        "volatility": -0.01546317730920664,
+        "volume": -0.009888938978697052,
+        "market": 0.0,
+        "alpha": -0.03760858966124689
+      },
+      "factor_weights": {
+        "momentum": 1.0,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 4,
+      "train_start": "2015-09-30",
+      "train_end": "2018-08-23",
+      "test_start": "2018-10-01",
+      "test_end": "2018-12-31",
+      "factor_scores": {
+        "momentum": 0.01730505553150369,
+        "trend": 0.013948247253793428,
+        "volatility": -0.05056656264063956,
+        "volume": 0.008531059398298018,
+        "market": 0.0,
+        "alpha": -0.013260040058841668
+      },
+      "factor_weights": {
+        "momentum": 0.38462826959497987,
+        "trend": 0.3453142662441974,
+        "volatility": 0.0,
+        "volume": 0.2700574641608227,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 5,
+      "train_start": "2015-12-30",
+      "train_end": "2018-11-21",
+      "test_start": "2019-01-02",
+      "test_end": "2019-04-02",
+      "factor_scores": {
+        "momentum": -0.04708893012230298,
+        "trend": -0.02026446722808259,
+        "volatility": -0.04027076584319379,
+        "volume": -0.029412504727480818,
+        "market": 0.0,
+        "alpha": 0.004296407068769709
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 1.0
+      }
+    },
+    {
+      "fold": 6,
+      "train_start": "2016-04-01",
+      "train_end": "2019-02-26",
+      "test_start": "2019-04-03",
+      "test_end": "2019-07-02",
+      "factor_scores": {
+        "momentum": 0.03531167406698135,
+        "trend": 0.021958080711240696,
+        "volatility": 0.031134995728544886,
+        "volume": 0.026638963100878005,
+        "market": 0.0,
+        "alpha": 0.021715245583552364
+      },
+      "factor_weights": {
+        "momentum": 0.22829392415281455,
+        "trend": 0.18002482117764484,
+        "volatility": 0.21436782664015339,
+        "volume": 0.1982868245268256,
+        "market": 0.0,
+        "alpha": 0.17902660350256167
+      }
+    },
+    {
+      "fold": 7,
+      "train_start": "2016-06-30",
+      "train_end": "2019-05-28",
+      "test_start": "2019-07-03",
+      "test_end": "2019-10-01",
+      "factor_scores": {
+        "momentum": -0.01653183517650575,
+        "trend": 0.024906806155730394,
+        "volatility": 0.024301643851412123,
+        "volume": 0.034952644600527966,
+        "market": 0.0,
+        "alpha": -0.02646271746988813
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.3152185577285105,
+        "volatility": 0.31136556672245874,
+        "volume": 0.3734158755490307,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 8,
+      "train_start": "2016-09-29",
+      "train_end": "2019-08-26",
+      "test_start": "2019-10-02",
+      "test_end": "2019-12-31",
+      "factor_scores": {
+        "momentum": 0.07665523966163713,
+        "trend": 0.10653117528897828,
+        "volatility": 0.11123225658468179,
+        "volume": 0.08742401660227563,
+        "market": 0.0,
+        "alpha": 0.045061585234686244
+      },
+      "factor_weights": {
+        "momentum": 0.19163972714066413,
+        "trend": 0.22591911604128462,
+        "volatility": 0.2308500616595494,
+        "volume": 0.20465859995083943,
+        "market": 0.0,
+        "alpha": 0.1469324952076624
+      }
+    },
+    {
+      "fold": 9,
+      "train_start": "2016-12-29",
+      "train_end": "2019-11-22",
+      "test_start": "2020-01-02",
+      "test_end": "2020-04-01",
+      "factor_scores": {
+        "momentum": 0.006883923084782693,
+        "trend": 0.022334700397392177,
+        "volatility": 0.023884332123443982,
+        "volume": 0.05212586433494221,
+        "market": 0.0,
+        "alpha": -0.009903178765618666
+      },
+      "factor_weights": {
+        "momentum": 0.13484956274129759,
+        "trend": 0.24289669384500753,
+        "volatility": 0.25118175398336806,
+        "volume": 0.3710719894303268,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 10,
+      "train_start": "2017-03-31",
+      "train_end": "2020-02-26",
+      "test_start": "2020-04-02",
+      "test_end": "2020-07-01",
+      "factor_scores": {
+        "momentum": -0.15629799973269712,
+        "trend": -0.07873386146842508,
+        "volatility": -0.07441446172795285,
+        "volume": 0.0062991632918062744,
+        "market": 0.0,
+        "alpha": -0.02110263273896764
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 1.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 11,
+      "train_start": "2017-06-30",
+      "train_end": "2020-05-27",
+      "test_start": "2020-07-02",
+      "test_end": "2020-09-30",
+      "factor_scores": {
+        "momentum": -0.04401381805455021,
+        "trend": -0.04730920606562543,
+        "volatility": -0.08705494392171075,
+        "volume": 0.0054941468212770924,
+        "market": 0.0,
+        "alpha": 0.008817558780017038
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 0.44114143979287357,
+        "market": 0.0,
+        "alpha": 0.5588585602071265
+      }
+    },
+    {
+      "fold": 12,
+      "train_start": "2017-09-29",
+      "train_end": "2020-08-25",
+      "test_start": "2020-10-01",
+      "test_end": "2020-12-30",
+      "factor_scores": {
+        "momentum": 0.04266698148055855,
+        "trend": 0.025922746105818555,
+        "volatility": -0.03449657973373523,
+        "volume": 0.05058451603237732,
+        "market": 0.0,
+        "alpha": 0.032723161491658555
+      },
+      "factor_weights": {
+        "momentum": 0.2670903597114817,
+        "trend": 0.2081865922832187,
+        "volatility": 0.0,
+        "volume": 0.2908178456742686,
+        "market": 0.0,
+        "alpha": 0.23390520233103096
+      }
+    },
+    {
+      "fold": 13,
+      "train_start": "2017-12-29",
+      "train_end": "2020-11-23",
+      "test_start": "2020-12-31",
+      "test_end": "2021-04-01",
+      "factor_scores": {
+        "momentum": -0.009624537354859913,
+        "trend": 0.022515753931194763,
+        "volatility": 0.04449784488664389,
+        "volume": -0.011910430423713389,
+        "market": 0.0,
+        "alpha": 0.008272161960940626
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.3320119886183307,
+        "volatility": 0.46674535862406163,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.20124265275760775
+      }
+    },
+    {
+      "fold": 14,
+      "train_start": "2018-04-03",
+      "train_end": "2021-02-25",
+      "test_start": "2021-04-05",
+      "test_end": "2021-07-01",
+      "factor_scores": {
+        "momentum": 0.08473372549925783,
+        "trend": -0.052891287840449504,
+        "volatility": 0.20433548947407204,
+        "volume": -0.08628060360315673,
+        "market": 0.0,
+        "alpha": -0.11953981062438142
+      },
+      "factor_weights": {
+        "momentum": 0.3917112441110755,
+        "trend": 0.0,
+        "volatility": 0.6082887558889245,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 15,
+      "train_start": "2018-07-02",
+      "train_end": "2021-05-26",
+      "test_start": "2021-07-02",
+      "test_end": "2021-09-30",
+      "factor_scores": {
+        "momentum": 0.09027139711280503,
+        "trend": 0.015090113750789379,
+        "volatility": 0.08953833238958325,
+        "volume": 0.0011562910113143148,
+        "market": 0.0,
+        "alpha": 0.014604384739722117
+      },
+      "factor_weights": {
+        "momentum": 0.34244371790468564,
+        "trend": 0.14001042641796763,
+        "volatility": 0.34105044640663323,
+        "volume": 0.03875678076699749,
+        "market": 0.0,
+        "alpha": 0.13773862850371602
+      }
+    },
+    {
+      "fold": 16,
+      "train_start": "2018-10-01",
+      "train_end": "2021-08-25",
+      "test_start": "2021-10-01",
+      "test_end": "2021-12-30",
+      "factor_scores": {
+        "momentum": 0.004205023892003367,
+        "trend": -0.04310233643674262,
+        "volatility": -0.01346924225248,
+        "volume": 0.041648168268458935,
+        "market": 0.0,
+        "alpha": -0.009188402179203005
+      },
+      "factor_weights": {
+        "momentum": 0.2411310194081796,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 0.7588689805918204,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 17,
+      "train_start": "2019-01-02",
+      "train_end": "2021-11-23",
+      "test_start": "2021-12-31",
+      "test_end": "2022-03-31",
+      "factor_scores": {
+        "momentum": -0.006960148260608989,
+        "trend": -0.06231599433739228,
+        "volatility": -0.06209835029807388,
+        "volume": 0.05146907743759089,
+        "market": 0.0,
+        "alpha": -0.023948776432276685
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 1.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 18,
+      "train_start": "2019-04-03",
+      "train_end": "2022-02-24",
+      "test_start": "2022-04-01",
+      "test_end": "2022-07-01",
+      "factor_scores": {
+        "momentum": -0.04435751747413588,
+        "trend": -0.07999103019377764,
+        "volatility": -0.06881575825795117,
+        "volume": -0.04884455110457074,
+        "market": 0.0,
+        "alpha": -0.05012281115039143
+      },
+      "factor_weights": {
+        "momentum": 0.16666666666666666,
+        "trend": 0.16666666666666666,
+        "volatility": 0.16666666666666666,
+        "volume": 0.16666666666666666,
+        "market": 0.16666666666666666,
+        "alpha": 0.16666666666666666
+      }
+    },
+    {
+      "fold": 19,
+      "train_start": "2019-07-03",
+      "train_end": "2022-05-25",
+      "test_start": "2022-07-05",
+      "test_end": "2022-09-30",
+      "factor_scores": {
+        "momentum": -0.06978139264089822,
+        "trend": -0.043229239331606786,
+        "volatility": -0.12490567267427635,
+        "volume": -0.08121740124378964,
+        "market": 0.0,
+        "alpha": -0.07855142610618965
+      },
+      "factor_weights": {
+        "momentum": 0.16666666666666666,
+        "trend": 0.16666666666666666,
+        "volatility": 0.16666666666666666,
+        "volume": 0.16666666666666666,
+        "market": 0.16666666666666666,
+        "alpha": 0.16666666666666666
+      }
+    },
+    {
+      "fold": 20,
+      "train_start": "2019-10-02",
+      "train_end": "2022-08-25",
+      "test_start": "2022-10-03",
+      "test_end": "2022-12-30",
+      "factor_scores": {
+        "momentum": 0.03258359212300182,
+        "trend": 0.023605145994528294,
+        "volatility": -0.04245388389092725,
+        "volume": -0.047137899447308534,
+        "market": 0.0,
+        "alpha": 0.002769473564459369
+      },
+      "factor_weights": {
+        "momentum": 0.4667038814122729,
+        "trend": 0.3972329612726207,
+        "volatility": 0.0,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.13606315731510638
+      }
+    },
+    {
+      "fold": 21,
+      "train_start": "2020-01-02",
+      "train_end": "2022-11-23",
+      "test_start": "2023-01-03",
+      "test_end": "2023-04-03",
+      "factor_scores": {
+        "momentum": 0.08589517261423357,
+        "trend": 0.043403444235854204,
+        "volatility": 0.04512077757923317,
+        "volume": -0.043995245415299165,
+        "market": 0.0,
+        "alpha": 0.015562054227981391
+      },
+      "factor_weights": {
+        "momentum": 0.34949487515351546,
+        "trend": 0.24843828944388702,
+        "volatility": 0.2533055591520641,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.14876127625053337
+      }
+    },
+    {
+      "fold": 22,
+      "train_start": "2020-04-02",
+      "train_end": "2023-02-27",
+      "test_start": "2023-04-04",
+      "test_end": "2023-07-05",
+      "factor_scores": {
+        "momentum": 0.056035380557160674,
+        "trend": 0.07604360075891176,
+        "volatility": 0.09328053656433583,
+        "volume": 0.026475630456137027,
+        "market": 0.0,
+        "alpha": 0.03935967354944146
+      },
+      "factor_weights": {
+        "momentum": 0.20077811654989552,
+        "trend": 0.23389263659419116,
+        "volatility": 0.25904829059448453,
+        "volume": 0.13800930485049018,
+        "market": 0.0,
+        "alpha": 0.16827165141093864
+      }
+    },
+    {
+      "fold": 23,
+      "train_start": "2020-07-02",
+      "train_end": "2023-05-26",
+      "test_start": "2023-07-06",
+      "test_end": "2023-10-03",
+      "factor_scores": {
+        "momentum": 0.09623167379801953,
+        "trend": 0.03798951138478688,
+        "volatility": 0.07267908039136609,
+        "volume": -0.0209185780708705,
+        "market": 0.0,
+        "alpha": 0.010041502346234991
+      },
+      "factor_weights": {
+        "momentum": 0.3545611041507656,
+        "trend": 0.22277370367762803,
+        "volatility": 0.30813198597941677,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.11453320619218968
+      }
+    },
+    {
+      "fold": 24,
+      "train_start": "2020-10-01",
+      "train_end": "2023-08-28",
+      "test_start": "2023-10-04",
+      "test_end": "2024-01-03",
+      "factor_scores": {
+        "momentum": -0.022211825935720395,
+        "trend": -0.03232284624354356,
+        "volatility": 0.05692152982195046,
+        "volume": -0.01432304549900945,
+        "market": 0.0,
+        "alpha": -0.053028468158096254
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.0,
+        "volatility": 1.0,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 25,
+      "train_start": "2020-12-31",
+      "train_end": "2023-11-27",
+      "test_start": "2024-01-04",
+      "test_end": "2024-04-04",
+      "factor_scores": {
+        "momentum": 0.006661940496954635,
+        "trend": 0.016674851912050703,
+        "volatility": 0.05166760771403577,
+        "volume": -0.0023091129661595685,
+        "market": 0.0,
+        "alpha": -0.004062838069282739
+      },
+      "factor_weights": {
+        "momentum": 0.1863244285128063,
+        "trend": 0.29478163003575863,
+        "volatility": 0.518893941451435,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 26,
+      "train_start": "2021-04-05",
+      "train_end": "2024-02-28",
+      "test_start": "2024-04-05",
+      "test_end": "2024-07-05",
+      "factor_scores": {
+        "momentum": 0.020634710916590235,
+        "trend": 0.04669914573156838,
+        "volatility": 0.07810049860039171,
+        "volume": 0.024549392660566438,
+        "market": 0.0,
+        "alpha": -0.02851187026419905
+      },
+      "factor_weights": {
+        "momentum": 0.18048599280863514,
+        "trend": 0.2715180939774661,
+        "volatility": 0.3511326478592928,
+        "volume": 0.19686326535460585,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 27,
+      "train_start": "2021-07-02",
+      "train_end": "2024-05-29",
+      "test_start": "2024-07-08",
+      "test_end": "2024-10-03",
+      "factor_scores": {
+        "momentum": -0.02354674733399702,
+        "trend": 0.0425685667330856,
+        "volatility": -0.015230604304499898,
+        "volume": -0.02100403246581571,
+        "market": 0.0,
+        "alpha": -0.020320103861508673
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 1.0,
+        "volatility": 0.0,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 28,
+      "train_start": "2021-10-01",
+      "train_end": "2024-08-28",
+      "test_start": "2024-10-04",
+      "test_end": "2025-01-03",
+      "factor_scores": {
+        "momentum": 0.007324229376587523,
+        "trend": 0.04405801730103755,
+        "volatility": -0.03688717485308641,
+        "volume": -0.0331653129598316,
+        "market": 0.0,
+        "alpha": -0.013941434998157221
+      },
+      "factor_weights": {
+        "momentum": 0.28963452988879895,
+        "trend": 0.7103654701112011,
+        "volatility": 0.0,
+        "volume": 0.0,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 29,
+      "train_start": "2021-12-31",
+      "train_end": "2024-11-26",
+      "test_start": "2025-01-06",
+      "test_end": "2025-04-07",
+      "factor_scores": {
+        "momentum": -0.04726218873290619,
+        "trend": 0.014516519960139498,
+        "volatility": -0.025695587874014512,
+        "volume": 0.0011902292738973004,
+        "market": 0.0,
+        "alpha": 0.006746892440873649
+      },
+      "factor_weights": {
+        "momentum": 0.0,
+        "trend": 0.5081083264684583,
+        "volatility": 0.0,
+        "volume": 0.14549242007157817,
+        "market": 0.0,
+        "alpha": 0.34639925345996353
+      }
+    },
+    {
+      "fold": 30,
+      "train_start": "2022-04-01",
+      "train_end": "2025-03-03",
+      "test_start": "2025-04-08",
+      "test_end": "2025-07-09",
+      "factor_scores": {
+        "momentum": 0.005029359703903418,
+        "trend": 0.01547559077507088,
+        "volatility": 0.0249891466880121,
+        "volume": 0.02271356782125408,
+        "market": 0.0,
+        "alpha": -0.00817220184771784
+      },
+      "factor_weights": {
+        "momentum": 0.14067994088921598,
+        "trend": 0.24677402618091043,
+        "volatility": 0.31358230020434463,
+        "volume": 0.29896373272552895,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 31,
+      "train_start": "2022-07-05",
+      "train_end": "2025-06-02",
+      "test_start": "2025-07-10",
+      "test_end": "2025-10-07",
+      "factor_scores": {
+        "momentum": 0.09331654341496946,
+        "trend": -0.005203185811683597,
+        "volatility": -0.021794713339935413,
+        "volume": 0.00787140220386877,
+        "market": 0.0,
+        "alpha": -0.007262994680567993
+      },
+      "factor_weights": {
+        "momentum": 0.7749333760598638,
+        "trend": 0.0,
+        "volatility": 0.0,
+        "volume": 0.2250666239401363,
+        "market": 0.0,
+        "alpha": 0.0
+      }
+    },
+    {
+      "fold": 32,
+      "train_start": "2022-10-03",
+      "train_end": "2025-09-02",
+      "test_start": "2025-10-08",
+      "test_end": "2026-01-07",
+      "factor_scores": {
+        "momentum": 0.08336622404493886,
+        "trend": 0.021784931291318428,
+        "volatility": 0.03660481154049131,
+        "volume": 0.032697203008132364,
+        "market": 0.0,
+        "alpha": 0.030946810145776237
+      },
+      "factor_weights": {
+        "momentum": 0.2933095258357712,
+        "trend": 0.1499371320335371,
+        "volatility": 0.1943570013258469,
+        "volume": 0.18369037641046929,
+        "market": 0.0,
+        "alpha": 0.17870596439437553
+      }
+    },
+    {
+      "fold": 33,
+      "train_start": "2023-01-03",
+      "train_end": "2025-12-01",
+      "test_start": "2026-01-08",
+      "test_end": "2026-04-09",
+      "factor_scores": {
+        "momentum": 0.01905161111716712,
+        "trend": 0.016854236915359526,
+        "volatility": 0.024771086957025755,
+        "volume": 0.021569403864753214,
+        "market": 0.0,
+        "alpha": 0.02540626862733504
+      },
+      "factor_weights": {
+        "momentum": 0.18869154089914572,
+        "trend": 0.17747660982787855,
+        "volatility": 0.2151587977732,
+        "volume": 0.20077315706334428,
+        "market": 0.0,
+        "alpha": 0.21789989443643146
+      }
+    },
+    {
+      "fold": 34,
+      "train_start": "2023-04-04",
+      "train_end": "2026-03-04",
+      "test_start": "2026-04-10",
+      "test_end": "2026-07-10",
+      "factor_scores": {
+        "momentum": 0.023012406879189973,
+        "trend": -0.004941648553359128,
+        "volatility": 0.02118668455054359,
+        "volume": 0.0014387552159508595,
+        "market": 0.0,
+        "alpha": 0.01259805436779848
+      },
+      "factor_weights": {
+        "momentum": 0.33904627344328564,
+        "trend": 0.0,
+        "volatility": 0.3253190185581045,
+        "volume": 0.0847757047432487,
+        "market": 0.0,
+        "alpha": 0.25085900325536103
+      }
+    }
+  ],
+  "ic": {
+    "pred": {
+      "dev": {
+        "n_days": 1884,
+        "ic_mean": 0.006761399831444527,
+        "ic_std": 0.1540430978037386,
+        "t_stat": 0.6192636508123226,
+        "ic_ir": 0.04389291002222645,
+        "pct_positive": 0.5063694267515924,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 258,
+        "ic_mean": 0.043476778367737244,
+        "ic_std": 0.11641976477325418,
+        "t_stat": 2.109073098510181,
+        "ic_ir": 0.3734484299329681,
+        "pct_positive": 0.6162790697674418,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 2142,
+        "ic_mean": 0.011183700327412558,
+        "ic_std": 0.15046462429993443,
+        "t_stat": 1.120866840192659,
+        "ic_ir": 0.07432777225508569,
+        "pct_positive": 0.5196078431372549,
+        "nw_lags": 19
+      }
+    },
+    "factor_momentum": {
+      "dev": {
+        "n_days": 1884,
+        "ic_mean": 0.007975151565842638,
+        "ic_std": 0.1680445074231799,
+        "t_stat": 0.6552056075226348,
+        "ic_ir": 0.047458567305381345,
+        "pct_positive": 0.49150743099787686,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 258,
+        "ic_mean": 0.028052194310499635,
+        "ic_std": 0.10759049687018113,
+        "t_stat": 1.6837842871453834,
+        "ic_ir": 0.2607311530901048,
+        "pct_positive": 0.5930232558139535,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 2142,
+        "ic_mean": 0.010393394809596841,
+        "ic_std": 0.16207491623788575,
+        "t_stat": 0.951816361050994,
+        "ic_ir": 0.06412710276735184,
+        "pct_positive": 0.503734827264239,
+        "nw_lags": 19
+      }
+    },
+    "factor_trend": {
+      "dev": {
+        "n_days": 1884,
+        "ic_mean": 0.0027111045011168158,
+        "ic_std": 0.12251544501499298,
+        "t_stat": 0.3490363562946463,
+        "ic_ir": 0.022128675293021552,
+        "pct_positive": 0.49044585987261147,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 258,
+        "ic_mean": 0.018424454338571577,
+        "ic_std": 0.09907471237460176,
+        "t_stat": 1.170108964008859,
+        "ic_ir": 0.1859652568953081,
+        "pct_positive": 0.6046511627906976,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 2142,
+        "ic_mean": 0.00460374887929764,
+        "ic_std": 0.12002371034098636,
+        "t_stat": 0.6480365658033039,
+        "ic_ir": 0.038356995182188824,
+        "pct_positive": 0.5042016806722689,
+        "nw_lags": 19
+      }
+    },
+    "factor_volatility": {
+      "dev": {
+        "n_days": 1884,
+        "ic_mean": 0.01566952068741848,
+        "ic_std": 0.17988532370578522,
+        "t_stat": 1.1498462670000553,
+        "ic_ir": 0.08710838863679093,
+        "pct_positive": 0.5074309978768577,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 258,
+        "ic_mean": 0.05244718342804818,
+        "ic_std": 0.1236155311624538,
+        "t_stat": 2.234306098909475,
+        "ic_ir": 0.4242766498258445,
+        "pct_positive": 0.6472868217054264,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 2142,
+        "ic_mean": 0.020099323202396286,
+        "ic_std": 0.17446199489014017,
+        "t_stat": 1.6272342652550595,
+        "ic_ir": 0.11520745945300556,
+        "pct_positive": 0.5242763772175537,
+        "nw_lags": 19
+      }
+    },
+    "factor_volume": {
+      "dev": {
+        "n_days": 1884,
+        "ic_mean": -0.003113190818204315,
+        "ic_std": 0.11874416300284545,
+        "t_stat": -0.38215829771390936,
+        "ic_ir": -0.026217632424843606,
+        "pct_positive": 0.4867303609341826,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 258,
+        "ic_mean": 0.012125651217158888,
+        "ic_std": 0.08845719879183882,
+        "t_stat": 0.7939717054395401,
+        "ic_ir": 0.13707930369458654,
+        "pct_positive": 0.5775193798449613,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 2142,
+        "ic_mean": -0.0012777000408356366,
+        "ic_std": 0.11560670032327183,
+        "t_stat": -0.17235564660514074,
+        "ic_ir": -0.01105212792392478,
+        "pct_positive": 0.4976657329598506,
+        "nw_lags": 19
+      }
+    },
+    "factor_market": {
+      "dev": {
+        "n_days": 0,
+        "ic_mean": NaN,
+        "ic_std": NaN,
+        "t_stat": NaN,
+        "ic_ir": NaN,
+        "pct_positive": NaN,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 0,
+        "ic_mean": NaN,
+        "ic_std": NaN,
+        "t_stat": NaN,
+        "ic_ir": NaN,
+        "pct_positive": NaN,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 0,
+        "ic_mean": NaN,
+        "ic_std": NaN,
+        "t_stat": NaN,
+        "ic_ir": NaN,
+        "pct_positive": NaN,
+        "nw_lags": 19
+      }
+    },
+    "factor_alpha": {
+      "dev": {
+        "n_days": 1884,
+        "ic_mean": -0.006556184027414559,
+        "ic_std": 0.13726897126577628,
+        "t_stat": -0.7577942413300871,
+        "ic_ir": -0.04776158782978465,
+        "pct_positive": 0.4729299363057325,
+        "nw_lags": 19
+      },
+      "holdout": {
+        "n_days": 258,
+        "ic_mean": 0.024744067711533632,
+        "ic_std": 0.08121962562359414,
+        "t_stat": 2.5234667242060462,
+        "ic_ir": 0.304656264068589,
+        "pct_positive": 0.5968992248062015,
+        "nw_lags": 19
+      },
+      "all": {
+        "n_days": 2142,
+        "ic_mean": -0.0027861256947121172,
+        "ic_std": 0.13216585690864052,
+        "t_stat": -0.35896159087867574,
+        "ic_ir": -0.021080525332938468,
+        "pct_positive": 0.48786181139122314,
+        "nw_lags": 19
+      }
+    }
+  },
+  "target_col": "future_return_20d"
+}
