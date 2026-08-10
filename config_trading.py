@@ -24,6 +24,15 @@ Shorting is PERMITTED, but only under these hard controls:
      may only scale DOWN (cap 1.0), never up.
 
 tests/test_no_debt_principle.py pins these settings; CI fails if violated.
+
+Adjudication note (2026-08-11): a stricter standard ("maximum loss must
+be MATHEMATICALLY bounded; ban shorts outright") was considered and the
+distinction was made explicit -- the caps below bound short NOTIONAL,
+not loss, so negative equity requires an astronomically improbable
+multi-name extreme-gap event but is not mathematically zero. The user
+consciously chose capped shorts over a shorts ban. If the account ever
+goes live with real money, prefer a CASH account for the long book and
+re-open this decision.
 ============================================================================
 """
 
