@@ -15,3 +15,7 @@ date,hypothesis,verdict
 2026-08-10,factor_reversal,rejected: sign-oscillator (recent-regime only)
 2026-08-10,factor_high52,"CONDITIONALLY ADOPTED 2026-08-10: dev rule passed (blend 0.013->0.031), family-t 2.88 < 2.93 bar; removal trigger = negative fresh tier at ~2026-11 review"
 2026-08-10,factor_seasonal,"rejected: dev harm; fresh spike = one seasonal month, ~2 indep obs"
+2026-08-10,factor_value,"rejected: no tier significant, fresh -0.041; value dead at 20d as pre-discounted"
+2026-08-10,factor_profitability,rejected: standalone ~0 everywhere; dev blend gain without any standalone signal = weighting shuffle
+2026-08-10,factor_investment,"rejected: virgin +0.025(t=2.3) but fresh -0.036(t=-3.3) -- sign oscillator, newest window vetoes"
+2026-08-10,factor_accruals,"closest miss: dev blend 0.013->0.024, fresh alone +0.039(t=2.86<2.97 bar), no negative tier; WATCH-LIST -> re-examine at 2026-11 review"
