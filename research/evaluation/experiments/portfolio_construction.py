@@ -90,13 +90,20 @@ def simulate(panel: pd.DataFrame, wide: dict, top_n: int, inv_vol: bool,
              neutral: bool, cost_bp: float,
              collect: dict | None = None) -> pd.Series:
     """``collect``: optional dict filled with 'weights' ({date: {sym: net w}})
-    and 'costs' ({date: drag}) for the attribution layer (risk_model.py)."""
+    and 'costs' ({date: drag}) for the attribution layer (risk_model.py),
+    plus tranche-level detail for overlay experiments:
+      'tranche_pnl'     {(entry_session, mark_session): pnl contribution}
+      'tranche_weights' {(entry_session, mark_session): {sym: net w}}
+    keyed by the tranche's ENTRY session (the day its orders fill), so a
+    per-tranche scale factor multiplies both consistently."""
     sessions, sess_idx = wide["sessions"], wide["idx"]
     open_px, close_px = wide["open"], wide["close"]
     rt = cost_bp / 1e4
     daily = defaultdict(float)
     coll_w = defaultdict(lambda: defaultdict(float)) if collect is not None else None
     coll_c = defaultdict(float) if collect is not None else None
+    coll_tp = defaultdict(float) if collect is not None else None
+    coll_tw = defaultdict(lambda: defaultdict(float)) if collect is not None else None
     for date, day in panel.groupby("date", sort=True):
         i = sess_idx.get(date)
         if i is None or i + 1 >= len(sessions):
@@ -125,10 +132,14 @@ def simulate(panel: pd.DataFrame, wide: dict, top_n: int, inv_vol: bool,
                         coll_c[sessions[i + h]] += w * rt / 2
                     if h == last_h:
                         coll_c[sessions[i + h]] += w * rt / 2
+                    coll_tp[(sessions[i + 1], sessions[i + h])] += w * mark
+                    coll_tw[(sessions[i + 1], sessions[i + h])][sym] += w * d
                 prev = px
     if collect is not None:
         collect['weights'] = {dt: dict(sy) for dt, sy in coll_w.items()}
         collect['costs'] = dict(coll_c)
+        collect['tranche_pnl'] = dict(coll_tp)
+        collect['tranche_weights'] = {k: dict(v) for k, v in coll_tw.items()}
     return pd.Series(dict(daily)).sort_index()
 
 

@@ -1,0 +1,78 @@
+{
+  "generated_at": "2026-08-12T10:57:22.460615",
+  "config": {
+    "target_ann_vol": 0.12,
+    "forecast_window": 120,
+    "cap": 1.0,
+    "book": "prod pitOFF h20",
+    "top_n": 10,
+    "inv_vol": true,
+    "neutral": false,
+    "cost_bp": 15.0
+  },
+  "segments": {
+    "dev": {
+      "baseline": {
+        "n_days": 1883,
+        "total_return": 1.3232111131144046,
+        "ann_return": 0.11942056244109578,
+        "ann_vol": 0.16951288355866972,
+        "sharpe": 0.7501032323179573,
+        "sortino": 1.0594264839888103,
+        "max_drawdown": -0.23003673450359852,
+        "calmar": 0.5191369226258411,
+        "daily_win_rate": 0.5284121083377589
+      },
+      "overlay": {
+        "n_days": 1883,
+        "total_return": 0.8316576074066613,
+        "ann_return": 0.08436673935276384,
+        "ann_vol": 0.14545932489870464,
+        "sharpe": 0.6294700498437347,
+        "sortino": 0.8763644441581606,
+        "max_drawdown": -0.2131081102069865,
+        "calmar": 0.3958870418907125,
+        "daily_win_rate": 0.5268189060010622
+      },
+      "avg_multiplier": 0.9003571844664571
+    },
+    "holdout": {
+      "baseline": {
+        "n_days": 278,
+        "total_return": 0.24105844579624747,
+        "ann_return": 0.21624284626422652,
+        "ann_vol": 0.1493134048932011,
+        "sharpe": 1.3860148116175541,
+        "sortino": 2.1788878871989663,
+        "max_drawdown": -0.09966545736090571,
+        "calmar": 2.1696869907612433,
+        "daily_win_rate": 0.5251798561151079
+      },
+      "overlay": {
+        "n_days": 278,
+        "total_return": 0.2014694977474396,
+        "ann_return": 0.1810209467830486,
+        "ann_vol": 0.14032842758741262,
+        "sharpe": 1.2560086252751321,
+        "sortino": 1.8922020656429146,
+        "max_drawdown": -0.0951441559665066,
+        "calmar": 1.90259659086968,
+        "daily_win_rate": 0.5287769784172662
+      },
+      "avg_multiplier": 0.9353898508516022
+    }
+  },
+  "checks": {
+    "dev_vol_toward_target": true,
+    "dev_maxdd_improves": true,
+    "dev_sharpe_within_0p05": false,
+    "holdout_confirms": false,
+    "verdict": "REJECT"
+  },
+  "forecast_stats": {
+    "mean": 0.1192416465608537,
+    "p10": 0.06087086488394989,
+    "p90": 0.17521339870438277,
+    "n": 2161
+  }
+}

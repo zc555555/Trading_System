@@ -190,6 +190,68 @@ def decompose_portfolio(
     return out
 
 
+class VolForecaster:
+    """Ex-ante portfolio volatility forecast from the two-layer risk model.
+
+    Forecast variance of a weight vector w at session t uses ONLY data
+    through session t-1:
+
+        var(w) = x' C x  +  sum_i w_i^2 * idio_var_i
+
+    where x = [sum_i w_i*beta_i, net sector weights...] are the factor
+    exposures, C is the trailing-``window`` covariance of the factor
+    returns (market + sectors) ending at t-1, and idio_var is the
+    trailing variance of each stock's idiosyncratic return through t-1.
+    Betas come from ``rm.beta`` which is already shifted -- the beta row
+    at t was estimated on data through t-1.
+    """
+
+    def __init__(self, rm: RiskModel, window: int = 120, min_periods: int = 60):
+        self.rm = rm
+        F = pd.concat([rm.market.rename("MKT"), rm.sector_returns], axis=1)
+        self.factors = list(F.columns)
+        self.sector_pos = {s: i for i, s in enumerate(self.factors)}
+        self.cov = F.rolling(window, min_periods=min_periods).cov()
+        self.idio_var = rm.resid.rolling(window, min_periods=min_periods).var()
+        self.dates = list(F.index)
+        self.date_pos = {d: i for i, d in enumerate(self.dates)}
+
+    def forecast_ann_vol(self, date, weights: dict) -> float | None:
+        """Annualized forecast vol of holding ``weights`` over session
+        ``date``; None while history is insufficient (warmup)."""
+        i = self.date_pos.get(date)
+        if i is None or i == 0:
+            return None
+        prev = self.dates[i - 1]
+        try:
+            C = self.cov.loc[prev]
+        except KeyError:
+            return None
+        C = C.reindex(index=self.factors, columns=self.factors)
+        if C.isna().any().any():
+            return None
+        syms = [s for s in weights
+                if s in self.rm.beta.columns and weights[s] != 0.0]
+        if not syms:
+            return 0.0
+        w = np.array([weights[s] for s in syms], dtype=float)
+        beta = self.rm.beta.loc[date, syms].fillna(BETA_FALLBACK).to_numpy()
+        x = np.zeros(len(self.factors))
+        x[self.sector_pos["MKT"]] = float((w * beta).sum())
+        for sym, wi in zip(syms, w):
+            sec = self.rm.sector_of.get(sym, "Unknown")
+            pos = self.sector_pos.get(sec)
+            if pos is not None:
+                x[pos] += wi
+        iv = self.idio_var.loc[prev, syms]
+        fallback = float(iv.median()) if np.isfinite(iv.median()) else 0.0004
+        idio = float(np.nansum(w ** 2 * iv.fillna(fallback).to_numpy()))
+        var_daily = float(x @ C.to_numpy() @ x) + idio
+        if not np.isfinite(var_daily) or var_daily < 0:
+            return None
+        return float(np.sqrt(var_daily * 252))
+
+
 def summarize_attribution(attr: pd.DataFrame, ann_factor: int = 252) -> dict:
     """Annualized contribution of each component + realized exposures."""
     comps = [c for c in ("market", "sector", "selection", "costs", "residual")

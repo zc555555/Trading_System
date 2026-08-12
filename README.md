@@ -18,7 +18,7 @@ rebuilt from scratch — purged walk-forward, per-date rank IC with
 Newey-West inference, a four-tier evidence framework with an untouched
 holdout, pre-registered adoption rules, and a hypothesis ledger with
 family-wise multiple-testing thresholds. The rebuilt ruler has since
-adjudicated **20 hypotheses (3 adopted, 16 rejected, 1 watch-listed)**,
+adjudicated **21 hypotheses (3 adopted, 17 rejected, 1 watch-listed)**,
 twice overturning findings that looked significant (t > 2) on partial
 evidence. The honest expectation of the live configuration is a Sharpe of
 roughly **0.8, with a measured beta component** (a two-layer risk model

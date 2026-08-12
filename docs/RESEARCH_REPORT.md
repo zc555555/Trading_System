@@ -10,7 +10,7 @@ This project began as a multi-factor US-equity paper-trading system that reporte
 
 Rather than patch and move on, I rebuilt the entire evaluation methodology — purged walk-forward validation, per-date cross-sectional rank IC with Newey-West inference, a four-tier evidence framework with an untouched holdout, pre-registered adoption rules, and a hypothesis ledger that applies family-wise multiple-testing corrections to every claim the project has ever made.
 
-The rebuilt ruler then adjudicated **20 hypotheses: 3 adoptions, 16 rejections, 1 watch-list item**. Two of the rejections overturned findings that had looked statistically significant (t > 2) on partial evidence — caught by deliberately mining *never-before-evaluated* data rather than waiting for the future to arrive. The system now trades live (paper) as a fully automated 7-factor book whose honest expectation is a Sharpe of roughly 0.8 with a measured beta component (a risk model attributes the return daily: market, sector, stock-selection — §3.6) — a number I can defend line by line, which the fake 1.89 never was.
+The rebuilt ruler then adjudicated **21 hypotheses: 3 adoptions, 17 rejections, 1 watch-list item**. Two of the rejections overturned findings that had looked statistically significant (t > 2) on partial evidence — caught by deliberately mining *never-before-evaluated* data rather than waiting for the future to arrive. The system now trades live (paper) as a fully automated 7-factor book whose honest expectation is a Sharpe of roughly 0.8 with a measured beta component (a risk model attributes the return daily: market, sector, stock-selection — §3.6) — a number I can defend line by line, which the fake 1.89 never was.
 
 The thesis of this report: **for a research career, the ability to produce a trustworthy zero matters more than the ability to produce an untrustworthy two.**
 
@@ -134,9 +134,11 @@ The verdict on the full-history headline book (h=20, members universe, inverse-v
 
 So roughly **two-thirds of the gross return (and 66% of the variance) is systematic** — the honest reading of the Sharpe ≈ 0.8 headline — but the stock-selection component is *positive in both evaluation segments* with an information ratio of ~0.5: small, real, and now measured rather than asserted. The same engine attributes the live paper book every night (`log_attribution.py` → `trading_logs/attribution_history.csv`), accumulating the live answer to the same question.
 
+The risk model's first downstream consumer was pre-registered and **rejected**: a volatility-target overlay (12% target, factor-covariance forecast, scale-*down*-only with a hard 1.0 cap applied to each day's new tranche) delivered exactly what it promised on risk — dev vol 17.0% → 14.5%, max drawdown −23.0% → −21.3% — but charged more Sharpe than the pre-registered band allowed (dev 0.75 → 0.63 against a 0.05 tolerance; holdout confirmed the damage, 1.39 → 1.26). The mechanism is recorded with the verdict: a long-biased book earns much of its return in high-volatility recoveries, and a vol-timing rule sells precisely those days. The overlay stays out of production; the forecaster stays as a monitoring instrument.
+
 ---
 
-## 4. The factor program: 20 hypotheses, 3 survivors
+## 4. The factor program: 21 hypotheses, 3 survivors
 
 The complete ledger, most instructive cases first:
 
@@ -169,7 +171,7 @@ Honest expectation for this configuration, from the members-universe evaluation 
 3. **The book carries beta — now measured, not just admitted**: average β ≈ 0.59, roughly two-thirds of gross return systematic (§3.6). The Sharpe ≈ 0.8 expectation is not market-neutral performance; the measured stock-selection component is ~+4.5%/yr (IR ~0.5).
 4. **Market-feature reproducibility** — nightly rebuilds refetch macro series, so historical feature values can drift slightly between runs (observed: a virgin-tier IC moving 0.0168 → 0.0141); a snapshot cache is the known fix.
 5. **Capacity is small** — the strategy trades large-cap US equities in tiny size; measured costs do not extrapolate.
-6. **Twenty hypotheses is a small family** by industry standards; the 15% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.
+6. **Twenty-one hypotheses is a small family** by industry standards; the ~14% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.
 
 ## 7. What I would tell a younger version of this project
 

@@ -19,3 +19,4 @@ date,hypothesis,verdict
 2026-08-10,factor_profitability,rejected: standalone ~0 everywhere; dev blend gain without any standalone signal = weighting shuffle
 2026-08-10,factor_investment,"rejected: virgin +0.025(t=2.3) but fresh -0.036(t=-3.3) -- sign oscillator, newest window vetoes"
 2026-08-10,factor_accruals,"closest miss: dev blend 0.013->0.024, fresh alone +0.039(t=2.86<2.97 bar), no negative tier; WATCH-LIST -> re-examine at 2026-11 review"
+2026-08-12,vol_target_overlay,"rejected (pre-registered): 12% target/120d factor-cov forecast/cap 1.0 new-tranche scaling cut dev vol 17.0->14.5 and maxDD -23.0->-21.3 but cost Sharpe 0.75->0.63 (band 0.05); holdout confirmed damage 1.39->1.26 -- long-biased book earns its returns in high-vol recoveries, vol timing sells them"
