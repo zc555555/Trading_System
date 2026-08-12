@@ -87,11 +87,16 @@ def select(day: pd.DataFrame, top_n: int, inv_vol: bool,
 
 
 def simulate(panel: pd.DataFrame, wide: dict, top_n: int, inv_vol: bool,
-             neutral: bool, cost_bp: float) -> pd.Series:
+             neutral: bool, cost_bp: float,
+             collect: dict | None = None) -> pd.Series:
+    """``collect``: optional dict filled with 'weights' ({date: {sym: net w}})
+    and 'costs' ({date: drag}) for the attribution layer (risk_model.py)."""
     sessions, sess_idx = wide["sessions"], wide["idx"]
     open_px, close_px = wide["open"], wide["close"]
     rt = cost_bp / 1e4
     daily = defaultdict(float)
+    coll_w = defaultdict(lambda: defaultdict(float)) if collect is not None else None
+    coll_c = defaultdict(float) if collect is not None else None
     for date, day in panel.groupby("date", sort=True):
         i = sess_idx.get(date)
         if i is None or i + 1 >= len(sessions):
@@ -114,7 +119,16 @@ def simulate(panel: pd.DataFrame, wide: dict, top_n: int, inv_vol: bool,
                 if h == last_h:
                     mark -= rt / 2
                 daily[sessions[i + h]] += w * mark
+                if coll_w is not None:
+                    coll_w[sessions[i + h]][sym] += w * d
+                    if h == 1:
+                        coll_c[sessions[i + h]] += w * rt / 2
+                    if h == last_h:
+                        coll_c[sessions[i + h]] += w * rt / 2
                 prev = px
+    if collect is not None:
+        collect['weights'] = {dt: dict(sy) for dt, sy in coll_w.items()}
+        collect['costs'] = dict(coll_c)
     return pd.Series(dict(daily)).sort_index()
 
 

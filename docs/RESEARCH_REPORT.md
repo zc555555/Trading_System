@@ -10,7 +10,7 @@ This project began as a multi-factor US-equity paper-trading system that reporte
 
 Rather than patch and move on, I rebuilt the entire evaluation methodology — purged walk-forward validation, per-date cross-sectional rank IC with Newey-West inference, a four-tier evidence framework with an untouched holdout, pre-registered adoption rules, and a hypothesis ledger that applies family-wise multiple-testing corrections to every claim the project has ever made.
 
-The rebuilt ruler then adjudicated **20 hypotheses: 3 adoptions, 16 rejections, 1 watch-list item**. Two of the rejections overturned findings that had looked statistically significant (t > 2) on partial evidence — caught by deliberately mining *never-before-evaluated* data rather than waiting for the future to arrive. The system now trades live (paper) as a fully automated 7-factor book whose honest expectation is a Sharpe of roughly 0.8 with a documented beta component — a number I can defend line by line, which the fake 1.89 never was.
+The rebuilt ruler then adjudicated **20 hypotheses: 3 adoptions, 16 rejections, 1 watch-list item**. Two of the rejections overturned findings that had looked statistically significant (t > 2) on partial evidence — caught by deliberately mining *never-before-evaluated* data rather than waiting for the future to arrive. The system now trades live (paper) as a fully automated 7-factor book whose honest expectation is a Sharpe of roughly 0.8 with a measured beta component (a risk model attributes the return daily: market, sector, stock-selection — §3.6) — a number I can defend line by line, which the fake 1.89 never was.
 
 The thesis of this report: **for a research career, the ability to produce a trustworthy zero matters more than the ability to produce an untrustworthy two.**
 
@@ -108,13 +108,31 @@ Three weeks of live paper fills (27+ orders) calibrated the cost model: intraday
 
 ### 3.4 Portfolio construction: one upgrade, one honest discovery, one rejected optimizer
 
-A 12-configuration grid (width × weighting × neutrality × cost) found exactly one robust improvement: **inverse-volatility position sizing** (holdout Sharpe 0.74/0.67/0.63 across widths versus 0.43/0.42/0.37 signal-weighted, with shallower drawdowns) — adopted into production. The grid also surfaced an uncomfortable truth: dollar-neutralizing hurts every configuration, meaning the book's returns carry a **real beta component**; the pure alpha is thinner than the headline. This is reported, not hidden.
+A 12-configuration grid (width × weighting × neutrality × cost) found exactly one robust improvement: **inverse-volatility position sizing** (holdout Sharpe 0.74/0.67/0.63 across widths versus 0.43/0.42/0.37 signal-weighted, with shallower drawdowns) — adopted into production. The grid also surfaced an uncomfortable truth: dollar-neutralizing hurts every configuration, meaning the book's returns carry a **real beta component**; the pure alpha is thinner than the headline. This is reported, not hidden — and §3.6 puts a number on it.
 
 A cvxpy mean-variance optimizer (Ledoit-Wolf covariance, 10% vol target, |β| ≤ 0.5, transaction costs in the objective) **lost to the heuristic** (dev Sharpe 0.44 vs 0.75): horizon-amortized decision costs produced 21.7%/day turnover against a 20-day signal (~8%/yr cost drag), and the beta cap removed drift the incumbent keeps. Two implementation lessons are documented — the myopic-objective zero-trade equilibrium, and a DCP violation in a relative beta bound. *A carefully calibrated heuristic beats an uncalibrated optimizer* is itself a result.
 
 ### 3.5 The universe was quietly lying about the past
 
 Point-in-time S&P 500 membership (reconstructed from the index change log; 500–504 members at every checkpoint) measured the membership look-ahead bias directly: **pre-2022 IC was ~85% inclusion-runup artifact** (virgin-tier IC 0.0092 → 0.0014 under PIT filtering), while 2022+ results — where every adoption decision actually lived — were untouched, and every prior rejection survives *a fortiori*. A bonus finding was adopted into production: excluding ETFs/never-members from signal selection doubles dev IC (0.0066 → 0.0129) and lifts holdout IC to 0.051 (t = 2.65) — baskets dilute a rankable cross-section. Documented residual: delisted members' price histories remain unavailable with free data; only the inclusion half of survivorship bias is fixed.
+
+### 3.6 Risk model and daily attribution: the beta, named
+
+The "carries beta" caveat deserved a number, so the book got a **two-layer linear risk model** (rolling 252-day SPY beta, estimated ex-ante — the beta attributing day *t* uses data through *t−1* — plus 11 equal-weight sector factors built from market residuals) and a daily attribution that decomposes every session's return into market, sector, stock-selection, cost, and execution-timing components. The decomposition is exact by construction (market + sector + selection ≡ Σ w·r, pinned by unit tests), and the residual is reported separately rather than flattering the selection line.
+
+The verdict on the full-history headline book (h=20, members universe, inverse-vol, calibrated costs — annualized +13.7%):
+
+| Component | dev | holdout | all | IR (all) |
+|---|---|---|---|---|
+| Market (avg β ≈ 0.59) | +8.5% | +10.4% | **+8.7%** | 0.68 |
+| Sector tilts | +2.6% | +4.4% | **+2.9%** | 0.58 |
+| **Stock selection** | +3.8% | +9.4% | **+4.5%** | 0.55 |
+| Costs | −1.9% | −1.8% | −1.9% | — |
+| Execution residual | −0.3% | −1.7% | −0.5% | — |
+
+![Cumulative return attribution](img/attribution_prod_h20.png)
+
+So roughly **two-thirds of the gross return (and 66% of the variance) is systematic** — the honest reading of the Sharpe ≈ 0.8 headline — but the stock-selection component is *positive in both evaluation segments* with an information ratio of ~0.5: small, real, and now measured rather than asserted. The same engine attributes the live paper book every night (`log_attribution.py` → `trading_logs/attribution_history.csv`), accumulating the live answer to the same question.
 
 ---
 
@@ -142,13 +160,13 @@ Also rejected: Amihud illiquidity and short-term reversal (sign oscillators), ca
 
 Fully automated since 2026-07-21: nightly signal generation and staggered order placement (Mon–Fri 21:00 UK), 5-minute intraday risk monitoring, Sunday full retrain, desktop failure alerts. The book: **7 factors** (volatility 28.8%, high52 22.9%, trend 18.8%, alpha 16.9%, momentum 12.6%, market and volume honestly zero-weighted), 273 point-in-time S&P members, 20-day staggered tranches, inverse-volatility sizing, **broker-side GTC bracket orders** (positions protected overnight and across process crashes), registry-broker reconciliation on every cycle (bracket fires are detected and absorbed automatically — validated live twice in the first fortnight).
 
-Honest expectation for this configuration, from the members-universe evaluation at calibrated costs: **all-period Sharpe ≈ 0.8** (dev 0.75, holdout 1.39), *including* a beta component the neutrality experiments quantified. Two weeks of live operation surfaced and fixed real bugs (a OneDrive file-lock crash that silently killed one nightly run — now retried with backoff and alerting; an encoding crash in a logging path), exactly what paper trading is for.
+Honest expectation for this configuration, from the members-universe evaluation at calibrated costs: **all-period Sharpe ≈ 0.8** (dev 0.75, holdout 1.39), *including* the beta component the attribution in §3.6 decomposes (avg β ≈ 0.59; stock selection ≈ +4.5%/yr of the +13.7% total). Two weeks of live operation surfaced and fixed real bugs (a OneDrive file-lock crash that silently killed one nightly run — now retried with backoff and alerting; an encoding crash in a logging path), exactly what paper trading is for.
 
 ## 6. Limitations, stated plainly
 
 1. **Survivorship residual** — delisted members' prices are unavailable with free data; pre-2022 results should be read as upper bounds even after PIT filtering.
 2. **Paper fills are a lower bound on costs**; live slippage will be worse than the calibrated 12–15 bp.
-3. **The book carries beta**; pure cross-sectional alpha net of costs is thin (~0.01–0.03 rank IC), and the Sharpe ≈ 0.8 expectation is not market-neutral performance.
+3. **The book carries beta — now measured, not just admitted**: average β ≈ 0.59, roughly two-thirds of gross return systematic (§3.6). The Sharpe ≈ 0.8 expectation is not market-neutral performance; the measured stock-selection component is ~+4.5%/yr (IR ~0.5).
 4. **Market-feature reproducibility** — nightly rebuilds refetch macro series, so historical feature values can drift slightly between runs (observed: a virgin-tier IC moving 0.0168 → 0.0141); a snapshot cache is the known fix.
 5. **Capacity is small** — the strategy trades large-cap US equities in tiny size; measured costs do not extrapolate.
 6. **Twenty hypotheses is a small family** by industry standards; the 15% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.

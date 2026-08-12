@@ -21,7 +21,9 @@ family-wise multiple-testing thresholds. The rebuilt ruler has since
 adjudicated **20 hypotheses (3 adopted, 16 rejected, 1 watch-listed)**,
 twice overturning findings that looked significant (t > 2) on partial
 evidence. The honest expectation of the live configuration is a Sharpe of
-roughly **0.8, with a documented beta component** — a small number that can
+roughly **0.8, with a measured beta component** (a two-layer risk model
+attributes the +13.7%/yr headline as market +8.7%, sector +2.9%, stock
+selection +4.5%, costs −1.9%; avg β ≈ 0.59) — a small number that can
 be defended line by line.
 
 ## What makes this repo worth reading
@@ -31,6 +33,7 @@ be defended line by line.
 | [`research/evaluation/`](research/evaluation/) | The trustworthy ruler: purged walk-forward, rank-IC metrics, cost-aware next-open simulation — one audited path for every performance claim |
 | [`research/evaluation/results/hypothesis_ledger.csv`](research/evaluation/results/hypothesis_ledger.csv) | Every hypothesis ever adjudicated, including all failures, with Šidák family-wise thresholds — the multiple-testing record most projects don't keep |
 | [`research/evaluation/experiments/`](research/evaluation/experiments/) | Each experiment as a standalone, re-runnable script with its pre-registered verdict criteria |
+| [`research/evaluation/risk_model.py`](research/evaluation/risk_model.py) | Two-layer risk model (market + 11 sectors) with exact-additivity attribution — the beta caveat as a daily number, backtest and live |
 | [`tests/`](tests/) | Leakage guards that structurally forbid negative feature shifts and backward-fills — the audited bug classes cannot silently return |
 | [`docs/RESEARCH_REPORT.md`](docs/RESEARCH_REPORT.md) | The full narrative with every number |
 
@@ -60,7 +63,8 @@ be defended line by line.
 · 273 point-in-time S&P members (ETFs excluded — measured, not assumed)
 · 20-day staggered tranches · inverse-volatility sizing · calibrated
 12–15 bp round-trip costs (from live fills) · randomized limit-vs-market
-execution A/B accumulating evidence.
+execution A/B accumulating evidence · nightly return attribution of the
+live book (market / sector / selection).
 
 ## Reproduce the headline results
 
@@ -85,6 +89,12 @@ python evaluation/experiments/pead_factor.py
 python evaluation/experiments/pit_universe_test.py
 ```
 
+Return attribution of the headline book through the risk model:
+
+```bash
+python evaluation/attribution_backtest.py --horizon 20   # writes docs/img chart
+```
+
 ## Data sources (all free)
 
 - **Prices:** yfinance OHLCV, 2014+ (survivorship residual documented)
@@ -98,8 +108,10 @@ python evaluation/experiments/pit_universe_test.py
 ## Honest limitations
 
 Paper fills are a lower bound on live costs; the book carries a measured
-beta component; delisted names' prices are unavailable (only the inclusion
-half of survivorship bias is fixed); capacity is small. Full list in
+beta component (avg β ≈ 0.59, ~2/3 of gross return systematic; the
+attribution chart in the report shows the split); delisted names' prices
+are unavailable (only the inclusion half of survivorship bias is fixed);
+capacity is small. Full list in
 [the report §6](docs/RESEARCH_REPORT.md#6-limitations-stated-plainly).
 
 ## Repo map

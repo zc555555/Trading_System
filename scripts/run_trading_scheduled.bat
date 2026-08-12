@@ -15,3 +15,8 @@ if not "%RC%"=="0" (
     echo %date% %time% NIGHTLY TRADING RUN FAILED exit=%RC% see auto_run_%DT%.log >> "trading_logs\FAILURES.log"
     powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0notify_failure.ps1" "StockPredict 夜间交易失败" "exit=%RC%, 详见 trading_logs\auto_run_%DT%.log"
 )
+rem Daily live-book attribution (descriptive analytics; places no orders).
+"research\venv\Scripts\python.exe" log_attribution.py >> "trading_logs\auto_run_%DT%.log" 2>&1
+if not "%errorlevel%"=="0" (
+    echo %date% %time% ATTRIBUTION LOG FAILED see auto_run_%DT%.log >> "trading_logs\FAILURES.log"
+)

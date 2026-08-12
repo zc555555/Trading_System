@@ -98,13 +98,20 @@ def simulate_legacy(panel: pd.DataFrame) -> tuple[pd.Series, pd.DataFrame]:
 
 
 def simulate_staggered(panel: pd.DataFrame, prices_wide: dict,
-                       hold_days: int = 5) -> tuple[pd.Series, pd.DataFrame]:
+                       hold_days: int = 5,
+                       collect: dict | None = None) -> tuple[pd.Series, pd.DataFrame]:
     """k-day hold, k overlapping tranches of 1/k equity.
 
     Daily mark for entry session = open->close; later sessions close->close;
     exit at the k-th session's close. Half the round-trip cost is charged on
     the entry mark, half on the exit mark. Tranche capital is fixed at 1/k
     (marks are additive, not compounded, within a tranche's life).
+
+    ``collect``: optional dict; when provided it is filled with
+      'weights': {date: {symbol: net_weight}} -- the book's daily net
+                 weights (share of equity, shorts negative), and
+      'costs':   {date: cost_drag} -- trading-cost charge booked that day.
+    Used by the attribution layer; simulation output is unchanged.
     """
     sessions = prices_wide['sessions']
     sess_idx = {d: i for i, d in enumerate(sessions)}
@@ -112,6 +119,8 @@ def simulate_staggered(panel: pd.DataFrame, prices_wide: dict,
 
     daily = defaultdict(float)
     trades = []
+    coll_w = defaultdict(lambda: defaultdict(float)) if collect is not None else None
+    coll_c = defaultdict(float) if collect is not None else None
     for date, day in panel.groupby('date', sort=True):
         i = sess_idx.get(date)
         if i is None or i + 1 >= len(sessions):
@@ -137,6 +146,12 @@ def simulate_staggered(panel: pd.DataFrame, prices_wide: dict,
                 if h == last_h:
                     mark -= ROUND_TRIP_COST / 2
                 daily[sessions[i + h]] += w * mark
+                if coll_w is not None:
+                    coll_w[sessions[i + h]][sym] += w * d
+                    if h == 1:
+                        coll_c[sessions[i + h]] += w * ROUND_TRIP_COST / 2
+                    if h == last_h:
+                        coll_c[sessions[i + h]] += w * ROUND_TRIP_COST / 2
                 prev = px
             exit_px = close_px.get((sessions[i + last_h], sym))
             if exit_px is not None and np.isfinite(exit_px):
@@ -145,6 +160,9 @@ def simulate_staggered(panel: pd.DataFrame, prices_wide: dict,
                                'weight': r['weight'],
                                'net_return': float(d * (exit_px / entry - 1)
                                                    - ROUND_TRIP_COST)})
+    if collect is not None:
+        collect['weights'] = {dt: dict(sy) for dt, sy in coll_w.items()}
+        collect['costs'] = dict(coll_c)
     return pd.Series(dict(daily)).sort_index(), pd.DataFrame(trades)
 
 
