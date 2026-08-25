@@ -38,8 +38,8 @@ HOLD_DAYS = 5  # overridden by --horizon
 MIN_STOCKS = 3
 
 
-def load_inputs(horizon: int = 5):
-    panel = pd.read_parquet(RESULTS / f"oos_predictions_h{horizon}_ext.parquet")
+def load_inputs(horizon: int = 5, panel_tag: str = "ext"):
+    panel = pd.read_parquet(RESULTS / f"oos_predictions_h{horizon}_{panel_tag}.parquet")
     prices = pd.read_parquet(DATA, columns=["date", "symbol", "open", "close"])
     prices = prices.sort_values(["symbol", "date"])
     g = prices.groupby("symbol")
@@ -143,10 +143,15 @@ def simulate(panel: pd.DataFrame, wide: dict, top_n: int, inv_vol: bool,
     return pd.Series(dict(daily)).sort_index()
 
 
-def main(horizon: int = 5):
-    global HOLD_DAYS
+def main(horizon: int = 5, panel_tag: str = "ext", data_path: str | None = None):
+    global HOLD_DAYS, DATA
     HOLD_DAYS = horizon
-    panel, wide = load_inputs(horizon)
+    if data_path:
+        # prices must come from the panel the predictions were made on
+        # (e.g. the survivorship-complete / full-breadth feature panels),
+        # or picks of names absent from the production panel vanish
+        DATA = Path(data_path)
+    panel, wide = load_inputs(horizon, panel_tag)
     print(f"panel (h={horizon}, hold={HOLD_DAYS}): {len(panel):,} rows, "
           f"{panel['date'].min().date()} .. {panel['date'].max().date()}")
 
@@ -181,7 +186,8 @@ def main(horizon: int = 5):
             print(f"{name:<34}{seg:<9}{m['sharpe']:>7.2f}"
                   f"{m['ann_return']:>8.1%}{m['max_drawdown']:>8.1%}")
 
-    out = RESULTS / f"portfolio_construction_grid_h{horizon}.csv"
+    suffix = "" if panel_tag == "ext" else f"_{panel_tag}"
+    out = RESULTS / f"portfolio_construction_grid_h{horizon}{suffix}.csv"
     pd.DataFrame(rows).to_csv(out, index=False)
     print(f"\nsaved: {out}")
 
@@ -190,5 +196,9 @@ if __name__ == "__main__":
     import argparse
     ap = argparse.ArgumentParser()
     ap.add_argument("--horizon", type=int, default=5, choices=[5, 20])
+    ap.add_argument("--panel", default="ext",
+                    help="prediction panel tag: ext (default), surv, full, ...")
+    ap.add_argument("--data", default=None,
+                    help="price panel path when --panel is not the production one")
     args = ap.parse_args()
-    main(horizon=args.horizon)
+    main(horizon=args.horizon, panel_tag=args.panel, data_path=args.data)

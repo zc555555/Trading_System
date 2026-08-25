@@ -73,11 +73,18 @@ def departed_members() -> pd.DataFrame:
     return iv[iv["end"].notna() & (iv["end"] >= pd.Timestamp(START))]
 
 
-def build_extended_raw() -> tuple[pd.DataFrame, dict]:
+def build_extended_raw(mode: str = "surv") -> tuple[pd.DataFrame, dict]:
+    """mode 'surv': add departed members only (isolates survivorship).
+    mode 'full': also add CURRENT members the yfinance panel never had
+    (the breadth lever: 268 -> ~500 names). Both from Sharadar."""
     raw = pd.read_parquet(RAW)
     have = set(raw["symbol"].unique())
     dep = departed_members()
-    dep_syms = sorted(set(dep["symbol"]) - have)
+    want = set(dep["symbol"])
+    if mode == "full":
+        iv = pd.read_parquet(MEMBERSHIP)
+        want |= set(iv[iv["end"].isna()]["symbol"])
+    dep_syms = sorted(want - have)
     sh = pd.read_parquet(SHARADAR)
     sh = sh[sh["symbol"].isin(dep_syms)].copy()
     covered = sorted(sh["symbol"].unique())
@@ -99,14 +106,14 @@ def build_extended_raw() -> tuple[pd.DataFrame, dict]:
     add = add.dropna(subset=["close"]).sort_values(["symbol", "date"])
     ext = pd.concat([raw[["date", "symbol", "open", "high", "low", "close", "volume"]], add],
                     ignore_index=True).sort_values(["date", "symbol"]).reset_index(drop=True)
-    info = {"departed_members": len(dep_syms), "covered_by_sharadar": len(covered),
+    info = {"mode": mode, "symbols_to_add": len(dep_syms), "covered_by_sharadar": len(covered),
             "coverage": round(len(covered) / max(len(dep_syms), 1), 3),
             "missing_examples": missing[:20], "added_rows": int(len(add)),
             "panel_symbols_before": len(have), "panel_symbols_after": int(ext["symbol"].nunique())}
     return ext, info
 
 
-def run_feature_chain_on(ext_raw: pd.DataFrame) -> pd.DataFrame:
+def run_feature_chain_on(ext_raw: pd.DataFrame, out_panel: Path = SURV_PANEL) -> pd.DataFrame:
     """Swap the extended raw panel in, run the production chain, take the
     result, restore production files unconditionally."""
     BACKUP.mkdir(exist_ok=True)
@@ -119,7 +126,7 @@ def run_feature_chain_on(ext_raw: pd.DataFrame) -> pd.DataFrame:
         print("running production feature chain on the extended panel (10-20 min)...")
         subprocess.run([sys.executable, "prepare_prediction_data.py"], cwd=RESEARCH, check=True)
         out = pd.read_parquet(DATA_PATH)
-        out.to_parquet(SURV_PANEL, index=False)
+        out.to_parquet(out_panel, index=False)
         return out
     finally:
         for f in PROD_FILES:
@@ -129,21 +136,25 @@ def run_feature_chain_on(ext_raw: pd.DataFrame) -> pd.DataFrame:
         print("production data files restored from backup")
 
 
-def main(max_folds: int | None, reuse_panel: bool) -> None:
-    print("=== survivorship-complete universe experiment ===")
-    if reuse_panel and SURV_PANEL.exists():
-        surv = pd.read_parquet(SURV_PANEL)
-        info = {"reused": str(SURV_PANEL)}
+def main(max_folds: int | None, reuse_panel: bool, mode: str = "surv") -> None:
+    print(f"=== {'survivorship-complete' if mode == 'surv' else 'full-breadth'} universe experiment ===")
+    out_panel = SURV_PANEL if mode == "surv" else DATA / "stocks_with_time_windows_full.parquet"
+    if reuse_panel and out_panel.exists():
+        surv = pd.read_parquet(out_panel)
+        info = {"reused": str(out_panel)}
     else:
-        ext_raw, info = build_extended_raw()
+        ext_raw, info = build_extended_raw(mode)
         print(json.dumps(info, indent=1))
-        surv = run_feature_chain_on(ext_raw)
+        surv = run_feature_chain_on(ext_raw, out_panel)
     cur = pd.read_parquet(DATA_PATH)
 
     iv = pd.read_parquet(MEMBERSHIP)
     members = set(iv["symbol"].unique())
     runs = {}
-    for tag, df in (("pitCUR", cur), ("surv", surv)):
+    # 'full' mode is compared against 'surv' (already PIT + dead), so the
+    # contrast isolates breadth; pitCUR is the baseline for 'surv' mode
+    pairs = (("pitCUR", cur), ("surv", surv)) if mode == "surv" else (("full", surv),)
+    for tag, df in pairs:
         sub = df[df["symbol"].isin(members)].copy()
         mask = membership_mask(sub)
         data = sub[mask].copy()
@@ -152,12 +163,13 @@ def main(max_folds: int | None, reuse_panel: bool) -> None:
         runs[tag] = run_walk_forward(WalkForwardConfig(horizon=HORIZON, min_tail_test=15),
                                      max_folds=max_folds, df=data, tag=tag)
     if not max_folds:
-        compare("pitCUR", "surv")
+        compare("pitCUR", "surv") if mode == "surv" else compare("surv", "full")
+    name = "survivorship_universe_report.json" if mode == "surv" else "full_universe_report.json"
     report = {"generated_at": datetime.now().isoformat(), "panel_info": info,
-              "horizon": HORIZON, "max_folds": max_folds}
-    with open(RESULTS_DIR / "survivorship_universe_report.json", "w") as f:
+              "horizon": HORIZON, "max_folds": max_folds, "mode": mode}
+    with open(RESULTS_DIR / name, "w") as f:
         json.dump(report, f, indent=2, default=str)
-    print(f"\nsaved: {RESULTS_DIR / 'survivorship_universe_report.json'}")
+    print(f"\nsaved: {RESULTS_DIR / name}")
 
 
 if __name__ == "__main__":
@@ -165,6 +177,8 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--max-folds", type=int, default=None)
     ap.add_argument("--reuse-panel", action="store_true",
-                    help="skip the feature chain and reuse stocks_with_time_windows_surv.parquet")
+                    help="skip the feature chain and reuse the cached extended panel")
+    ap.add_argument("--mode", choices=["surv", "full"], default="surv",
+                    help="surv: departed members only; full: also current members missing from the panel")
     a = ap.parse_args()
-    main(a.max_folds, a.reuse_panel)
+    main(a.max_folds, a.reuse_panel, a.mode)
