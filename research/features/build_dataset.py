@@ -436,8 +436,6 @@ class DatasetBuilder:
             from . import operators as ops
         except ImportError:
             import operators as ops
-        import yfinance as yf
-
         if 'market_features' not in self.config['features']:
             return df
 
@@ -452,6 +450,18 @@ class DatasetBuilder:
         # Dictionary to store all market data
         market_data = {}
 
+        # Market series come from the frozen append-only snapshot
+        # (data/market_snapshot.py), NOT from a live yfinance call: live
+        # calls return dividend-adjusted closes that Yahoo re-adjusts on
+        # every new dividend, so historical return features drifted between
+        # rebuilds. The snapshot only ever appends new dates.
+        import sys as _sys
+        _research_dir = str(Path(__file__).resolve().parent.parent)
+        if _research_dir not in _sys.path:
+            _sys.path.insert(0, _research_dir)
+        from data.market_snapshot import update_snapshot, market_history
+        panel_tz = getattr(df['date'].dt, 'tz', None)
+
         # Define market symbols and their features
         market_symbols = {
             'SPY': ['spy_returns_1d', 'spy_returns_5d', 'spy_returns_20d', 'spy_volatility_20d'],
@@ -465,6 +475,10 @@ class DatasetBuilder:
             'UUP': ['uup_returns_1d', 'uup_returns_5d']
         }
 
+        wanted = [sym for sym, feats in market_symbols.items()
+                  if any(f in self.config['features']['market_features'] for f in feats)]
+        snapshot = update_snapshot(wanted, end_date)
+
         # Fetch each market symbol
         for symbol, feature_list in market_symbols.items():
             # Check if any feature from this symbol is requested
@@ -472,16 +486,13 @@ class DatasetBuilder:
                 continue
 
             try:
-                print(f"\n  Fetching {symbol} data...")
-                ticker = yf.Ticker(symbol)
-                ticker_df = ticker.history(start=start_date, end=end_date)
+                print(f"\n  Loading {symbol} from market snapshot...")
+                ticker_df = market_history(symbol, snapshot, start_date, panel_tz)
 
                 if len(ticker_df) == 0:
                     print(f"  [WARN] No data for {symbol}")
                     continue
 
-                ticker_df = ticker_df.reset_index()
-                ticker_df.columns = [c.lower() for c in ticker_df.columns]
                 ticker_df['symbol'] = symbol
 
                 # Compute features for this symbol
@@ -496,7 +507,7 @@ class DatasetBuilder:
 
                 # VIX features
                 elif symbol == '^VIX':
-                    features_dict['vix_level'] = ticker_df['close']
+                    features_dict['vix_level'] = ticker_df['raw_close']
                     features_dict['vix_change_1d'] = ops.delta(ticker_df, 'close', 1)
                     features_dict['vix_change_5d'] = ops.delta(ticker_df, 'close', 5)
 

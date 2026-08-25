@@ -36,6 +36,8 @@ research/data/*.parquet.*
 research/data/*.csv
 # sector map is tiny, rarely changes, and reproduction needs it
 !research/data/sector_map.csv
+# frozen macro snapshot: committed so feature history is reproducible from git
+!research/data/market_snapshot.csv
 research/data/data/
 research/data/fetch_manifest.json
 research/data/liquidity_report.json

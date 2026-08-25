@@ -169,7 +169,7 @@ Honest expectation for this configuration, from the members-universe evaluation 
 1. **Survivorship residual** — delisted members' prices are unavailable with free data; pre-2022 results should be read as upper bounds even after PIT filtering.
 2. **Paper fills are a lower bound on costs**; live slippage will be worse than the calibrated 12–15 bp.
 3. **The book carries beta — now measured, not just admitted**: average β ≈ 0.59, roughly two-thirds of gross return systematic (§3.6). The Sharpe ≈ 0.8 expectation is not market-neutral performance; the measured stock-selection component is ~+4.5%/yr (IR ~0.5).
-4. **Market-feature reproducibility** — nightly rebuilds refetch macro series, so historical feature values can drift slightly between runs (observed: a virgin-tier IC moving 0.0168 → 0.0141); a snapshot cache is the known fix.
+4. **Market-feature reproducibility — fixed 2026-08.** Nightly rebuilds used to refetch macro series live; Yahoo re-adjusts the whole price history on every dividend, so historical feature values drifted between runs (observed: a virgin-tier IC moving 0.0168 → 0.0141 with no code change). Macro series now come from a frozen, append-only snapshot committed to git (`data/market_snapshot.py`; raw closes + dividends + splits, total-return index derived deterministically, only closed sessions ever stored). Any deliberate refresh is a reviewable diff, not silent drift.
 5. **Capacity is small** — the strategy trades large-cap US equities in tiny size; measured costs do not extrapolate.
 6. **Twenty-one hypotheses is a small family** by industry standards; the ~14% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.
 
