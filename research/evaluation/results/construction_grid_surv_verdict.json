@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-08-25",
+  "what": "Pre-registered construction grid (width x weighting x neutrality x cost) rerun on the corrected ruler (surv panel: PIT mask + survivorship-complete), h=20, inverse-vol rows at 15bp. The 'capped' (75% long / 25% short) variant was added and pre-registered AFTER seeing that 50/50 neutral reversed its old verdict, as the only neutral structure deployable under the no-debt short cap (25% of equity). One iteration; disclosed.",
+  "sharpe_dev_holdout": {
+    "n10_raw": [0.22, 0.85], "n10_neutral": [0.36, 0.76], "n10_capped": [0.42, 1.45],
+    "n30_raw": [0.31, 0.78], "n30_neutral": [0.29, 0.90], "n30_capped": [0.43, 1.49],
+    "n50_raw": [0.29, 0.61], "n50_neutral": [0.32, 0.88], "n50_capped": [0.46, 1.51]
+  },
+  "max_drawdown_dev": {"n10_raw": -0.32, "n10_neutral": -0.18, "n10_capped": -0.23,
+                       "n30_raw": -0.28, "n30_neutral": -0.18, "n50_neutral": -0.16},
+  "attribution_n10_all_period": {
+    "raw":     {"market": 0.029, "sector": 0.007, "selection": 0.030, "ir_selection": 0.30, "beta": 0.02, "net": -0.07},
+    "neutral": {"market": 0.029, "sector": 0.009, "selection": 0.029, "ir_selection": 0.33, "beta": 0.07, "net": -0.02},
+    "capped":  {"market": 0.087, "sector": 0.007, "selection": 0.012, "ir_selection": 0.13, "beta": 0.46, "net": 0.32}
+  },
+  "verdicts": {
+    "neutral_50_50": "REVERSED vs the pre-correction grid: no longer hurts; cuts dev max drawdown ~40% with Sharpe mixed across widths (2 of 3 widths better on holdout, 1 of 3 on dev). Fails the pre-registered 'robust across widths' bar for adoption; and is not deployable under the 25% short cap anyway. Recorded as the lowest-drawdown structure.",
+    "capped_75_25": "REJECTED on attribution: its Sharpe advantage is beta harvest (market +8.7%/yr, beta 0.46) while the selection component drops from +3.0% to +1.2%/yr (IR 0.30 -> 0.13). Capping the short side removes half the stock-picking alpha and replaces it with market drift.",
+    "width_30_50": "Within noise: dev 0.22 -> 0.31 at n=30 with holdout 0.85 -> 0.78. Not adopted on its own; kept as the natural width once the universe grows (full-breadth test pending). n=30 also needs the $1M paper reset.",
+    "production": "NO CHANGE. Raw top-10 inverse-vol stays. On the corrected ruler it is already near-neutral (beta 0.02) and carries the full selection component."
+  },
+  "lesson": "Sharpe alone cannot adjudicate a construction change on a long-biased-capable book; the risk-model attribution must accompany every grid cell, or the same beta-for-alpha mistake that inflated the retracted 0.8 headline returns through the construction door."
+}
