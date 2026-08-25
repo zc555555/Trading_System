@@ -73,8 +73,13 @@ def select(day: pd.DataFrame, top_n: int, inv_vol: bool,
     day = day[day["direction"] != 0]
     cap = max(0.15, 2.0 / top_n)
     if neutral:
+        # neutral=True  : dollar-neutral, 50% long / 50% short (evaluation
+        #                 reference; NOT deployable -- the no-debt principle
+        #                 caps total short notional at 25% of equity)
+        # neutral="capped": the deployable variant, 75% long / 25% short
+        sides = ((1, 0.75), (-1, 0.25)) if neutral == "capped" else ((1, 0.5), (-1, 0.5))
         parts = []
-        for sign, side_gross in ((1, 0.5), (-1, 0.5)):
+        for sign, side_gross in sides:
             side = day[day["direction"] == sign]
             if len(side):
                 w = side["weight"] / side["weight"].sum() * side_gross
@@ -158,7 +163,7 @@ def main(horizon: int = 5, panel_tag: str = "ext", data_path: str | None = None)
     grid = []
     for top_n in (10, 30, 50):
         for inv_vol in (False, True):
-            for neutral in (False, True):
+            for neutral in (False, True, "capped"):
                 for cost_bp in (30.0, 15.0):
                     grid.append((top_n, inv_vol, neutral, cost_bp))
 
@@ -168,7 +173,7 @@ def main(horizon: int = 5, panel_tag: str = "ext", data_path: str | None = None)
     for top_n, inv_vol, neutral, cost_bp in grid:
         daily = simulate(panel, wide, top_n, inv_vol, neutral, cost_bp)
         name = (f"n={top_n:<3} {'ivol' if inv_vol else 'sig '} "
-                f"{'ntrl' if neutral else 'raw '} {cost_bp:.0f}bp")
+                f"{ {False: 'raw ', True: 'ntrl', 'capped': 'cap '}[neutral]} {cost_bp:.0f}bp")
         idx = pd.DatetimeIndex(daily.index)
         cut = pd.Timestamp(HOLDOUT)
         if idx.tz is not None:
