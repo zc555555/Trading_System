@@ -1,0 +1,8 @@
+{
+  "generated_at": "2026-08-25T19:09:30.774081",
+  "panel_info": {
+    "reused": "C:\\Users\\13785\\OneDrive\\Desktop\\stock_predict\\research\\data\\stocks_with_time_windows_surv.parquet"
+  },
+  "horizon": 20,
+  "max_folds": null
+}

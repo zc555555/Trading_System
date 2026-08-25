@@ -10,7 +10,7 @@ This project began as a multi-factor US-equity paper-trading system that reporte
 
 Rather than patch and move on, I rebuilt the entire evaluation methodology — purged walk-forward validation, per-date cross-sectional rank IC with Newey-West inference, a four-tier evidence framework with an untouched holdout, pre-registered adoption rules, and a hypothesis ledger that applies family-wise multiple-testing corrections to every claim the project has ever made.
 
-The rebuilt ruler then adjudicated **21 hypotheses: 3 adoptions, 17 rejections, 1 watch-list item**. Two of the rejections overturned findings that had looked statistically significant (t > 2) on partial evidence — caught by deliberately mining *never-before-evaluated* data rather than waiting for the future to arrive. The system now trades live (paper) as a fully automated 7-factor book whose honest expectation is a Sharpe of roughly 0.8 with a measured beta component (a risk model attributes the return daily: market, sector, stock-selection — §3.6) — a number I can defend line by line, which the fake 1.89 never was.
+The rebuilt ruler then adjudicated **21 hypotheses: 3 adoptions, 17 rejections, 1 watch-list item**. Two of the rejections overturned findings that had looked statistically significant (t > 2) on partial evidence — caught by deliberately mining *never-before-evaluated* data rather than waiting for the future to arrive. The system now trades live (paper) as a fully automated 7-factor book whose honest expectation — on a ruler corrected twice more in August 2026, for point-in-time membership *inside the portfolio* and for survivorship-complete prices of every departed S&P member (§3.7) — is an all-period Sharpe of roughly **0.3** (holdout ≈ 0.85), with a measured stock-selection component of about +3%/yr (§3.6). This report's earlier headline of 0.8 is retracted in §3.7, with the arithmetic. A small number I can defend line by line, which the fake 1.89 never was.
 
 The thesis of this report: **for a research career, the ability to produce a trustworthy zero matters more than the ability to produce an untrustworthy two.**
 
@@ -114,27 +114,44 @@ A cvxpy mean-variance optimizer (Ledoit-Wolf covariance, 10% vol target, |β| �
 
 ### 3.5 The universe was quietly lying about the past
 
-Point-in-time S&P 500 membership (reconstructed from the index change log; 500–504 members at every checkpoint) measured the membership look-ahead bias directly: **pre-2022 IC was ~85% inclusion-runup artifact** (virgin-tier IC 0.0092 → 0.0014 under PIT filtering), while 2022+ results — where every adoption decision actually lived — were untouched, and every prior rejection survives *a fortiori*. A bonus finding was adopted into production: excluding ETFs/never-members from signal selection doubles dev IC (0.0066 → 0.0129) and lifts holdout IC to 0.051 (t = 2.65) — baskets dilute a rankable cross-section. Documented residual: delisted members' price histories remain unavailable with free data; only the inclusion half of survivorship bias is fixed.
+Point-in-time S&P 500 membership (reconstructed from the index change log; 500–504 members at every checkpoint) measured the membership look-ahead bias directly: **pre-2022 IC was ~85% inclusion-runup artifact** (virgin-tier IC 0.0092 → 0.0014 under PIT filtering), while 2022+ results — where every adoption decision actually lived — were untouched, and every prior rejection survives *a fortiori*. A bonus finding was adopted into production: excluding ETFs/never-members from signal selection doubles dev IC (0.0066 → 0.0129) and lifts holdout IC to 0.051 (t = 2.65) — baskets dilute a rankable cross-section. Documented residual at the time: delisted members' price histories were unavailable with free data, so only the inclusion half of survivorship bias was fixed — and, as §3.7 shows, this experiment compared *signals* and missed what the *portfolio* was doing. Both gaps were closed in August 2026.
 
 ### 3.6 Risk model and daily attribution: the beta, named
 
 The "carries beta" caveat deserved a number, so the book got a **two-layer linear risk model** (rolling 252-day SPY beta, estimated ex-ante — the beta attributing day *t* uses data through *t−1* — plus 11 equal-weight sector factors built from market residuals) and a daily attribution that decomposes every session's return into market, sector, stock-selection, cost, and execution-timing components. The decomposition is exact by construction (market + sector + selection ≡ Σ w·r, pinned by unit tests), and the residual is reported separately rather than flattering the selection line.
 
-The verdict on the full-history headline book (h=20, members universe, inverse-vol, calibrated costs — annualized +13.7%):
+The verdict on the production book measured on the corrected ruler of §3.7 (h=20, point-in-time members plus every departed member, inverse-vol, calibrated costs — annualized +4.6%):
 
 | Component | dev | holdout | all | IR (all) |
 |---|---|---|---|---|
-| Market (avg β ≈ 0.59) | +8.5% | +10.4% | **+8.7%** | 0.68 |
-| Sector tilts | +2.6% | +4.4% | **+2.9%** | 0.58 |
-| **Stock selection** | +3.8% | +9.4% | **+4.5%** | 0.55 |
-| Costs | −1.9% | −1.8% | −1.9% | — |
-| Execution residual | −0.3% | −1.7% | −0.5% | — |
+| Market (avg β ≈ 0.0) | +2.8% | +3.6% | **+2.9%** | 0.26 |
+| Sector tilts | +0.6% | +1.4% | **+0.7%** | 0.10 |
+| **Stock selection** | +2.4% | +7.4% | **+3.0%** | 0.30 |
+| Costs | −1.8% | −1.8% | −1.8% | — |
+| Execution residual | −0.0% | −1.3% | −0.2% | — |
 
-![Cumulative return attribution](img/attribution_prod_h20.png)
+![Cumulative return attribution](img/attribution_surv_h20.png)
 
-So roughly **two-thirds of the gross return (and 66% of the variance) is systematic** — the honest reading of the Sharpe ≈ 0.8 headline — but the stock-selection component is *positive in both evaluation segments* with an information ratio of ~0.5: small, real, and now measured rather than asserted. The same engine attributes the live paper book every night (`log_attribution.py` → `trading_logs/attribution_history.csv`), accumulating the live answer to the same question.
+The same decomposition on the pre-correction panel read market +8.7%, sector +2.9%, selection +4.5% of +13.7%: the two corrections of §3.7 removed almost the entire systematic component — that was look-ahead and survivorship, not beta harvested by design — while the stock-selection component gave up a third and stayed *positive in both evaluation segments* (IR 0.23 dev, 0.89 holdout). Small, real, and now measured on a ruler that includes the dead. The same engine attributes the live paper book every night (`log_attribution.py` → `trading_logs/attribution_history.csv`), accumulating the live answer to the same question.
 
 The risk model's first downstream consumer was pre-registered and **rejected**: a volatility-target overlay (12% target, factor-covariance forecast, scale-*down*-only with a hard 1.0 cap applied to each day's new tranche) delivered exactly what it promised on risk — dev vol 17.0% → 14.5%, max drawdown −23.0% → −21.3% — but charged more Sharpe than the pre-registered band allowed (dev 0.75 → 0.63 against a 0.05 tolerance; holdout confirmed the damage, 1.39 → 1.26). The mechanism is recorded with the verdict: a long-biased book earns much of its return in high-volatility recoveries, and a vol-timing rule sells precisely those days. The overlay stays out of production; the forecaster stays as a monitoring instrument.
+
+### 3.7 The ruler, corrected twice: the retraction of 0.8
+
+Buying survivorship-complete prices (Sharadar SEP, $39/month) to close the residual of §3.5 produced two corrections, one of them unexpected. The experiment was pre-registered as a measurement change, not a hypothesis: whatever the numbers did, a universe that includes the dead becomes the standard.
+
+**Correction 1 — membership look-ahead inside the portfolio.** The August 10 experiment compared *signals* under the point-in-time mask and found the 2022+ IC untouched, so the headline book kept the today's-members panel. But a concentrated top-10 book is not a cross-sectional IC: in 2018–2021 it was buying names that were later *added* to the index, riding their pre-inclusion run-ups. Re-simulating the identical construction under the point-in-time mask:
+
+| Panel | dev Sharpe | holdout | all | ann. (all) |
+|---|---|---|---|---|
+| today's members, no PIT mask (the 0.8 headline) | 0.76 | 1.38 | **0.83** | +13.4% |
+| PIT mask (panel of Aug 10) | 0.35 | 1.62 | 0.51 | +6.8% |
+| PIT mask, today's code | 0.33 | 1.13 | 0.44 | +6.7% |
+| **PIT mask + survivorship-complete** | **0.22** | **0.85** | **0.27** | **+3.2%** |
+
+**Correction 2 — the dead.** Sharadar keeps a delisted company under its last ticker (SIVB → SIVBQ, FRC → FRCB) and lists the S&P-era code only in a `relatedtickers` field, so departed members are resolved through that field, restricted to common stock that still traded inside the evaluation window. Coverage: **261 of 261** members that left the index in 2014+. Adding them and rerunning the same walk-forward under the same mask lowered blended IC by 30% in dev (0.0267 → 0.0187) and 27% in holdout (0.0520 → 0.0377), and the book's all-period Sharpe from 0.44 to 0.27.
+
+Two-thirds of the number I had been defending was look-ahead and survivorship. Every verdict adjudicated before 2026-08-25 — the construction grid, the optimizer, the overlay, the factor adoptions — was reached on the pre-correction panel; their *directions* are expected to survive (the corrections act on the universe, not on any one factor) but their magnitudes are not re-certified until rerun. The incident that surfaced along the way is recorded too: on 2026-08-16 Wikipedia moved the index change log to a separate article, the scraper silently read a navigation box in its place, and the weekly refresh overwrote the membership table with a degenerate one (every member since 1957, zero removals). It was caught only because a survivorship fetch with zero departed members is a contradiction; the parser now refuses to write a table that fails three plausibility checks.
 
 ---
 
@@ -164,13 +181,13 @@ Fully automated since 2026-07-21: nightly signal generation and staggered order 
 
 Factor health has three detection layers. The weekly retrain re-weights factors by recent rank IC and zeroes negatives (automatic, coarse); pre-registered removal triggers fire on fixed dates (strict, infrequent); and a **weekly IC-decay monitor** (`evaluation/ic_monitor.py`) fills the gap between them — each production factor's rolling 120-session rank IC, stitched from the walk-forward history and nightly full-universe score dumps, is compared with its own development-period band, with pre-registered rules (WARN: below dev mean − 1 sd for ≥ 20 sessions; ALERT: below zero for ≥ 60 sessions while carrying weight) that raise a desktop alert and open a removal review — never an automatic removal.
 
-Honest expectation for this configuration, from the members-universe evaluation at calibrated costs: **all-period Sharpe ≈ 0.8** (dev 0.75, holdout 1.39), *including* the beta component the attribution in §3.6 decomposes (avg β ≈ 0.59; stock selection ≈ +4.5%/yr of the +13.7% total). Two weeks of live operation surfaced and fixed real bugs (a OneDrive file-lock crash that silently killed one nightly run — now retried with backoff and alerting; an encoding crash in a logging path), exactly what paper trading is for.
+Honest expectation for this configuration on the corrected ruler (§3.7): **all-period Sharpe ≈ 0.3** (dev 0.22, holdout 0.85), of which stock selection is ≈ +3%/yr of the +4.6% total with average β ≈ 0 (§3.6). The 0.8 this report once carried is retracted. Live trading is unaffected by either correction — the book only ever trades current members and cannot look ahead — but its expectation was overstated. Two weeks of live operation surfaced and fixed real bugs (a OneDrive file-lock crash that silently killed one nightly run — now retried with backoff and alerting; an encoding crash in a logging path), exactly what paper trading is for.
 
 ## 6. Limitations, stated plainly
 
-1. **Survivorship residual** — delisted members' prices are unavailable with free data; pre-2022 results should be read as upper bounds even after PIT filtering.
+1. **Survivorship — fixed 2026-08** (Sharadar histories for 261/261 members departed since 2014); the fix cost ~30% of measured IC and, together with point-in-time masking of the portfolio, revised the headline from 0.8 to ~0.3 (§3.7). Verdicts dated before 2026-08-25 were reached on the pre-correction panel and are not re-certified in magnitude.
 2. **Paper fills are a lower bound on costs**; live slippage will be worse than the calibrated 12–15 bp.
-3. **The book carries beta — now measured, not just admitted**: average β ≈ 0.59, roughly two-thirds of gross return systematic (§3.6). The Sharpe ≈ 0.8 expectation is not market-neutral performance; the measured stock-selection component is ~+4.5%/yr (IR ~0.5).
+3. **Beta and selection are measured, not asserted**: on the corrected ruler the book runs near β ≈ 0 with a stock-selection component of ~+3%/yr (IR 0.3 all-period, 0.9 holdout) — small, positive in both segments, and the only part of the original headline that survived the corrections.
 4. **Market-feature reproducibility — fixed 2026-08.** Nightly rebuilds used to refetch macro series live; Yahoo re-adjusts the whole price history on every dividend, so historical feature values drifted between runs (observed: a virgin-tier IC moving 0.0168 → 0.0141 with no code change). Macro series now come from a frozen, append-only snapshot committed to git (`data/market_snapshot.py`; raw closes + dividends + splits, total-return index derived deterministically, only closed sessions ever stored). Any deliberate refresh is a reviewable diff, not silent drift.
 5. **Capacity is small** — the strategy trades large-cap US equities in tiny size; measured costs do not extrapolate.
 6. **Twenty-one hypotheses is a small family** by industry standards; the ~14% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.

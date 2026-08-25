@@ -20,11 +20,14 @@ holdout, pre-registered adoption rules, and a hypothesis ledger with
 family-wise multiple-testing thresholds. The rebuilt ruler has since
 adjudicated **21 hypotheses (3 adopted, 17 rejected, 1 watch-listed)**,
 twice overturning findings that looked significant (t > 2) on partial
-evidence. The honest expectation of the live configuration is a Sharpe of
-roughly **0.8, with a measured beta component** (a two-layer risk model
-attributes the +13.7%/yr headline as market +8.7%, sector +2.9%, stock
-selection +4.5%, costs −1.9%; avg β ≈ 0.59) — a small number that can
-be defended line by line.
+evidence. The honest expectation of the live configuration, on a ruler corrected
+in August 2026 for point-in-time membership *inside the portfolio* and
+for survivorship-complete prices of every departed S&P member, is an
+all-period Sharpe of roughly **0.3** (holdout ≈ 0.85) — the earlier 0.8
+is retracted in the report with the arithmetic. A two-layer risk model
+attributes the +4.6%/yr as market +2.9%, sector +0.7%, **stock selection
++3.0%**, costs −1.8% (avg β ≈ 0). A small number that can be defended
+line by line.
 
 ## What makes this repo worth reading
 
@@ -109,11 +112,11 @@ python evaluation/attribution_backtest.py --horizon 20   # writes docs/img chart
 
 ## Honest limitations
 
-Paper fills are a lower bound on live costs; the book carries a measured
-beta component (avg β ≈ 0.59, ~2/3 of gross return systematic; the
-attribution chart in the report shows the split); delisted names' prices
-are unavailable (only the inclusion half of survivorship bias is fixed);
-capacity is small. Full list in
+Paper fills are a lower bound on live costs; verdicts dated before
+2026-08-25 were reached on the pre-correction panel (directions expected
+to hold, magnitudes not re-certified); the survivorship-complete panel is
+1.1 GB and rebuilt by `experiments/survivorship_universe.py` rather than
+committed; capacity is small. Full list in
 [the report §6](docs/RESEARCH_REPORT.md#6-limitations-stated-plainly).
 
 ## Repo map

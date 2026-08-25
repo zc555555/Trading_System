@@ -13,15 +13,19 @@ into:
                   model's close->close returns); honestly reported, never
                   folded into selection
 
-Three books can be attributed (same code paths as the original
+Four books can be attributed (same code paths as the original
 experiments, nothing re-implemented):
 
-  --config prod     (default) the EXACT headline book (all-period Sharpe
-                    ~0.8, dev 0.75 / holdout 1.39): the members-only h=20
-                    panel (oos_predictions_h20_pitOFF, the ETF-exclusion
-                    adoption) through the production construction --
-                    top-10 by |pred|, inverse-vol weights, raw long/short
-                    mix, 15bp calibrated round-trip costs.
+  --config surv     (default) the production construction on the
+                    CORRECTED ruler (2026-08-25): point-in-time members
+                    plus every departed member from Sharadar
+                    (oos_predictions_h20_surv); all-period Sharpe ~0.3.
+  --config prod     the retracted 0.8 headline book: today's-members
+                    h=20 panel without the PIT mask
+                    (oos_predictions_h20_pitOFF) -- kept for the
+                    before/after comparison in the report.
+                    Construction in both: top-10 by |pred|, inverse-vol
+                    weights, raw long/short mix, 15bp round trip.
   --config grid     the same construction on the full extended panel
                     (portfolio_construction.py grid population).
   --config baseline the plain simulate_portfolio.py book: |pred|-weights,
@@ -168,7 +172,16 @@ def make_chart(attr: pd.DataFrame, title: str, out_path: Path) -> None:
 def main(horizon: int, config: str) -> None:
     print(f"=== attribution: config={config}, h={horizon} ===")
     print("running simulation with weight collection...")
-    if config == "prod":
+    if config == "surv":
+        # survivorship-complete, PIT-masked panel (the corrected ruler,
+        # 2026-08-25); prices must come from the extended feature panel
+        # or picks of departed names silently vanish from the book
+        pc.DATA = RESULTS_DIR.parent.parent / "data" / "stocks_with_time_windows_surv.parquet"
+        daily, weights, costs = run_construction_book(
+            horizon, f"oos_predictions_h{horizon}_surv.parquet")
+        desc = (f"corrected ruler: PIT + survivorship-complete (h={horizon}, "
+                f"top-{PROD['top_n']}, inverse-vol, {PROD['cost_bp']:.0f}bp)")
+    elif config == "prod":
         daily, weights, costs = run_construction_book(
             horizon, f"oos_predictions_h{horizon}_pitOFF.parquet")
         desc = (f"production book (h={horizon}, members universe, "
@@ -184,7 +197,24 @@ def main(horizon: int, config: str) -> None:
     print(f"  sim days: {len(daily)}, weight rows: {len(weights):,}")
 
     print("building risk model (rolling beta + sector factors)...")
-    rm = build_risk_model()
+    if config == "surv":
+        # the risk model must know the departed names too, or their P&L
+        # falls into `residual`: prices from the extended raw panel,
+        # sectors from Sharadar's TICKERS (same taxonomy as Yahoo's)
+        from evaluation.experiments.survivorship_universe import build_extended_raw
+        from evaluation.risk_model import load_sector_map
+        ext_raw, _ = build_extended_raw()
+        sectors = load_sector_map()
+        data_dir = RESULTS_DIR.parent.parent / "data"
+        sp = pd.read_parquet(data_dir / "sharadar_prices.parquet", columns=["symbol", "ticker"]).drop_duplicates()
+        st = pd.read_parquet(data_dir / "sharadar_tickers.parquet", columns=["ticker", "sector"]).drop_duplicates("ticker")
+        sh_sector = dict(zip(sp.merge(st, on="ticker", how="left")["symbol"],
+                             sp.merge(st, on="ticker", how="left")["sector"].fillna("Unknown")))
+        for s, sec in sh_sector.items():
+            sectors.setdefault(s, sec)
+        rm = build_risk_model(prices=ext_raw[["date", "symbol", "close"]], sector_of=sectors)
+    else:
+        rm = build_risk_model()
     n_unknown = sum(1 for v in rm.sector_of.values() if v == "Unknown")
     print(f"  {len(rm.sector_of)} symbols, {len(rm.sector_returns.columns)} "
           f"sector buckets ({n_unknown} Unknown)")
@@ -226,7 +256,7 @@ def main(horizon: int, config: str) -> None:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--horizon", type=int, default=20, choices=[1, 5, 20])
-    ap.add_argument("--config", choices=["prod", "grid", "baseline"],
-                    default="prod")
+    ap.add_argument("--config", choices=["surv", "prod", "grid", "baseline"],
+                    default="surv")
     args = ap.parse_args()
     main(args.horizon, args.config)
