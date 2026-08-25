@@ -94,6 +94,7 @@ trader/configs/production.yaml
 # Alpaca / Finnhub API keys (CRITICAL)
 config_alpaca.py
 config_finnhub.py
+config_keys.py
 research/config_alpaca.py
 research/config_finnhub.py
 research/data/gdelt_sql/
