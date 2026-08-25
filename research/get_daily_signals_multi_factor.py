@@ -272,6 +272,23 @@ def get_weighted_predictions_multi_factor(df, factor_ensembles, n_days=5):
 
     result_df = pd.DataFrame(weighted_predictions)
 
+    # Persist the FULL-universe per-factor scores for the IC decay monitor
+    # (evaluation/ic_monitor.py). Each factor's realized 20-day rank IC is
+    # computed from these once the labels mature; without this dump the
+    # nightly scores exist only inside this process. Never fatal.
+    try:
+        _scores_dir = Path(__file__).resolve().parent / "artifacts" / "factor_scores"
+        _scores_dir.mkdir(parents=True, exist_ok=True)
+        _score_cols = (["date", "symbol"]
+                       + [c for c in result_df.columns if c.startswith("factor_")]
+                       + ["prediction"])
+        _d = pd.to_datetime(result_df["date"]).max()
+        result_df[_score_cols].to_parquet(
+            _scores_dir / f"factor_scores_{_d.strftime('%Y%m%d')}.parquet", index=False)
+        print(f"[OK] factor scores persisted for {_d.date()} ({len(result_df)} names)")
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[WARN] factor score dump failed: {_exc}")
+
     print(f"\n[OK] Multi-factor weighted predictions calculated for {len(result_df)} stocks")
 
     return result_df

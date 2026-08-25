@@ -64,7 +64,9 @@ be defended line by line.
 · 20-day staggered tranches · inverse-volatility sizing · calibrated
 12–15 bp round-trip costs (from live fills) · randomized limit-vs-market
 execution A/B accumulating evidence · nightly return attribution of the
-live book (market / sector / selection).
+live book (market / sector / selection) · weekly factor IC-decay monitor
+with pre-registered WARN/ALERT rules · frozen macro snapshot (features are
+a pure function of git) · CI on every push.
 
 ## Reproduce the headline results
 

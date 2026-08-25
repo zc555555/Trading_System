@@ -1,0 +1,73 @@
+{
+  "generated_at": "2026-08-25T16:23:28.313370",
+  "roll": 120,
+  "horizon": 20,
+  "rules": {
+    "warn": "rolling IC < dev_mean - 1sd for >= 20 sessions",
+    "alert": "rolling IC < 0 for >= 60 sessions and weight > 0"
+  },
+  "history_end": "2026-07-10",
+  "live_sessions": 0,
+  "factors": {
+    "factor_momentum": {
+      "status": "OK",
+      "latest_rolling_ic": 0.06071,
+      "dev_mean": 0.00906,
+      "dev_std": 0.04785,
+      "sessions_below_band": 0,
+      "sessions_below_zero": 0,
+      "production_weight": 0.1506,
+      "as_of": "2026-07-10"
+    },
+    "factor_trend": {
+      "status": "OK",
+      "latest_rolling_ic": 0.01209,
+      "dev_mean": 0.0039,
+      "dev_std": 0.03193,
+      "sessions_below_band": 0,
+      "sessions_below_zero": 0,
+      "production_weight": 0.1827,
+      "as_of": "2026-07-10"
+    },
+    "factor_volatility": {
+      "status": "OK",
+      "latest_rolling_ic": 0.06126,
+      "dev_mean": 0.01309,
+      "dev_std": 0.05436,
+      "sessions_below_band": 0,
+      "sessions_below_zero": 0,
+      "production_weight": 0.2891,
+      "as_of": "2026-07-10"
+    },
+    "factor_volume": {
+      "status": "OK",
+      "latest_rolling_ic": 0.0013,
+      "dev_mean": -0.01843,
+      "dev_std": 0.02404,
+      "sessions_below_band": 0,
+      "sessions_below_zero": 0,
+      "production_weight": 0.0,
+      "as_of": "2026-07-10"
+    },
+    "factor_alpha": {
+      "status": "OK",
+      "latest_rolling_ic": 0.02936,
+      "dev_mean": -0.01119,
+      "dev_std": 0.02775,
+      "sessions_below_band": 0,
+      "sessions_below_zero": 0,
+      "production_weight": 0.1463,
+      "as_of": "2026-07-10"
+    },
+    "factor_high52": {
+      "status": "OK",
+      "latest_rolling_ic": 0.04409,
+      "dev_mean": 0.009,
+      "dev_std": 0.0553,
+      "sessions_below_band": 0,
+      "sessions_below_zero": 0,
+      "production_weight": 0.2314,
+      "as_of": "2026-07-10"
+    }
+  }
+}

@@ -10,6 +10,8 @@ set RC=%errorlevel%
 echo ================ retrain finished %date% %time% exit=%RC% ================ >> "trading_logs\retrain_%DT%.log"
 rem Weekly slippage / execution-A/B reconciliation (non-fatal)
 "research\venv\Scripts\python.exe" research\evaluation\experiments\slippage_calibration.py >> "trading_logs\retrain_%DT%.log" 2>&1
+rem Weekly factor IC decay monitor: third detection layer (non-fatal; flags -> WARNINGS.log + toast)
+"research\venv\Scripts\python.exe" research\evaluation\ic_monitor.py >> "trading_logs\retrain_%DT%.log" 2>&1
 rem Weekly S&P membership refresh for the PIT universe filter (non-fatal)
 "research\venv\Scripts\python.exe" research\data\fetch_sp500_history.py >> "trading_logs\retrain_%DT%.log" 2>&1
 if not "%RC%"=="0" (
