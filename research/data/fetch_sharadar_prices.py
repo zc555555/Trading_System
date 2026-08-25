@@ -118,6 +118,17 @@ def resolve_aliases(missing: list[str], key: str) -> tuple[dict, pd.DataFrame]:
     want = {to_sharadar(s): s for s in missing}
     alias: dict = {}
     if len(delisted):
+        # only common stock may stand in for an S&P member: relatedtickers
+        # of preferred shares / units also list the parent's old code
+        # (FSR -> USB-PQ was one such false match)
+        cat = delisted.get("category", pd.Series("", index=delisted.index)).astype(str)
+        ok = cat.str.contains("Common Stock", case=False, na=False) & \
+            ~delisted["ticker"].astype(str).str.contains(r"-P|-U|-W", regex=True)
+        # an entity that stopped trading before START cannot be the member
+        # we want; matching it would fetch a ticker-reusing successor's
+        # prices under the old symbol (FSR -> old USB entity -> today's USB)
+        ok &= pd.to_datetime(delisted["lastpricedate"], errors="coerce") >= pd.Timestamp(START)
+        delisted = delisted[ok]
         for _, row in delisted.sort_values("lastpricedate").iterrows():
             rel = str(row.get("relatedtickers") or "")
             for tok in rel.split():

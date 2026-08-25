@@ -70,7 +70,8 @@ def compare(tag_off: str, tag_on: str):
     off = pd.read_parquet(RESULTS_DIR / f"oos_predictions_h20_{tag_off}.parquet")
     on = pd.read_parquet(RESULTS_DIR / f"oos_predictions_h20_{tag_on}.parquet")
 
-    print(f"\n{'segment':<14}{'today-members (pitOFF)':>26}{'point-in-time (pitON)':>26}")
+    labels = {"pitOFF": "today-members (pitOFF)", "pitON": "point-in-time (pitON)"}
+    print(f"\n{'segment':<14}{labels.get(tag_off, tag_off):>26}{labels.get(tag_on, tag_on):>26}")
     print("-" * 68)
     rows = []
     for name, start, end in SEGMENTS:
