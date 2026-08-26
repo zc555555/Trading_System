@@ -1,0 +1,14 @@
+{
+  "generated_at": "2026-08-26",
+  "hypothesis": "Factor concentration: a high52-only book (pred = factor_high52 z-score) beats the 7-factor blend under the identical production construction grid. Pre-registered as a follow-up to the factor report card, which showed high52 as the only factor with positive dev IC, monotonic deciles and a net-of-cost spread on the corrected ruler.",
+  "rule": "dev decides, holdout must confirm direction (surv panel is the evaluation standard; full panel reported for completeness).",
+  "sharpe_raw_ivol_15bp": {
+    "surv": {"blend": {"n10": [0.22, 0.85], "n30": [0.31, 0.78], "n50": [0.29, 0.61]},
+             "high52": {"n10": [0.37, -0.18], "n30": [0.45, -0.55], "n50": [0.40, -0.63]}},
+    "full": {"blend": {"n10": [0.14, 1.58], "n30": [0.09, 1.03], "n50": [0.05, 0.98]},
+             "high52": {"n10": [0.30, 0.87], "n30": [0.25, 1.09], "n50": [0.29, 1.07]}}
+  },
+  "verdict": "REJECTED on the standard (surv) ruler: dev improves (0.37-0.46 vs 0.22-0.36) but holdout flips negative. Mechanism, consistent with the factor card: the blend's holdout is carried by the volatility factor (holdout IC +0.051, monotonic deciles there), its dev by high52 -- the two factors lead in different regimes and the blend's diversification across them is real work, not noise. Concentration discards it.",
+  "watch": "On the full (501-name) panel the high52-only book is the most balanced configuration seen (dev 0.25-0.30, holdout 0.87-1.09) while the blend collapses in dev. Single holdout window; logged for the November review alongside the high52 removal trigger and the accruals watch-list. No production change.",
+  "implication_for_weighting": "The concern that volatility's 28.8% weight was 'a recent run' is only half right: its holdout contribution is real. Re-weighting on dev-period IC alone would remove exactly the factor that carried the holdout. Any weighting change must be judged on both segments."
+}

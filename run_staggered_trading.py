@@ -47,6 +47,25 @@ def _today_str() -> str:
     return datetime.now().strftime("%Y-%m-%d")
 
 
+EXEC_ARM_LOG = Path("trading_logs") / "exec_arms.csv"
+
+
+def _log_exec_arm(tranche_id: str, symbol: str, side: str, client_order_id: str,
+                  arm: str, arrival_price: float) -> None:
+    """Append one row per placed entry so fills can be joined to their A/B
+    arm forever (the registry forgets closed legs). Never fatal."""
+    try:
+        EXEC_ARM_LOG.parent.mkdir(exist_ok=True)
+        new = not EXEC_ARM_LOG.exists()
+        with open(EXEC_ARM_LOG, "a", encoding="utf-8", newline="") as f:
+            if new:
+                f.write("logged_at,tranche_id,symbol,side,client_order_id,exec_arm,arrival_price\n")
+            f.write(f"{datetime.now().isoformat(timespec='seconds')},{tranche_id},{symbol},"
+                    f"{side},{client_order_id},{arm},{arrival_price:.4f}\n")
+    except Exception as exc:  # noqa: BLE001
+        print(f"  [WARN] exec-arm log failed for {symbol}: {exc}")
+
+
 def exec_arm_for(symbol: str, date_str: str) -> str:
     """Deterministic A/B assignment: reproducible, balanced-in-expectation,
     uncorrelated with the signal (hash of symbol+date)."""
@@ -382,6 +401,12 @@ def open_new_tranche(trader: AlpacaAutoTrader, registry: TrancheRegistry,
         )
         (longs if side == "long" else shorts).append(pos)
         placed_notional += order_notional
+        # Persist the A/B arm assignment OUTSIDE the registry: registry legs
+        # are removed when a tranche closes, and with them the arm label of
+        # every historical fill -- the A/B had accumulated zero usable
+        # observations by 2026-08-26 because of this. Append-only log.
+        if not dry_run:
+            _log_exec_arm(tranche_id, symbol, side, client_id, arm, float(cur_price))
         if side == "short":
             placed_short += order_notional
 

@@ -20,3 +20,9 @@ rem Daily live-book attribution (descriptive analytics; places no orders).
 if not "%errorlevel%"=="0" (
     echo %date% %time% ATTRIBUTION LOG FAILED see auto_run_%DT%.log >> "trading_logs\FAILURES.log"
 )
+rem Daily fill capture for the execution A/B (was Sunday-only; two missed
+rem Sundays left the fill record stale at 2026-08-14). Non-fatal.
+"research\venv\Scripts\python.exe" research\evaluation\experiments\slippage_calibration.py >> "trading_logs\auto_run_%DT%.log" 2>&1
+if not "%errorlevel%"=="0" (
+    echo %date% %time% SLIPPAGE CAPTURE FAILED see auto_run_%DT%.log >> "trading_logs\FAILURES.log"
+)

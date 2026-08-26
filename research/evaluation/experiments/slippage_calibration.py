@@ -146,9 +146,18 @@ def main():
     # converted-to-market after timeout; market-arm ids carry no suffix
     # but the registry's exec_arm field is authoritative).
     arm_map = {}
+    # 1) the append-only exec-arm log (survives tranche closes; primary)
+    arm_log = ROOT / "trading_logs" / "exec_arms.csv"
+    if arm_log.exists():
+        try:
+            al = pd.read_csv(arm_log)
+            arm_map.update(dict(zip(al["client_order_id"].astype(str), al["exec_arm"].astype(str))))
+        except Exception as exc:  # noqa: BLE001
+            print(f"[WARN] exec_arms.csv unreadable: {exc}")
+    # 2) registry legs still open (fallback for entries placed before the log)
     for t in reg["tranches"]:
         for p in t["longs"] + t["shorts"]:
-            if p.get("client_order_id"):
+            if p.get("client_order_id") and p["client_order_id"] not in arm_map:
                 arm_map[p["client_order_id"]] = p.get("exec_arm") or "pre_ab"
     df["exec_arm"] = [
         arm_map.get(getattr(o, "client_order_id", None) or "",
@@ -166,12 +175,19 @@ def main():
     ab = df[(df["kind"] == "entry") & df["exec_arm"].isin(["market", "limit"])]
     if len(ab):
         print("\nEXECUTION A/B (entries with an arm assignment):")
+        from scipy.stats import trim_mean
         for arm, g in ab.groupby("exec_arm"):
             with_slip = g.dropna(subset=["slip_bp"])
-            print(f"  {arm:<7} n={len(g):>3}  "
-                  f"mean {with_slip['slip_bp'].mean():+7.2f} bp  "
-                  f"median {with_slip['slip_bp'].median():+7.2f} bp"
-                  if len(with_slip) else f"  {arm:<7} n={len(g):>3}  (no benchmark)")
+            if len(with_slip):
+                s = with_slip["slip_bp"]
+                # paper first-quote outliers give raw sd ~90bp: the raw mean
+                # can never resolve a 5bp arm difference; the verdict uses
+                # the 10% trimmed mean / median (sd ~20bp -> ~250 fills/arm)
+                print(f"  {arm:<7} n={len(g):>3}  mean {s.mean():+7.2f} bp  "
+                      f"trimmed10 {trim_mean(s, 0.1):+7.2f} bp  "
+                      f"median {s.median():+7.2f} bp  sd {s.std():6.1f}")
+            else:
+                print(f"  {arm:<7} n={len(g):>3}  (no benchmark)")
     for (kind, bench), g in df.dropna(subset=["slip_bp"]).groupby(["kind", "benchmark"]):
         print(f"\n{kind} vs {bench}  (n={len(g)}):")
         print(f"  mean {g['slip_bp'].mean():+7.2f} bp   "
