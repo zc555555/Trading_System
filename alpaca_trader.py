@@ -205,7 +205,32 @@ class AlpacaAutoTrader:
                 print(f"[WARNING] Cancel failed for {symbol} order {order.id}: {e}")
         if n:
             print(f"[OK] Canceled {n} open order(s) for {symbol}")
+            # Cancellation is asynchronous at the broker: the qty stays
+            # held_for_orders until the cancel is processed, and a close
+            # submitted in that window is rejected with 40310000
+            # "insufficient qty available" (2026-08-26: six scheduled
+            # closes failed this way). Wait until nothing is open.
+            self.wait_until_no_open_orders(symbol)
         return n
+
+    def wait_until_no_open_orders(self, symbol: str, timeout_s: float = 15.0,
+                                  poll_s: float = 1.0) -> bool:
+        """Block until the broker reports no open orders for ``symbol``
+        (cancellations processed). Returns False on timeout."""
+        import time as _time
+        deadline = _time.time() + timeout_s
+        while _time.time() < deadline:
+            try:
+                still = self.trading_client.get_orders(
+                    GetOrdersRequest(status=QueryOrderStatus.OPEN, symbols=[symbol]))
+            except Exception as e:
+                print(f"[WARNING] Could not poll open orders for {symbol}: {e}")
+                return False
+            if not still:
+                return True
+            _time.sleep(poll_s)
+        print(f"[WARNING] {symbol}: open orders still pending cancel after {timeout_s:.0f}s")
+        return False
 
     def place_bracket_order(self, symbol: str, qty: int, side: str,
                             stop_price: float, take_price: float,

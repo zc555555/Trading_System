@@ -137,8 +137,16 @@ def _close_position(trader: AlpacaAutoTrader, symbol: str, qty: int, side: str,
         print(f"  [DRY-RUN] would close: {side.upper()} {qty} {symbol}")
         return True
     # Resting bracket legs (stop/take) hold the position's qty; cancel them
-    # first or the closing market order is rejected.
+    # first or the closing market order is rejected. cancel_open_orders now
+    # waits for the broker to process the cancels; one retry after a short
+    # pause covers a slow cancel (2026-08-26 race: 6 closes rejected with
+    # "insufficient qty available ... held_for_orders").
     trader.cancel_open_orders(symbol)
+    if trader.place_market_order(symbol, qty, side):
+        return True
+    time.sleep(3)
+    trader.wait_until_no_open_orders(symbol)
+    print(f"  [retry] close {side.upper()} {qty} {symbol}")
     return trader.place_market_order(symbol, qty, side)
 
 
