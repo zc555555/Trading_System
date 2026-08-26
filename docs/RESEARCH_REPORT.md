@@ -153,7 +153,26 @@ Buying survivorship-complete prices (Sharadar SEP, $39/month) to close the resid
 
 The first verdict re-adjudicated on the corrected ruler was the construction grid of §3.4, and it turned into a second lesson. Dollar-neutralisation *reverses*: it no longer hurts (its old harm was the look-ahead drift being removed) and cuts dev drawdown from −32% to −18%, though its Sharpe gain is not robust across widths and a 50/50 book is not deployable under the 25% short cap of the no-debt principle. The deployable 75/25 "capped-neutral" variant looked like the clear winner on Sharpe (dev 0.42 / holdout 1.45 versus 0.22 / 0.85) — and the risk model rejected it: its market component is +8.7%/yr at β = 0.46 while the selection component *falls* from +3.0% to +1.2%/yr (IR 0.30 → 0.13). Capping the short side removes half the stock-picking and replaces it with market drift — the retracted headline's error, re-entering through the construction door. Production stays on raw top-10 inverse-vol, which on this ruler is already near-neutral (β ≈ 0) and keeps the whole selection component. Rule adopted from this: **no construction verdict without its attribution alongside the Sharpe.**
 
+The obvious breadth lever failed on the same ruler. Sharadar also supplies the 233 current S&P members the free panel never had; adding them (268 → 501 names, same walk-forward, same mask) cut dev IC from 0.0187 to 0.0049 and dev Sharpe roughly in half (n=10: 0.22 → 0.14; n=30: 0.31 → 0.09) — the models do not rank the added mid-caps, and breadth without a rankable signal dilutes. Rejected by the dev-decides rule; holdout *improved* in that single window (0.85 → 1.58) and is logged for the November review rather than acted on.
+
 Two-thirds of the number I had been defending was look-ahead and survivorship. Every verdict adjudicated before 2026-08-25 — the construction grid, the optimizer, the overlay, the factor adoptions — was reached on the pre-correction panel; their *directions* are expected to survive (the corrections act on the universe, not on any one factor) but their magnitudes are not re-certified until rerun. The incident that surfaced along the way is recorded too: on 2026-08-16 Wikipedia moved the index change log to a separate article, the scraper silently read a navigation box in its place, and the weekly refresh overwrote the membership table with a degenerate one (every member since 1957, zero removals). It was caught only because a survivorship fetch with zero departed members is a contradiction; the parser now refuses to write a table that fails three plausibility checks.
+
+### 3.8 Factor report card: what IC alone does not say
+
+A reviewer's list of what the pipeline lacked — orthogonality, decile structure, turnover, a hard gate — became `evaluation/factor_card.py`, run on the corrected ruler (dev 2022–2025 H1 / holdout):
+
+| Factor | IC dev / hold | residual IC dev / hold | decile spread dev (20d) | monotonicity | turnover per hold | spread net of costs |
+|---|---|---|---|---|---|---|
+| **high52** | **+0.032** / +0.022 | +0.011 / +0.017 | **+1.11%** | **0.95** | 0.80 | **+0.87%** |
+| volatility | −0.006 / **+0.051** | −0.003 / +0.037 | −0.13% | −0.76 | 0.84 | −0.38% |
+| trend | +0.007 / −0.018 | +0.005 / −0.002 | +0.30% | 0.42 | 0.84 | +0.05% |
+| alpha | −0.010 / +0.028 | −0.005 / +0.015 | −0.07% | −0.55 | 0.70 | −0.28% |
+| momentum | −0.004 / −0.002 | +0.006 / −0.004 | −0.24% | 0.14 | 0.69 | −0.44% |
+| volume | +0.001 / +0.015 | +0.001 / +0.003 | +0.20% | 0.14 | 0.76 | −0.03% |
+
+![Decile analysis](img/factor_card_surv.png)
+
+Three readings. Orthogonality is not the problem: pairwise correlations of the per-date z-scored factor scores never exceed 0.20, and high52's residual IC — after cross-sectional regression on every other factor — is still positive in both segments, so it carries information the rest of the blend does not. Concentration is: on this ruler the book rests on high52, the only factor with a positive dev IC, monotonic deciles and a spread that survives costs; the top-weighted volatility factor (28.8% of the blend) is dev-negative with *inverted* deciles and owes its weight to a strong holdout — the weighting scheme rewards a recent run, which is exactly what the November review must adjudicate. And turnover is the silent tax: 70–84% of the top decile changes every 20-day hold, so at 15 bp round trip most decile spreads are consumed before they reach the book. Every factor fails the family-wise gate at |t| ≥ 3.02 (N = 20); how that gate should treat literature-backed factors versus data-mined ones is the open rulebook question of §6.
 
 ---
 
