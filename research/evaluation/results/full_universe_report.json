@@ -1,0 +1,16 @@
+{
+  "generated_at": "2026-08-26T13:43:35.081128",
+  "panel_info": {
+    "mode": "full",
+    "symbols_to_add": 488,
+    "covered_by_sharadar": 488,
+    "coverage": 1.0,
+    "missing_examples": [],
+    "added_rows": 1244234,
+    "panel_symbols_before": 298,
+    "panel_symbols_after": 786
+  },
+  "horizon": 20,
+  "max_folds": null,
+  "mode": "full"
+}
