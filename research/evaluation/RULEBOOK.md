@@ -123,7 +123,53 @@ h = 5 book exists (gated on the execution A/B, ~2026-11) and its own
 adoption is decided then. Rationale: the only honest signals ever
 measured at t > 2 on this ruler were at h = 5 (trend, volatility, news).
 
-**Gate (all clauses required).**
+**v3 (pre-registered 2026-09-04, user decision, after five track-B runs and
+five full-stage verdicts had been read; applies to candidates adjudicated
+from now on; earlier verdicts stand until the 2026-11-15 review, when every
+track-B full-stage candidate is re-adjudicated under v3 on the rotated
+segments and the family is recomputed).** The two-track structure, the
+screen, the oracles and the one-bit feedback are unchanged. What changes:
+
+*Two adoption paths, one family.* Every full-stage candidate contributes
+two one-sided p-values (declared direction, Newey–West h − 1 lags) to the
+BH family at q = 0.10: the p of its per-date IC pooled over every unseen
+tier (virgin_early + holdout + fresh), and the p of its IC pooled over
+the recent tiers (holdout + fresh). FDR is therefore controlled over all
+tests actually run. Common clauses for either path: holdout ≥ 120
+sessions, blended seen_dev gain > 0, no unseen tier significantly
+negative in the declared direction (fresh vetoes once it holds ≥ 60
+sessions).
+
+| Path | Test | Also required | Adoption |
+|---|---|---|---|
+| structural | pooled p rejected by BH, and pooled t ≥ 2 in the declared direction (BH alone can let a candidate's strong recent p carry a weak pooled p; the label must be earned by the pooled evidence itself) | ≥ 2 of the available unseen tiers positive (all if fewer than 2); recent IC not negative | normal, with the usual pre-registered removal trigger |
+| probation | recent p rejected by BH | holdout positive, fresh positive when available | adopted under probation: the IC monitor's first WARN removes it, static weight capped at half |
+
+Rationale. A single ~250-session holdout is one regime and the verdicts
+hinged on whether an effect happened to be present in it; pooling
+multiplies the unseen sample about five-fold. But a rule that only
+admits effects alive since 2015 would never admit a young one (high52,
+the one factor that survived track A, is flat in virgin_early), and
+alpha decays, so demanding significance across a decade is the wrong
+shape. The probation path admits a young effect on its post-dev
+evidence and prices the shorter history through monitoring rather than
+through a higher bar. seen_dev stays the only selection segment; nothing
+unseen is shown to the agent.
+
+*Rotation.* At each review date in `rulebook.REVIEW_SCHEDULE` (2026-11-15,
+then every six months) the segments move: holdout becomes the twelve
+months before the review date, fresh becomes everything after it, the old
+holdout joins seen_dev; virgin_early never changes. A rotation is executed
+by setting `rulebook.ACTIVE_REVIEW` to that date and nothing else. Every
+verdict reveals holdout information to the human who sets the next goal,
+so a holdout window wears out; the newest data must always be the sealed
+one. The agent therefore mines data that is six to twelve months old —
+that lag is the price of verifiability.
+
+Operations: the survivorship-complete panel is rebuilt monthly so the
+fresh tier keeps growing (PRODUCTION.md).
+
+**Gate (v2 wording, kept for the record of how the first five full stages were judged; v3 above is current).**
 
 | Clause | Rule |
 |---|---|

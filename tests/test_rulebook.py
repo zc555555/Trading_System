@@ -90,7 +90,8 @@ def test_track_b_passes_clean_candidate_in_empty_family():
 def test_track_b_direction_mismatch_fails():
     out = rb.gate_mined(_tiers(holdout_t=2.5), "negative", blend_dev_gain=0.002)
     assert out["verdict"] == "FAIL"
-    assert any("direction" in r for r in out["reasons"])
+    # a holdout t of +2.5 declared negative is a significantly negative tier in the declared direction
+    assert any(("significantly negative" in r) or ("positive in the declared direction" in r) for r in out["reasons"])
 
 
 def test_track_b_requires_dev_blend_gain():

@@ -40,6 +40,7 @@ Rules: performance numbers quoted anywhere (docs, decisions, README) must come f
 - [data/universe.py](data/universe.py), [data/apply_liquidity_filter.py](data/apply_liquidity_filter.py) — universe management
 - [config_loader.py](config_loader.py), [config_trend_filters.py](config_trend_filters.py) — reads `config.yaml`
 - [data/build_edgar_fields.py](data/build_edgar_fields.py) — point-in-time share counts + filing calendar from the EDGAR cache (`edgar_fields.parquet`) for the mining DSL's auxiliary fields `marketcap` / `turnover` / `filing_days`. NOT in the nightly pipeline yet: if an adopted mined factor uses them, run `data/fetch_fundamentals.py` (refresh cache) + this script before `prepare_prediction_data.py` in `run_auto_trading.py` first.
+- **Monthly (rulebook v3 ops):** rebuild the survivorship-complete panel (`experiments/survivorship_universe.py`, then `mining/harness.py baseline` per horizon) so the fresh evidence tier keeps growing; the panel is otherwise a manual artefact and `fresh` stalls at the last rebuild date.
 - [factors/mined_factors.py](factors/mined_factors.py) + `factors/mined_factors.json` — registry of agent-mined factors adopted under rulebook track B; read by build_dataset, cross_sectional, update_selected_features and factor_definitions (empty registry = no-op). Written only by `mining/harness.py adopt`.
 - [update_selected_features.py](update_selected_features.py) — called by `prepare_prediction_data.py`
 

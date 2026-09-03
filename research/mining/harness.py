@@ -360,7 +360,7 @@ def prior_family(candidate_id: str, ledger_path: Path = rb.MINED_LEDGER) -> list
         return []
     full = led[(led["stage"].astype(str) == "full") & (led["candidate_id"] != candidate_id)
               & (rb.horizon_of(led) == HORIZON)]
-    return [float(x) for x in full["holdout_p_onesided"].dropna()]
+    return rb.family_pvalues_of(full)
 
 
 def raw_feature_on(oos: pd.DataFrame, expression: str) -> pd.Series:
@@ -397,14 +397,15 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
     var = var.assign(_raw=(raw_feature if raw_feature is not None
                            else raw_feature_on(var, p.expression).to_numpy()))
 
-    tiers, ic_by_tier = {}, {}
+    tiers, ic_by_tier, ic_series = {}, {}, {}
     for name, _, _ in SEGMENTS:
         b = summarize_ic(daily_rank_ic(segment(base, name), "pred", target_col=LABEL,
                                        min_names_per_date=MIN_NAMES), nw_lags=NW_LAGS)
         v = summarize_ic(daily_rank_ic(segment(var, name), "pred", target_col=LABEL,
                                        min_names_per_date=MIN_NAMES), nw_lags=NW_LAGS)
-        f = summarize_ic(daily_rank_ic(segment(var, name), "_raw", target_col=LABEL,
-                                       min_names_per_date=MIN_NAMES), nw_lags=NW_LAGS)
+        ic_series[name] = daily_rank_ic(segment(var, name), "_raw", target_col=LABEL,
+                                        min_names_per_date=MIN_NAMES)
+        f = summarize_ic(ic_series[name], nw_lags=NW_LAGS)
         m = summarize_ic(daily_rank_ic(segment(var, name), fcol, target_col=LABEL,
                                        min_names_per_date=MIN_NAMES), nw_lags=NW_LAGS)
         tiers[name] = {"base": b, "blend": v, "alone": f, "model": m}
@@ -412,8 +413,14 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
 
     dev = tiers["seen_dev"]
     blend_dev_gain = float(dev["blend"]["ic_mean"] - dev["base"]["ic_mean"])
+    # v3: two test statistics -- the IC series pooled over every unseen tier
+    # (structural path) and over holdout + fresh (probation path)
+    pooled = summarize_ic(pd.concat([ic_series[k] for k in rb.UNSEEN_TIERS if k in ic_series]).sort_index(),
+                          nw_lags=NW_LAGS)
+    recent = summarize_ic(pd.concat([ic_series[k] for k in rb.RECENT_TIERS if k in ic_series]).sort_index(),
+                          nw_lags=NW_LAGS)
     fam = prior_family(p.candidate_id, ledger_path) if family is None else list(family)
-    gate = rb.gate_mined(ic_by_tier, p.expected_direction, blend_dev_gain, fam)
+    gate = rb.gate_mined(ic_by_tier, p.expected_direction, blend_dev_gain, fam, pooled=pooled, recent=recent)
 
     dev_rows = segment(var, "seen_dev")
     row = base_row(p, "full")
@@ -435,6 +442,11 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
         "fresh_ic": tiers["fresh"]["alone"]["ic_mean"],
         "fresh_t": tiers["fresh"]["alone"]["t_stat"],
         "fresh_n": tiers["fresh"]["alone"]["n_days"],
+        "pooled_ic": pooled["ic_mean"], "pooled_t": pooled["t_stat"], "pooled_n": pooled["n_days"],
+        "pooled_p_onesided": gate["pooled_p_onesided"],
+        "recent_ic": recent["ic_mean"], "recent_t": recent["t_stat"], "recent_n": recent["n_days"],
+        "recent_p_onesided": gate["recent_p_onesided"],
+        "adoption_tier": gate["adoption_tier"], "rule_version": rb.RULE_VERSION,
         "family_n": gate["family_n"], "bh_threshold": gate["bh_threshold"],
         "verdict": gate["verdict"], "reasons": " | ".join(gate["reasons"]),
         "blend_by_tier": json.dumps({k: {"base": t["base"]["ic_mean"], "blend": t["blend"]["ic_mean"]}
@@ -502,7 +514,11 @@ def adopt(candidate_id: str, removal_trigger: str, ledger_path: Path = rb.MINED_
              "lookback": int(last["lookback"]), "family_n": int(last["family_n"]),
              "holdout_p_onesided": float(last["holdout_p_onesided"]),
              "removal_trigger": removal_trigger, "rule_version": rb.RULE_VERSION,
-             "horizon": int(last.get("horizon") or PRODUCTION_HORIZON)}
+             "horizon": int(last.get("horizon") or PRODUCTION_HORIZON),
+             "adoption_tier": str(last.get("adoption_tier") or "structural")}
+    if entry["adoption_tier"] == "probation":
+        entry["weight_cap"] = 0.025            # half the 5% static fallback; IC-monitor WARN removes it
+        entry["removal_trigger"] = "PROBATION: first IC-monitor WARN removes it | " + removal_trigger
     if entry["horizon"] != PRODUCTION_HORIZON:
         entry["status"] = "shelf"        # validated at a non-production horizon; never compiled for the live book
     register_adopted(entry)

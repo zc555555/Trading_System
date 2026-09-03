@@ -45,7 +45,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from evaluation.metrics import daily_rank_ic, summarize_ic  # noqa: E402
 from evaluation.rulebook import (  # noqa: E402
-    RULE_VERSION, family_size_literature, gate_literature, sidak_bar)
+    RULE_VERSION, SEGMENTS as _SEGMENTS, family_size_literature, gate_literature, sidak_bar)
 
 RESULTS = Path(__file__).resolve().parent / "results"
 IMG = Path(__file__).resolve().parent.parent.parent / "docs" / "img"
@@ -53,12 +53,7 @@ HORIZON = 20
 N_DECILES = 10
 MIN_NAMES = 40
 ROUND_TRIP_BP = 15.0
-SEGMENTS = [
-    ("virgin_early", None, "2021-12-30"),
-    ("seen_dev", "2021-12-30", "2025-07-01"),
-    ("holdout", "2025-07-01", "2026-05-16"),
-    ("fresh", "2026-05-16", None),
-]
+SEGMENTS = _SEGMENTS                     # single definition: evaluation/rulebook.py
 # RULE_VERSION now lives in evaluation/rulebook.py (v2, two-track).
 
 

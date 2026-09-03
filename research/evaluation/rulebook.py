@@ -55,10 +55,41 @@ RESULTS = Path(__file__).resolve().parent / "results"
 LEDGER = RESULTS / "hypothesis_ledger.csv"
 MINED_LEDGER = RESULTS / "mined_candidates.csv"
 
-RULE_VERSION = ("v2 (two-track, pre-registered 2026-09-02): "
+RULE_VERSION = ("v3 (pre-registered 2026-09-04): "
                 "A literature = Sidak FWER 5% on two-sided holdout t; "
-                "B mined = BH FDR q=0.10 on one-sided holdout p in the "
-                "pre-declared direction + dev blend gain > 0")
+                "B mined = two adoption paths in one BH family (q=0.10): structural = pooled "
+                "unseen-tier p (virgin+holdout+fresh) + >=2 tiers positive + recent not negative; "
+                "probation = recent (holdout+fresh) p + holdout and fresh positive; both need "
+                "dev blend gain > 0 and the negative-tier veto")
+
+# ---- evidence segments (single definition; harness / factor_card / factor_pipeline import it)
+# v3 rotation (pre-registered): at each review date R in REVIEW_SCHEDULE the
+# boundaries move -- holdout := the 12 months before R, fresh := after R, the
+# old holdout joins seen_dev; virgin_early never changes. Executing a rotation
+# = setting ACTIVE_REVIEW to that date (a reviewable diff), nothing else.
+VIRGIN_END = "2021-12-30"
+LEGACY_SEGMENTS = [
+    ("virgin_early", None, VIRGIN_END),
+    ("seen_dev", VIRGIN_END, "2025-07-01"),
+    ("holdout", "2025-07-01", "2026-05-16"),
+    ("fresh", "2026-05-16", None),
+]
+REVIEW_SCHEDULE = ("2026-11-15", "2027-05-15", "2027-11-15", "2028-05-15")
+ACTIVE_REVIEW: str | None = None
+
+
+def segments_for(review_date: str | None) -> list[tuple]:
+    """The four evidence tiers as of a review date (None = the pre-v3 legacy split)."""
+    if review_date is None:
+        return list(LEGACY_SEGMENTS)
+    r = pd.Timestamp(review_date)
+    dev_end = (r - pd.DateOffset(months=12)).strftime("%Y-%m-%d")
+    rs = r.strftime("%Y-%m-%d")
+    return [("virgin_early", None, VIRGIN_END), ("seen_dev", VIRGIN_END, dev_end),
+            ("holdout", dev_end, rs), ("fresh", rs, None)]
+
+
+SEGMENTS = segments_for(ACTIVE_REVIEW)
 
 FWER_ALPHA = 0.05
 FDR_Q = 0.10
@@ -80,6 +111,9 @@ MINED_COLUMNS = [
     "residual_dev_ic", "residual_dev_t", "residual_vs",
     "model_dev_t", "model_holdout_t",
     "oracle_flags", "quarantined", "horizon",
+    "pooled_ic", "pooled_t", "pooled_n", "pooled_p_onesided",
+    "recent_ic", "recent_t", "recent_n", "recent_p_onesided",
+    "adoption_tier", "rule_version",
 ]
 PRODUCTION_HORIZON = 20
 
@@ -229,7 +263,25 @@ def family_holdout_pvalues(path: Path = MINED_LEDGER, horizon: int | None = None
     full = led[led["stage"].astype(str) == "full"]
     if horizon is not None:
         full = full[horizon_of(full) == int(horizon)]
-    return [float(x) for x in full["holdout_p_onesided"].dropna()]
+    return family_pvalues_of(full)
+
+
+def family_pvalues_of(rows: pd.DataFrame) -> list[float]:
+    """Every p-value the given full-stage rows contributed to the BH family:
+    a v3 row contributes its pooled and recent p (whichever were computed),
+    a v2 row its holdout p."""
+    out = []
+    for _, r in rows.iterrows():
+        v3 = [pd.to_numeric(r.get(c), errors="coerce") for c in ("pooled_p_onesided", "recent_p_onesided")
+              if c in rows.columns]
+        v3 = [float(x) for x in v3 if pd.notna(x)]
+        if v3:
+            out.extend(v3)
+        else:
+            hp = pd.to_numeric(r.get("holdout_p_onesided"), errors="coerce")
+            if pd.notna(hp):
+                out.append(float(hp))
+    return out
 
 
 # --------------------------------------------------------------------------
@@ -250,42 +302,119 @@ def gate_literature(ic_by_tier: dict, family_bar: float) -> dict:
             "verdict": "PASS" if passes else "FAIL"}
 
 
+UNSEEN_TIERS = ("virgin_early", "holdout", "fresh")
+RECENT_TIERS = ("holdout", "fresh")
+STRUCTURAL_MIN_T = 2.0      # pooled t (declared direction) a structural adoption must earn on its own
+
+
+def _tier_available(name: str, tier: dict) -> bool:
+    n = int(tier.get("n_days", 0) or 0)
+    return n >= (FRESH_MIN_SESSIONS if name == "fresh" else 1)
+
+
 def gate_mined(ic_by_tier: dict, expected_direction: str, blend_dev_gain: float,
-               family_pvalues: list[float] | None = None, q: float = FDR_Q) -> dict:
-    """Track B gate. `ic_by_tier` maps tier -> {ic_mean, t_stat, n_days} for
-    the candidate's standalone rank IC; `family_pvalues` are the one-sided
-    holdout p-values of every PRIOR full-stage track-B candidate (this
-    candidate is appended here)."""
+               family_pvalues: list[float] | None = None, q: float = FDR_Q,
+               pooled: dict | None = None, recent: dict | None = None) -> dict:
+    """Track B gate, v3: two adoption paths, one BH family.
+
+    ic_by_tier      tier -> {ic_mean, t_stat, n_days} of the candidate's RAW
+                    expression (standalone per-date rank IC)
+    pooled          summary of the per-date IC series pooled over every unseen
+                    tier (virgin_early + holdout + fresh)
+    recent          the same over holdout + fresh (data after seen_dev)
+    family_pvalues  every p-value earlier full-stage candidates at this horizon
+                    contributed (two per v3 candidate, one per v2 candidate);
+                    this candidate's own p-values are appended here
+
+    Common clauses (required for either path): holdout >= HOLDOUT_MIN_SESSIONS;
+    dev blend gain > 0; no unseen tier significantly negative in the declared
+    direction (fresh needs FRESH_MIN_SESSIONS to veto).
+
+    STRUCTURAL path: pooled one-sided p rejected by BH at q over the family,
+    at least two of the available unseen tiers positive in the declared
+    direction (all of them if fewer than two are available), and recent IC
+    not negative. Normal adoption.
+
+    PROBATION path (a young effect, absent before seen_dev): recent one-sided
+    p rejected by BH, holdout positive and fresh positive when available.
+    Adopted under probation: the IC monitor's first WARN removes it and its
+    weight is capped at half the static fallback -- the extra risk of a
+    short history is priced by monitoring, not by a higher bar.
+
+    Both p-values of a candidate enter the family, so FDR stays q over all
+    tests actually run. Without `pooled`/`recent` (a legacy caller) the
+    holdout t stands in for the recent test and the record says so."""
     sign = _direction_sign(expected_direction)
     ho = ic_by_tier.get("holdout", {})
-    reasons = []
+    reasons, common = [], []
 
     ho_n = int(ho.get("n_days", 0))
     if ho_n < HOLDOUT_MIN_SESSIONS:
-        reasons.append(f"holdout has {ho_n} sessions < {HOLDOUT_MIN_SESSIONS}")
-
-    ho_ic = float(ho.get("ic_mean", 0.0))
-    if ho_ic * sign <= 0:
-        reasons.append("holdout sign disagrees with pre-declared direction")
-
+        common.append(f"holdout has {ho_n} sessions < {HOLDOUT_MIN_SESSIONS}")
     if not (float(blend_dev_gain) > 0):
-        reasons.append("no blend gain on seen_dev")
-
+        common.append("no blend gain on seen_dev")
     neg = [k for k, v in ic_by_tier.items()
            if sign * float(v.get("t_stat", 0)) <= NEG_T
            and (k != "fresh" or v.get("n_days", 0) >= FRESH_MIN_SESSIONS)]
     if neg:
-        reasons.append(f"significantly negative tier(s) in declared direction: {neg}")
+        common.append(f"significantly negative tier(s) in declared direction: {neg}")
 
-    p = onesided_p(float(ho.get("t_stat", 0.0)), expected_direction)
-    fam = list(family_pvalues or []) + [p]
+    # the two test statistics and their family membership
+    p_pooled = onesided_p(float(pooled["t_stat"]), expected_direction) \
+        if pooled is not None and int(pooled.get("n_days", 0) or 0) > 0 else None
+    if recent is not None and int(recent.get("n_days", 0) or 0) > 0:
+        p_recent, basis = onesided_p(float(recent["t_stat"]), expected_direction), "recent"
+    else:
+        p_recent, basis = onesided_p(float(ho.get("t_stat", 0.0)), expected_direction), "holdout (no recent series supplied)"
+    own = [p for p in (p_pooled, p_recent) if p is not None]
+    fam = list(family_pvalues or []) + own
     mask = bh_reject(fam, q)
     thr = bh_threshold(fam, q)
-    if not mask[-1]:
-        reasons.append(f"holdout p={p:.4f} not rejected by BH q={q} over family n={len(fam)}")
+    own_mask = list(mask[len(fam) - len(own):])
+    pooled_ok = p_pooled is not None and bool(own_mask[0])
+    recent_ok = bool(own_mask[-1])
 
-    return {"track": "B", "rule_version": RULE_VERSION, "q": q,
+    avail = [k for k in UNSEEN_TIERS if _tier_available(k, ic_by_tier.get(k, {}))]
+    pos = [k for k in avail if sign * float(ic_by_tier[k].get("ic_mean", 0.0)) > 0]
+    need = min(2, len(avail))
+    recent_ic = float(recent.get("ic_mean", 0.0)) if recent else float(ho.get("ic_mean", 0.0))
+
+    structural_reasons = []
+    if p_pooled is None:
+        structural_reasons.append("no pooled series supplied")
+    elif not pooled_ok:
+        structural_reasons.append(f"pooled p={p_pooled:.4f} not rejected by BH q={q} over family n={len(fam)}")
+    elif sign * float(pooled.get("t_stat", 0.0)) < STRUCTURAL_MIN_T:
+        # BH can let a candidate's strong recent p carry a weak pooled p through;
+        # the structural label must be earned by the pooled evidence itself
+        structural_reasons.append(f"pooled t={float(pooled.get('t_stat', 0.0)):+.2f} below the structural "
+                                  f"floor of {STRUCTURAL_MIN_T} in the declared direction")
+    if len(pos) < need:
+        structural_reasons.append(f"only {len(pos)} of {len(avail)} unseen tiers positive in the declared direction (need {need})")
+    if sign * recent_ic < 0:
+        structural_reasons.append(f"recent (holdout+fresh) IC {recent_ic:+.4f} negative in the declared direction")
+
+    probation_reasons = []
+    if not recent_ok:
+        probation_reasons.append(f"{basis} p={p_recent:.4f} not rejected by BH q={q} over family n={len(fam)}")
+    for k in RECENT_TIERS:
+        if _tier_available(k, ic_by_tier.get(k, {})) and sign * float(ic_by_tier[k].get("ic_mean", 0.0)) <= 0:
+            probation_reasons.append(f"{k} not positive in the declared direction")
+
+    if common:
+        tier, reasons = "", common
+    elif not structural_reasons:
+        tier, reasons = "structural", []
+    elif not probation_reasons:
+        tier, reasons = "probation", []
+    else:
+        tier, reasons = "", ["structural: " + "; ".join(structural_reasons),
+                             "probation: " + "; ".join(probation_reasons)]
+
+    return {"track": "B", "rule_version": RULE_VERSION, "q": q, "test_basis": basis,
             "family_n": len(fam), "bh_threshold": thr,
-            "holdout_p_onesided": p, "holdout_t": ho.get("t_stat"),
+            "pooled_p_onesided": p_pooled, "recent_p_onesided": p_recent,
+            "holdout_p_onesided": onesided_p(float(ho.get("t_stat", 0.0)), expected_direction),
+            "holdout_t": ho.get("t_stat"), "positive_unseen_tiers": pos, "available_unseen_tiers": avail,
             "negative_tiers": neg, "fresh_n_days": ic_by_tier.get("fresh", {}).get("n_days", 0),
-            "verdict": "PASS" if not reasons else "FAIL", "reasons": reasons}
+            "adoption_tier": tier, "verdict": "PASS" if tier else "FAIL", "reasons": reasons}

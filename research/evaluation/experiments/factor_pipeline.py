@@ -49,12 +49,7 @@ from evaluation.rulebook import family_size_literature, sidak_bar  # noqa: E402
 MEMBERSHIP = Path(__file__).resolve().parent.parent.parent / "data" / "sp500_membership.parquet"
 LEDGER = RESULTS_DIR / "hypothesis_ledger.csv"
 HORIZON = 20
-SEGMENTS = [
-    ("virgin_early", None, "2021-12-30"),
-    ("seen_dev", "2021-12-30", "2025-07-01"),
-    ("holdout", "2025-07-01", "2026-05-16"),
-    ("fresh", "2026-05-16", None),
-]
+from evaluation.rulebook import SEGMENTS  # noqa: E402  (single definition)
 
 # Every hypothesis adjudicated before this pipeline existed (retro-filled
 # from the commit log). The family size for multiple-testing corrections
