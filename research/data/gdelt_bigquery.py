@@ -182,7 +182,11 @@ if __name__ == "__main__":
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--years", type=int, nargs="*", default=None)
     ap.add_argument("--project", type=str, default="stockpredict-503112")
+    ap.add_argument("--names", type=Path, default=None,
+                    help="name-variant JSON (default company_names.json; company_names_full.json covers every PIT member)")
     args = ap.parse_args()
+    if args.names:
+        globals()["NAMES_CACHE"] = args.names
 
     if args.emit_sql:
         emit_sql_files()

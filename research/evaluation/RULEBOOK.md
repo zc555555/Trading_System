@@ -101,6 +101,17 @@ gained three point-in-time auxiliary fields from SEC EDGAR filings
 field addition changes the search space, not any rule: screen and gate are
 unchanged and the track-B family keeps counting across the change.
 
+**Fields (recorded 2026-09-04, after five runs; h=20 n=3 and h=5 n=2 full
+stages, no pass).** Two GDELT news fields were added (`news_tone`,
+`news_articles`; source `data/gdelt_bigquery.py` -> `data/gdelt_daily.parquet`,
+768 members, 2017-01-01 onward). Calendar day D's news is usable from the
+first session strictly after D (weekend news lands on Monday), one session
+more conservative than the news experiment's same-day convention. Same
+principle as above: a search-space change, no rule change, families keep
+counting. Coverage before 2017 is NaN, so virgin_early evidence for news
+factors is thinner than for OHLCV factors; the pooled/recent tests are
+unaffected because they use only the sessions where the factor exists.
+
 **Quarantine (process oracles, added 2026-09-03).** The harness runs
 runtime self-checks on every screened candidate (`mining/oracles.py`):
 future-perturbation, strength band (|dev t| > 6 or |dev IC| > 0.08),

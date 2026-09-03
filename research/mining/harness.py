@@ -138,7 +138,7 @@ def load_screen_panel(rebuild: bool = False) -> pd.DataFrame:
     df = add_label(df)
     df["pit"] = _pit_mask(df).to_numpy()
     from mining import aux_fields
-    df = aux_fields.attach(df)                 # marketcap / turnover / earn_days when sources exist
+    df = aux_fields.attach(df)                 # EDGAR + GDELT news fields when their sources exist
     df.to_parquet(cache, index=False)
     return df
 

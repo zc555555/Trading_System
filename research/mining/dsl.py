@@ -38,7 +38,7 @@ import pandas as pd
 BASE_FIELDS = ("open", "high", "low", "close", "volume", "returns", "dollar_volume", "typical")
 # auxiliary fields: present only when the panel carries the column (see
 # mining/aux_fields.py); an expression using an absent one is refused
-AUX_FIELDS = ("marketcap", "turnover", "filing_days")
+AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles")
 FIELDS = BASE_FIELDS + AUX_FIELDS
 FIELD_DOC = {
     "open": "session open", "high": "session high", "low": "session low",
@@ -49,6 +49,8 @@ FIELD_DOC = {
     "marketcap": "close * latest usable cover-page share count (SEC EDGAR, point-in-time), USD millions",
     "turnover": "volume / latest usable cover-page share count: fraction of shares traded in the session",
     "filing_days": "sessions since the last 10-Q/10-K filing usable today (filing session + 1); NaN before the first filing",
+    "news_tone": "GDELT mean news tone (article-weighted, roughly -10..+10) of the calendar days usable at this session (a day's news is usable from the next session); NaN when no article",
+    "news_articles": "GDELT article count over the same days; 0 = covered but no article, NaN = symbol not covered",
 }
 MAX_WINDOW = 250
 MAX_LOOKBACK = 250

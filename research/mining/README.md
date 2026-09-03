@@ -22,7 +22,16 @@ and one JSON blob out. Rules: [`evaluation/RULEBOOK.md`](../evaluation/RULEBOOK.
    `blend_dev_gain` (blended seen_dev IC with the candidate minus without).
    Nothing else.
 
-## Auxiliary fields (SEC EDGAR, point-in-time)
+## Auxiliary fields (SEC EDGAR + GDELT news, point-in-time)
+
+News: `news_tone` (article-weighted mean GDELT tone of the calendar days that
+became usable at this session, NaN when no article) and `news_articles`
+(article count, 0 when the symbol is covered but quiet, NaN when the symbol is
+not in the source). Source: `data/gdelt_bigquery.py --names
+data/company_names_full.json` -> `data/gdelt_daily.parquet` (BigQuery
+`gdeltv2.gkg_partitioned`, ~230 GB per full 2017-2026 pass). A calendar day's
+news is usable from the first session strictly after it, so Friday-Sunday news
+lands on Monday.
 
 Beyond OHLCV the DSL exposes `marketcap` (close x latest usable cover-page
 share count, USD millions), `turnover` (volume / share count) and

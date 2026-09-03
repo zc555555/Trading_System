@@ -32,7 +32,8 @@ import pandas as pd
 
 DATA = Path(__file__).resolve().parent.parent / "data"
 EDGAR = DATA / "edgar_fields.parquet"
-AUX_FIELDS = ("marketcap", "turnover", "filing_days")
+GDELT = DATA / "gdelt_daily.parquet"
+AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles")
 SHARES_MAX_AGE = 130          # ~two quarters of sessions
 
 
@@ -76,14 +77,58 @@ def attach_filings(df: pd.DataFrame, filings: pd.DataFrame) -> pd.DataFrame:
     return out.drop(columns=["_ord", "shares_out"])
 
 
-def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None = None) -> pd.DataFrame:
-    """Attach the auxiliary fields when the source is available; otherwise
-    return df unchanged (the DSL then refuses those fields)."""
-    if filings is None:
-        if not Path(source).exists():
-            return df
+def attach_news(df: pd.DataFrame, news: pd.DataFrame) -> pd.DataFrame:
+    """GDELT daily tone / article count (calendar days) onto the panel.
+
+    news_tone      article-weighted mean tone of the calendar days that became
+                   usable at this session; NaN when no article
+    news_articles  article count over those days; 0 when the symbol has news
+                   coverage but no article, NaN when the symbol is absent from
+                   the source altogether
+
+    Causality: the aggregate for calendar day D is complete only after D ends,
+    so D's news is usable from the FIRST SESSION STRICTLY AFTER D (a Friday's,
+    Saturday's and Sunday's news all land on Monday). This is one session more
+    conservative than the news experiment's same-day convention."""
+    out = df.copy()
+    naive = _naive_dates(out["date"])
+    sessions = np.sort(naive.unique())
+    n = news[["symbol", "date", "gdelt_tone", "gdelt_articles"]].copy()
+    n["date"] = pd.to_datetime(n["date"]).dt.normalize()
+    n["gdelt_tone"] = pd.to_numeric(n["gdelt_tone"], errors="coerce")
+    n["gdelt_articles"] = pd.to_numeric(n["gdelt_articles"], errors="coerce").fillna(0.0)
+    pos = np.searchsorted(sessions, n["date"].to_numpy(dtype="datetime64[ns]"), side="right")
+    keep = pos < len(sessions)
+    n = n[keep].copy()
+    n["eff"] = sessions[pos[keep]]
+    n["_w"] = n["gdelt_tone"] * n["gdelt_articles"]
+    agg = n.groupby(["symbol", "eff"]).agg(_w=("_w", "sum"), news_articles=("gdelt_articles", "sum")).reset_index()
+    agg["news_tone"] = (agg["_w"] / agg["news_articles"]).where(agg["news_articles"] > 0)
+    key = pd.DataFrame({"symbol": out["symbol"].to_numpy(), "eff": naive.to_numpy()}, index=out.index)
+    merged = key.merge(agg[["symbol", "eff", "news_tone", "news_articles"]], on=["symbol", "eff"], how="left")
+    covered = out["symbol"].isin(set(n["symbol"])).to_numpy()
+    tone = merged["news_tone"].to_numpy(dtype=float)
+    arts = merged["news_articles"].to_numpy(dtype=float)
+    arts = np.where(np.isnan(arts) & covered, 0.0, arts)
+    out["news_tone"] = np.where(covered, tone, np.nan)
+    out["news_articles"] = np.where(covered, arts, np.nan)
+    return out
+
+
+def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None = None,
+           news_source: Path = GDELT, news: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Attach every auxiliary field whose source is available; a field whose
+    source is missing is simply absent (the DSL then refuses it)."""
+    out = df
+    if filings is None and Path(source).exists():
         filings = pd.read_parquet(source, columns=["symbol", "filed", "shares_out"])
-    return attach_filings(df, filings)
+    if filings is not None:
+        out = attach_filings(out, filings)
+    if news is None and Path(news_source).exists():
+        news = pd.read_parquet(news_source, columns=["symbol", "date", "gdelt_tone", "gdelt_articles"])
+    if news is not None:
+        out = attach_news(out, news)
+    return out
 
 
 def available(df: pd.DataFrame) -> list[str]:
