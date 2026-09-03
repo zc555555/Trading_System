@@ -127,6 +127,29 @@ aimed proposals at mechanisms earlier runs had marked dead, re-submitted
 indexed expressions, wrote reflection and beliefs, and which beliefs changed
 status; `learned` is true only when all four hold. Test: `tests/test_mining_audit.py`.
 
+## Process-level oracles (runtime self-checks)
+
+[`oracles.py`](oracles.py) runs on every screened candidate, whatever
+produced the feature: a metamorphic **future-perturbation** check (rows
+after a cutoff are perturbed; pre-cutoff values must not move), a
+**strength** plausibility band (|dev t| > 6 or |IC| > 0.08 is an audit
+signal, not a discovery), an **N-version membership** check (the dev IC is
+recomputed on an independently derived point-in-time mask and must match),
+batch-level **controls** (expressions with a known honest IC band are
+screened alongside; a misaligned label throws them outside it), and a
+**visibility canary** (no hidden key or number may appear in the text handed
+to the agent; the harness refuses to emit rather than leak). A firing
+quarantines the candidate (`quarantined`, `oracle_flags`, never eligible for
+the full stage without a human `--force`) and is logged to
+`mining/runs/oracle.log`.
+
+The mutation-injection experiment
+(`evaluation/experiments/mutation_injection.py`) injects six defect classes
+with known real instances around the harness and records which oracle
+catches each one, plus the false-alarm count on a clean run; report in
+`evaluation/results/mutation_injection_report.md`. Tests:
+`tests/test_mining_oracles.py`.
+
 ## What the agent never sees
 
 `virgin_early`, `holdout`, `fresh` tiers, the one-sided holdout p, the

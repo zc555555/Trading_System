@@ -1,0 +1,660 @@
+{
+ "generated_at": "2026-09-03T15:35:29.379007",
+ "probes": [
+  [
+   "p_mom5",
+   "rank(ts_mean(returns, 5))",
+   "positive"
+  ],
+  [
+   "p_high52",
+   "close / ts_max(high, 250)",
+   "positive"
+  ],
+  [
+   "p_volspike",
+   "div(ts_max(dollar_volume, 60), ts_mean(dollar_volume, 60))",
+   "negative"
+  ],
+  [
+   "p_size",
+   "log(marketcap)",
+   "positive"
+  ],
+  [
+   "p_turn",
+   "rank(turnover)",
+   "negative"
+  ],
+  [
+   "p_vol20",
+   "ts_std(returns, 20)",
+   "negative"
+  ],
+  [
+   "p_filing",
+   "filing_days",
+   "negative"
+  ],
+  [
+   "p_corr",
+   "rank(ts_corr(close, volume, 20))",
+   "negative"
+  ]
+ ],
+ "oracles": [
+  "future_leak",
+  "implausible_strength",
+  "membership_mask",
+  "visibility",
+  "controls",
+  "audit_duplicate"
+ ],
+ "false_alarms_on_clean": 0,
+ "runs": [
+  {
+   "mutation": "clean",
+   "real_instance": "-",
+   "elapsed_s": 121,
+   "fired": {},
+   "detected": false,
+   "detail": {
+    "p_mom5": {
+     "dev_ic": -0.007421553661213205,
+     "dev_t": -0.65199901298323,
+     "flags": {},
+     "error": null
+    },
+    "p_high52": {
+     "dev_ic": 0.010196811373761749,
+     "dev_t": 0.3872988719535157,
+     "flags": {},
+     "error": null
+    },
+    "p_volspike": {
+     "dev_ic": -0.020768179497513403,
+     "dev_t": -2.555307495602192,
+     "flags": {},
+     "error": null
+    },
+    "p_size": {
+     "dev_ic": 0.030005725490433746,
+     "dev_t": 2.010382746169431,
+     "flags": {},
+     "error": null
+    },
+    "p_turn": {
+     "dev_ic": -0.006921950017217402,
+     "dev_t": -0.43381325151105554,
+     "flags": {},
+     "error": null
+    },
+    "p_vol20": {
+     "dev_ic": 0.007476298260534365,
+     "dev_t": 0.2795926845404823,
+     "flags": {},
+     "error": null
+    },
+    "p_filing": {
+     "dev_ic": -0.012140270208246116,
+     "dev_t": -1.5690161791499415,
+     "flags": {},
+     "error": null
+    },
+    "p_corr": {
+     "dev_ic": -0.0017619288457216954,
+     "dev_t": -0.15025622564748278,
+     "flags": {},
+     "error": null
+    }
+   }
+  },
+  {
+   "mutation": "feature_future_shift",
+   "real_instance": "dpo_20 shift(-11) (audit 2026-07)",
+   "elapsed_s": 93,
+   "fired": {
+    "future_leak": [
+     "p_mom5",
+     "p_high52",
+     "p_volspike",
+     "p_size",
+     "p_turn",
+     "p_vol20",
+     "p_filing",
+     "p_corr"
+    ],
+    "implausible_strength": [
+     "p_mom5",
+     "p_high52",
+     "p_corr"
+    ],
+    "controls": [
+     {
+      "returns": 0.1811,
+      "log(volume)": 0.0216,
+      "log(close)": 0.0167
+     }
+    ]
+   },
+   "detected": true,
+   "detail": {
+    "p_mom5": {
+     "dev_ic": 0.456736465624552,
+     "dev_t": 53.163712603255455,
+     "flags": {
+      "future_leak": 0.8571428571428572,
+      "implausible_strength": {
+       "dev_ic": 0.456736465624552,
+       "dev_t": 53.163712603255455
+      }
+     },
+     "error": null
+    },
+    "p_high52": {
+     "dev_ic": 0.12997366435391486,
+     "dev_t": 4.832166031063894,
+     "flags": {
+      "future_leak": 0.6329444421538901,
+      "implausible_strength": {
+       "dev_ic": 0.12997366435391486,
+       "dev_t": 4.832166031063894
+      }
+     },
+     "error": null
+    },
+    "p_volspike": {
+     "dev_ic": -0.027376893360674077,
+     "dev_t": -3.4421459013746505,
+     "flags": {
+      "future_leak": 1.560947248488357
+     },
+     "error": null
+    },
+    "p_size": {
+     "dev_ic": 0.04565543406385869,
+     "dev_t": 3.071866309539172,
+     "flags": {
+      "future_leak": 0.6859332472782445
+     },
+     "error": null
+    },
+    "p_turn": {
+     "dev_ic": -0.026362616277031143,
+     "dev_t": -1.6597111375233664,
+     "flags": {
+      "future_leak": 0.43396226415094336
+     },
+     "error": null
+    },
+    "p_vol20": {
+     "dev_ic": -0.009827771308878807,
+     "dev_t": -0.36448208697643314,
+     "flags": {
+      "future_leak": 0.3656541863110719
+     },
+     "error": null
+    },
+    "p_filing": {
+     "dev_ic": -0.014227398181251023,
+     "dev_t": -1.8237256094474454,
+     "flags": {
+      "future_leak": 37.18884991989147
+     },
+     "error": null
+    },
+    "p_corr": {
+     "dev_ic": 0.10751701150203001,
+     "dev_t": 8.691166822559227,
+     "flags": {
+      "future_leak": 0.9285714285714285,
+      "implausible_strength": {
+       "dev_ic": 0.10751701150203001,
+       "dev_t": 8.691166822559227
+      }
+     },
+     "error": null
+    }
+   }
+  },
+  {
+   "mutation": "centered_window",
+   "real_instance": "AQuA Appendix B full-day normaliser",
+   "elapsed_s": 115,
+   "fired": {
+    "future_leak": [
+     "p_mom5",
+     "p_high52",
+     "p_volspike",
+     "p_size",
+     "p_turn",
+     "p_vol20",
+     "p_filing",
+     "p_corr"
+    ],
+    "controls": [
+     {
+      "returns": 0.1736,
+      "log(volume)": 0.0328,
+      "log(close)": 0.001
+     }
+    ]
+   },
+   "detected": true,
+   "detail": {
+    "p_mom5": {
+     "dev_ic": 0.05769964963852932,
+     "dev_t": 4.471108829119734,
+     "flags": {
+      "future_leak": 0.21071428571428572
+     },
+     "error": null
+    },
+    "p_high52": {
+     "dev_ic": 0.027234313281034008,
+     "dev_t": 1.0187776158693982,
+     "flags": {
+      "future_leak": 0.1705793919381935
+     },
+     "error": null
+    },
+    "p_volspike": {
+     "dev_ic": -0.022524264064276316,
+     "dev_t": -2.744465559066355,
+     "flags": {
+      "future_leak": 0.16271634865999296
+     },
+     "error": null
+    },
+    "p_size": {
+     "dev_ic": 0.032026397807889836,
+     "dev_t": 2.145539384285621,
+     "flags": {
+      "future_leak": 0.23328788458750616
+     },
+     "error": null
+    },
+    "p_turn": {
+     "dev_ic": -0.012085407484953355,
+     "dev_t": -0.7031815831473252,
+     "flags": {
+      "future_leak": 0.09056603773584909
+     },
+     "error": null
+    },
+    "p_vol20": {
+     "dev_ic": 0.004427037086420139,
+     "dev_t": 0.1633183842429876,
+     "flags": {
+      "future_leak": 0.0753255999171397
+     },
+     "error": null
+    },
+    "p_filing": {
+     "dev_ic": -0.011824742317956691,
+     "dev_t": -1.5560376754825294,
+     "flags": {
+      "future_leak": 11.71200113734892
+     },
+     "error": null
+    },
+    "p_corr": {
+     "dev_ic": 0.010068863271339774,
+     "dev_t": 0.8279789802950815,
+     "flags": {
+      "future_leak": 0.3464285714285714
+     },
+     "error": null
+    }
+   }
+  },
+  {
+   "mutation": "label_misaligned",
+   "real_instance": "label from close[t-1]: today's return inside the label",
+   "elapsed_s": 135,
+   "fired": {
+    "implausible_strength": [
+     "p_mom5"
+    ],
+    "controls": [
+     {
+      "returns": 0.1903,
+      "log(volume)": 0.0324,
+      "log(close)": 0.0022
+     }
+    ]
+   },
+   "detected": true,
+   "detail": {
+    "p_mom5": {
+     "dev_ic": 0.08115052870968749,
+     "dev_t": 7.387492283617095,
+     "flags": {
+      "implausible_strength": {
+       "dev_ic": 0.08115052870968749,
+       "dev_t": 7.387492283617095
+      }
+     },
+     "error": null
+    },
+    "p_high52": {
+     "dev_ic": 0.036196943895657994,
+     "dev_t": 1.3518847509428182,
+     "flags": {},
+     "error": null
+    },
+    "p_volspike": {
+     "dev_ic": -0.022572407190125085,
+     "dev_t": -2.7611498165606236,
+     "flags": {},
+     "error": null
+    },
+    "p_size": {
+     "dev_ic": 0.03402538360550563,
+     "dev_t": 2.2645314337625595,
+     "flags": {},
+     "error": null
+    },
+    "p_turn": {
+     "dev_ic": -0.009934924550345867,
+     "dev_t": -0.620664510086929,
+     "flags": {},
+     "error": null
+    },
+    "p_vol20": {
+     "dev_ic": 0.004824229164801088,
+     "dev_t": 0.17798428044114628,
+     "flags": {},
+     "error": null
+    },
+    "p_filing": {
+     "dev_ic": -0.013015266788290786,
+     "dev_t": -1.656875799238227,
+     "flags": {},
+     "error": null
+    },
+    "p_corr": {
+     "dev_ic": 0.016653428845422494,
+     "dev_t": 1.421677952172214,
+     "flags": {},
+     "error": null
+    }
+   }
+  },
+  {
+   "mutation": "pit_mask_off",
+   "real_instance": "today's members applied to history (PIT experiment 2026-08)",
+   "elapsed_s": 136,
+   "fired": {
+    "membership_mask": [
+     "p_mom5",
+     "p_high52",
+     "p_volspike",
+     "p_size",
+     "p_turn",
+     "p_vol20",
+     "p_filing",
+     "p_corr"
+    ]
+   },
+   "detected": true,
+   "detail": {
+    "p_mom5": {
+     "dev_ic": -0.010353370791791492,
+     "dev_t": -1.0781491059158799,
+     "flags": {
+      "membership_mask": {
+       "official": -0.010353370791791492,
+       "independent": -0.007421553661213205
+      }
+     },
+     "error": null
+    },
+    "p_high52": {
+     "dev_ic": 0.025838342378939307,
+     "dev_t": 0.9982675974902917,
+     "flags": {
+      "membership_mask": {
+       "official": 0.025838342378939307,
+       "independent": 0.010196811373761749
+      }
+     },
+     "error": null
+    },
+    "p_volspike": {
+     "dev_ic": -0.034957794082913524,
+     "dev_t": -3.7732571855557913,
+     "flags": {
+      "membership_mask": {
+       "official": -0.034957794082913524,
+       "independent": -0.020768179497513403
+      }
+     },
+     "error": null
+    },
+    "p_size": {
+     "dev_ic": 0.03019216190258822,
+     "dev_t": 1.6635124085370252,
+     "flags": {
+      "membership_mask": {
+       "official": 0.03019216190258822,
+       "independent": 0.030005725490433746
+      }
+     },
+     "error": null
+    },
+    "p_turn": {
+     "dev_ic": -0.008026433929861507,
+     "dev_t": -0.45904724008200837,
+     "flags": {
+      "membership_mask": {
+       "official": -0.008026433929861507,
+       "independent": -0.006921950017217402
+      }
+     },
+     "error": null
+    },
+    "p_vol20": {
+     "dev_ic": -0.013559034312771358,
+     "dev_t": -0.5056276133683596,
+     "flags": {
+      "membership_mask": {
+       "official": -0.013559034312771358,
+       "independent": 0.007476298260534365
+      }
+     },
+     "error": null
+    },
+    "p_filing": {
+     "dev_ic": -0.0020742452955161477,
+     "dev_t": -0.2784592211783974,
+     "flags": {
+      "membership_mask": {
+       "official": -0.0020742452955161477,
+       "independent": -0.012140270208246116
+      }
+     },
+     "error": null
+    },
+    "p_corr": {
+     "dev_ic": -0.005561469134094154,
+     "dev_t": -0.5661198211397027,
+     "flags": {
+      "membership_mask": {
+       "official": -0.005561469134094154,
+       "independent": -0.0017619288457216954
+      }
+     },
+     "error": null
+    }
+   }
+  },
+  {
+   "mutation": "holdout_exposed",
+   "real_instance": "selection leakage: a hidden tier reaches the agent",
+   "elapsed_s": 168,
+   "fired": {
+    "visibility": [
+     "harness refused to emit"
+    ]
+   },
+   "detected": true,
+   "detail": {}
+  },
+  {
+   "mutation": "dedupe_off_flip",
+   "real_instance": "direction calibration after seeing dev (AQuA step we forbid)",
+   "elapsed_s": 250,
+   "fired": {
+    "audit_duplicate": [
+     "8 flipped resubmissions re-scored (dedupe off)"
+    ]
+   },
+   "detected": true,
+   "detail": {
+    "p_mom5": {
+     "dev_ic": -0.007421553661213205,
+     "dev_t": -0.65199901298323,
+     "flags": {},
+     "error": null
+    },
+    "p_high52": {
+     "dev_ic": 0.010196811373761749,
+     "dev_t": 0.3872988719535157,
+     "flags": {},
+     "error": null
+    },
+    "p_volspike": {
+     "dev_ic": -0.020768179497513403,
+     "dev_t": -2.555307495602192,
+     "flags": {},
+     "error": null
+    },
+    "p_size": {
+     "dev_ic": 0.030005725490433746,
+     "dev_t": 2.010382746169431,
+     "flags": {},
+     "error": null
+    },
+    "p_turn": {
+     "dev_ic": -0.006921950017217402,
+     "dev_t": -0.43381325151105554,
+     "flags": {},
+     "error": null
+    },
+    "p_vol20": {
+     "dev_ic": 0.007476298260534365,
+     "dev_t": 0.2795926845404823,
+     "flags": {},
+     "error": null
+    },
+    "p_filing": {
+     "dev_ic": -0.012140270208246116,
+     "dev_t": -1.5690161791499415,
+     "flags": {},
+     "error": null
+    },
+    "p_corr": {
+     "dev_ic": -0.0017619288457216954,
+     "dev_t": -0.15025622564748278,
+     "flags": {},
+     "error": null
+    },
+    "p_mom5_flip": {
+     "dev_ic": -0.007421553661213205,
+     "dev_t": -0.65199901298323,
+     "flags": {},
+     "error": null
+    },
+    "p_high52_flip": {
+     "dev_ic": 0.010196811373761749,
+     "dev_t": 0.3872988719535157,
+     "flags": {},
+     "error": null
+    },
+    "p_volspike_flip": {
+     "dev_ic": -0.020768179497513403,
+     "dev_t": -2.555307495602192,
+     "flags": {},
+     "error": null
+    },
+    "p_size_flip": {
+     "dev_ic": 0.030005725490433746,
+     "dev_t": 2.010382746169431,
+     "flags": {},
+     "error": null
+    },
+    "p_turn_flip": {
+     "dev_ic": -0.006921950017217402,
+     "dev_t": -0.43381325151105554,
+     "flags": {},
+     "error": null
+    },
+    "p_vol20_flip": {
+     "dev_ic": 0.007476298260534365,
+     "dev_t": 0.2795926845404823,
+     "flags": {},
+     "error": null
+    },
+    "p_filing_flip": {
+     "dev_ic": -0.012140270208246116,
+     "dev_t": -1.5690161791499415,
+     "flags": {},
+     "error": null
+    },
+    "p_corr_flip": {
+     "dev_ic": -0.0017619288457216954,
+     "dev_t": -0.15025622564748278,
+     "flags": {},
+     "error": null
+    }
+   }
+  }
+ ],
+ "summary": {
+  "clean": {
+   "detected": false,
+   "by": []
+  },
+  "feature_future_shift": {
+   "detected": true,
+   "by": [
+    "future_leak",
+    "implausible_strength",
+    "controls"
+   ]
+  },
+  "centered_window": {
+   "detected": true,
+   "by": [
+    "future_leak",
+    "controls"
+   ]
+  },
+  "label_misaligned": {
+   "detected": true,
+   "by": [
+    "implausible_strength",
+    "controls"
+   ]
+  },
+  "pit_mask_off": {
+   "detected": true,
+   "by": [
+    "membership_mask"
+   ]
+  },
+  "holdout_exposed": {
+   "detected": true,
+   "by": [
+    "visibility"
+   ]
+  },
+  "dedupe_off_flip": {
+   "detected": true,
+   "by": [
+    "audit_duplicate"
+   ]
+  }
+ }
+}

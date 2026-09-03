@@ -79,6 +79,7 @@ MINED_COLUMNS = [
     "max_corr", "corr_with", "cluster_id", "cluster_rep", "redundant_with",
     "residual_dev_ic", "residual_dev_t", "residual_vs",
     "model_dev_t", "model_holdout_t",
+    "oracle_flags", "quarantined",
 ]
 
 
@@ -143,7 +144,7 @@ def family_size_literature(path: Path = LEDGER) -> int:
     return int((~rows["verdict"].astype(str).str.startswith("finding")).sum())
 
 
-BOOL_COLUMNS = ("screen_pass", "cluster_rep")
+BOOL_COLUMNS = ("screen_pass", "cluster_rep", "quarantined")
 
 
 def truthy(v) -> bool | None:

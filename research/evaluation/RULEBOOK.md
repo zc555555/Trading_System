@@ -101,6 +101,15 @@ gained three point-in-time auxiliary fields from SEC EDGAR filings
 field addition changes the search space, not any rule: screen and gate are
 unchanged and the track-B family keeps counting across the change.
 
+**Quarantine (process oracles, added 2026-09-03).** The harness runs
+runtime self-checks on every screened candidate (`mining/oracles.py`):
+future-perturbation, strength band (|dev t| > 6 or |dev IC| > 0.08),
+independent point-in-time mask agreement, label controls, and a
+visibility canary. Any firing quarantines the candidate: it cannot enter
+the full stage without a human audit and `--force`, and it is never a
+cluster representative. These are integrity checks, not adoption rules;
+their detection power is measured by the mutation-injection experiment.
+
 **Gate (all clauses required).**
 
 | Clause | Rule |

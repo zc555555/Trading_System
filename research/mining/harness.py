@@ -66,7 +66,8 @@ AGENT_VISIBLE = ("candidate_id", "stage", "expression", "canonical", "proposal_h
                  "blend_dev_gain", "screen_pass", "recorded", "error",
                  "duplicate_of", "note",
                  "max_corr", "corr_with", "cluster_id", "cluster_rep", "redundant_with",
-                 "cluster_size", "residual_dev_ic", "residual_dev_t", "residual_vs")
+                 "cluster_size", "residual_dev_ic", "residual_dev_t", "residual_vs",
+                 "oracle_flags", "quarantined")
 
 
 # --------------------------------------------------------------------------
@@ -198,7 +199,24 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
                     "n_nodes": stats["n_nodes"], "canonical": stats["canonical"]})
         row["screen_pass"] = bool(signed_t >= SCREEN_T and coverage >= SCREEN_COVERAGE)
         row["verdict"] = "screen_pass" if row["screen_pass"] else "screen_fail"
-        if row["screen_pass"]:
+        # process-level oracles (mining/oracles.py): a firing quarantines the candidate
+        from mining import oracles
+        flags = {}
+        fp = oracles.future_perturbation(p.expression, panel)
+        if fp["fired"]:
+            flags["future_leak"] = fp["max_abs_diff"]
+        st = oracles.strength(s["ic_mean"], s["t_stat"])
+        if st["fired"]:
+            flags["implausible_strength"] = {"dev_ic": st["dev_ic"], "dev_t": st["dev_t"]}
+        mb = oracles.membership(panel, feat.to_numpy(), LABEL, lambda d: segment(d, "seen_dev"),
+                                s["ic_mean"], daily_rank_ic, MIN_NAMES)
+        if mb["fired"]:
+            flags["membership_mask"] = {"official": mb["official_ic"], "independent": mb["independent_ic"]}
+        row["oracle_flags"] = json.dumps(flags, default=float) if flags else ""
+        row["quarantined"] = bool(flags)
+        if flags:
+            _oracle_log(p.candidate_id, flags)
+        if row["screen_pass"] and not flags:
             row["_feature"] = feat.to_numpy()      # for the batch redundancy pass; never persisted
     except Exception as e:  # the agent gets the message, the ledger keeps it too
         row["error"] = f"{type(e).__name__}: {e}"
@@ -257,19 +275,53 @@ def assert_representative(candidate_id: str, ledger_path: Path = rb.MINED_LEDGER
     rows = led[(led["candidate_id"] == candidate_id) & (led["stage"].astype(str) == "screen")]
     if rows.empty or "cluster_rep" not in rows.columns:
         return
+    if rb.truthy(rows.iloc[-1].get("quarantined")) is True and not force:
+        raise SystemExit(f"{candidate_id} is quarantined by a process oracle "
+                         f"({rows.iloc[-1].get('oracle_flags')}); use --force only after a human audit")
     rep = rb.truthy(rows.iloc[-1]["cluster_rep"])
     if rep is False and not force:
         raise SystemExit(f"{candidate_id} is not the representative of its cluster "
                          f"(redundant_with={rows.iloc[-1]['redundant_with']}); use --force to override")
 
 
+ORACLE_LOG = RESEARCH / "mining" / "runs" / "oracle.log"
+
+
+def _oracle_log(candidate_id: str, flags: dict) -> None:
+    try:
+        ORACLE_LOG.parent.mkdir(parents=True, exist_ok=True)
+        with open(ORACLE_LOG, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"t": datetime.now().isoformat(), "candidate_id": candidate_id,
+                                "flags": flags}, default=float) + "\n")
+    except Exception:
+        pass
+
+
 def screen(proposals: list[Proposal], panel: pd.DataFrame,
-           ledger_path: Path = rb.MINED_LEDGER, record: bool = True) -> list[dict]:
+           ledger_path: Path = rb.MINED_LEDGER, record: bool = True,
+           run_controls: bool = True) -> list[dict]:
+    from mining import oracles
     rows = [screen_one(p, panel, ledger_path, record) for p in proposals]
     cluster_passes(rows, panel, ledger_path, record)
     for r in rows:
         r.pop("_feature", None)
-    return [agent_view(r) for r in rows]
+    views = []
+    for r in rows:
+        v = agent_view(r)
+        vis = oracles.visibility(v, r, AGENT_VISIBLE)
+        if vis["fired"]:
+            _oracle_log(r.get("candidate_id", "?"), {"visibility": vis})
+            raise RuntimeError(f"visibility oracle: hidden information would reach the agent: {vis}")
+        views.append(v)
+    if run_controls:
+        ctl = oracles.controls(panel, LABEL, lambda d: segment(d, "seen_dev"), daily_rank_ic, MIN_NAMES)
+        if ctl["fired"]:
+            _oracle_log("_controls", ctl)
+            views.append({"candidate_id": "_harness_controls", "error":
+                          "label oracle fired: a control expression is far outside its honest IC band; "
+                          "the harness is under audit and this batch's scores must not be trusted",
+                          "controls": {k: round(v.get("dev_ic", float("nan")), 4) for k, v in ctl["controls"].items()}})
+    return views
 
 
 # --------------------------------------------------------------------------

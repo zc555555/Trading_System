@@ -94,6 +94,8 @@ def test_harness_screen_marks_clusters_and_full_refuses_non_representative(tmp_p
     monkeypatch.setattr(rd, "PASS_CACHE", tmp_path / "pass.parquet")
     monkeypatch.setattr(rd, "PASS_CACHE_META", tmp_path / "pass.json")
     monkeypatch.setattr(harness, "_incumbent_refs_for", lambda p: {})   # synthetic panel has no incumbents
+    from mining import oracles
+    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None: panel["pit"].to_numpy(dtype=bool))
 
     def prop(cid, expr):
         return Proposal(candidate_id=cid, expression=expr, expected_direction="negative",
