@@ -378,6 +378,13 @@ def run_full_queue(run_id: str) -> list[dict]:
     missing = [c for c in queue if c not in props]
     if missing:
         raise SystemExit(f"queued ids not found in any proposals file: {missing}")
+    # the full stage runs at the run's own horizon (one track-B family per horizon)
+    horizons = {int(p.horizon) for p in props.values()}
+    if len(horizons) != 1:
+        raise SystemExit(f"run {run_id} mixes horizons {sorted(horizons)}; refusing")
+    harness.configure(horizons.pop())
+    print(f"full stages at horizon {harness.HORIZON} (label {harness.LABEL}, baseline "
+          f"oos_predictions_h{harness.HORIZON}_{harness.BASELINE_TAG}.parquet)")
     out = []
     for cid in queue:
         t0 = time.time()
