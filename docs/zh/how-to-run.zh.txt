@@ -26,14 +26,14 @@ CMD 的提示符是：     C:\Users\...>  ✓ 正确
 2. 输入：cmd
 3. 按回车（会打开黑色的CMD窗口）
 4. 在CMD中输入：
-   cd c:\Users\13785\OneDrive\Desktop\stock_predict
+   cd C:\Trading_System
    main_menu.bat
 
 ========================================================================
                       方法3：从文件管理器
 ========================================================================
 
-1. 打开文件夹：c:\Users\13785\OneDrive\Desktop\stock_predict
+1. 打开文件夹：C:\Trading_System
 2. 直接双击 main_menu.bat 或 auto_trading.bat
    （会自动在CMD中运行）
 

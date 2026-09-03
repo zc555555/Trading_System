@@ -9,7 +9,7 @@
 ### 方案A：仅IV数据（1小时，快速见效）
 
 ```bash
-cd c:\Users\13785\OneDrive\Desktop\stock_predict\research
+cd C:\Trading_System\research
 
 # 1. 获取IV数据
 python data/fetch_option_iv.py
@@ -28,7 +28,7 @@ python train/train_with_external_features.py --iv-only
 ### 方案B：完整流程（IV + 新闻，需要API key）
 
 ```bash
-cd c:\Users\13785\OneDrive\Desktop\stock_predict\research
+cd C:\Trading_System\research
 
 # === 第1步：期权IV ===
 python data/fetch_option_iv.py
@@ -98,6 +98,6 @@ python train/train_with_external_features.py
 立即执行方案A：
 
 ```bash
-cd c:\Users\13785\OneDrive\Desktop\stock_predict\research
+cd C:\Trading_System\research
 python data/fetch_option_iv.py
 ```

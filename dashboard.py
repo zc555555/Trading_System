@@ -260,7 +260,7 @@ def main():
 
         st.header("🔗 Quick Links")
         st.markdown("- [Alpaca Paper Trading](https://app.alpaca.markets/paper/dashboard/overview)")
-        st.markdown("- [View Logs](file:///C:/Users/13785/OneDrive/Desktop/stock_predict/alerts)")
+        st.markdown("- [View Logs](file:///C:/Trading_System/alerts)")
 
         st.markdown("---")
 
