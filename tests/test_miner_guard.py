@@ -47,6 +47,12 @@ def test_miner_bash_allowlist():
     assert _dec(_bash(f"{PY} research/mining/harness.py --horizon 5 screen {RUN}/proposals_1.json --out {RUN}/screen_1.json")) == "allow"
     assert _dec(_bash(f"{PY} research/mining/harness.py --horizon 7 screen {RUN}/proposals_1.json")) == "deny"
     assert _dec(_bash(f"{PY} research/mining/harness.py screen {RUN}/proposals_1.json --horizon 5")) == "deny"
+    ABS = "C:/Trading_System/research/venv/Scripts/python.exe C:/Trading_System/research/mining/harness.py"
+    assert _dec(_bash(f"{ABS} --horizon 5 memory")) == "allow"
+    assert _dec(_bash(f"{ABS} --horizon 5 screen C:/Trading_System/{RUN}/proposals_1.json --out C:/Trading_System/{RUN}/screen_1.json")) == "allow"
+    assert _dec(_bash("/c/Trading_System/research/venv/Scripts/python.exe /c/Trading_System/research/mining/harness.py ops")) == "allow"
+    assert _dec(_bash(f"cd /c/Trading_System && {PY} research/mining/harness.py ops")) == "deny"
+    assert _dec(_bash(f"{ABS} screen C:/Trading_System/{RUN}/proposals_1.json --out {RUN}/screen_1.json")) == "deny"   # prefixes must match
     assert _dec(_bash(f"{PY} research/mining/harness.py screen {RUN}/proposals_1.json")) == "allow"
     assert _dec(_bash(f"{PY} research/mining/harness.py screen {RUN}/proposals.json --out {RUN}/screen.json")) == "allow"
     assert _dec(_bash(f'"C:/Trading_System/research/venv/Scripts/python.exe" research/mining/harness.py ops')) == "allow"

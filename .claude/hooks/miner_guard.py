@@ -31,12 +31,14 @@ ROOT = Path(__file__).resolve().parent.parent.parent          # C:/Trading_Syste
 RUNS = ROOT / "research" / "mining" / "runs"
 MAX_SCREENS = 40
 
-PY = r'(?:"?C:/Trading_System/research/venv/Scripts/python\.exe"?|\./?research/venv/Scripts/python\.exe|research/venv/Scripts/python\.exe)'
-RUN = r"research/mining/runs/cc_[A-Za-z0-9_]{1,40}"
+PY = r'(?:"?(?:C:/|/c/)Trading_System/research/venv/Scripts/python\.exe"?|\./?research/venv/Scripts/python\.exe|research/venv/Scripts/python\.exe)'
+ROOTP = r"(?:(?:C:/|/c/)Trading_System/)?"          # optional absolute prefix, either spelling
+HARNESS = rf"{ROOTP}research/mining/harness\.py"
+RUN = rf"{ROOTP}research/mining/runs/cc_[A-Za-z0-9_]{{1,40}}"
 HZ = r"(?:--horizon (?:5|20) )?"
-BASH_OPS = re.compile(rf"^{PY} research/mining/harness\.py {HZ}(ops|memory)$")
+BASH_OPS = re.compile(rf"^{PY} {HARNESS} {HZ}(ops|memory)$")
 BASH_SCREEN = re.compile(
-    rf"^{PY} research/mining/harness\.py {HZ}screen ({RUN})/proposals(?:_\d{{1,3}})?\.json"
+    rf"^{PY} {HARNESS} {HZ}screen ({RUN})/proposals(?:_\d{{1,3}})?\.json"
     rf"(?: --out \1/screen(?:_\d{{1,3}})?\.json)?$")
 WRITE_OK = re.compile(r"^(proposals(?:_\d{1,3})?\.json|full_queue\.json|notes\.md|beliefs\.json|reflection\.md)$")
 
