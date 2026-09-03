@@ -29,9 +29,14 @@ became usable at this session, NaN when no article) and `news_articles`
 (article count, 0 when the symbol is covered but quiet, NaN when the symbol is
 not in the source). Source: `data/gdelt_bigquery.py --names
 data/company_names_full.json` -> `data/gdelt_daily.parquet` (BigQuery
-`gdeltv2.gkg_partitioned`, ~230 GB per full 2017-2026 pass). A calendar day's
-news is usable from the first session strictly after it, so Friday-Sunday news
-lands on Monday.
+`gdeltv2.gkg_partitioned`, ~260 GB per full 2017-2026 pass). Name matching
+follows GDELT's own spelling (apostrophes and possessives dropped, corporate
+suffixes stripped on both sides, `tests/test_gdelt_names.py`); an article
+counts once per symbol however many times it names the company. GDELT's
+organisation tagger never emits some large names (State Street, Capital One,
+AT&T, 3M, Phillips 66, Fifth Third), which therefore stay NaN. A calendar
+day's news is usable from the first session strictly after it, so
+Friday-Sunday news lands on Monday.
 
 Beyond OHLCV the DSL exposes `marketcap` (close x latest usable cover-page
 share count, USD millions), `turnover` (volume / share count) and

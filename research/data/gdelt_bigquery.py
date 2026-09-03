@@ -43,30 +43,77 @@ OUTPUT = DATA_DIR / "gdelt_daily.parquet"
 SQL_DIR = DATA_DIR / "gdelt_sql"
 YEARS = list(range(2017, 2027))
 
-GENERIC = {"inc", "inc.", "corp", "corp.", "corporation", "company", "co",
-           "co.", "ltd", "ltd.", "plc", "group", "holdings", "class", "the",
-           "&", "and"}
+# Corporate suffixes GDELT keeps on the organisation string ("hershey
+# company", "allstate corp", "hess corporation"). They are stripped from
+# BOTH sides of the match: here (trailing tokens of our name variants) and in
+# SQL (SUFFIX_RE on the GKG string), so "The Hershey Company" meets "hershey
+# company", "hershey co" and "hershey corp" alike.
+SUFFIX_TOKENS = ("inc", "corp", "corporation", "company", "companies", "co",
+                 "ltd", "plc", "group", "holdings", "holding", "limited",
+                 "incorporated", "&", "and")
+SUFFIX_RE = r"( (" + "|".join(t for t in SUFFIX_TOKENS if t != "&") + r"|&))+$"
+SHARE_CLASS_RE = r"\s+(class [a-c]|common stock|common st|ordinary shares|\(the\)|\(de\)|\(new\))\s*$"
+# Bare cores that are ordinary words: kept only with a suffix ("target corp"),
+# never matched alone.
+BARE_STOP = {"match", "booking", "ball", "dover", "progressive", "gap", "target",
+             "southern", "discover", "extra", "on", "block", "first", "global",
+             "american", "united", "general", "national", "international"}
+
+
+def _strip_suffix(name: str) -> str:
+    words = name.split()
+    while words and words[-1] in SUFFIX_TOKENS:
+        words.pop()
+    return " ".join(words)
 
 
 def _norm_variants(variants: list[str]) -> list[str]:
-    """Lowercased org-name variants incl. suffix-stripped forms, as GDELT
-    normalizes organization names to lowercase without punctuation.
+    """Lowercased organisation-name variants in GDELT's own spelling.
 
-    Punctuation must be removed BEFORE tokenizing: yfinance longNames like
-    "Salesforce, Inc." otherwise leave a "salesforce," token that never
-    matches GDELT's "salesforce".
+    GDELT (observed on gkg_partitioned, 2019-2025):
+      * lowercases and drops . , ! ( ) "   -> "yum brands", "phillips 66"
+      * drops apostrophes and usually the possessive s: "mcdonald",
+        "lowe companies", "oreilly automotive", but also "macys"
+      * keeps hyphens ("sherwin-williams") but not always
+        ("colgate palmolive"), keeps "&" as "&"
+      * keeps the corporate suffix ("hershey company", "allstate corp")
+
+    So each name yields: the cleaned full form, apostrophe/hyphen/ampersand
+    alternatives, and the suffix-stripped core (matched in SQL against the
+    suffix-stripped GKG string). A bare core shorter than four characters is
+    kept only when it contains a digit ("3m"), never a symbol-like token.
     """
-    out = set()
+    out: set[str] = set()
     for v in variants:
-        v = re.sub(r'["().,]', "", v).strip().lower()
-        for candidate in (v, v.replace("&", " ")):
-            candidate = re.sub(r"\s+", " ", candidate).strip()
-            if len(candidate) >= 3:
-                out.add(candidate)
-            words = [w for w in candidate.split() if w not in GENERIC]
-            stripped = " ".join(words)
-            if len(stripped) >= 4:
-                out.add(stripped)
+        base = v.strip().lower()
+        base = re.sub(SHARE_CLASS_RE, "", base)
+        base = re.sub(r"^the\s+", "", base)
+        forms = {base} if "'" not in base else set()
+        if "'" in base:
+            forms.add(base.replace("'s", "s").replace("'", ""))          # macys, oreilly
+            forms.add(re.sub(r"'s\b", "", base).replace("'", ""))       # mcdonald, lowe companies
+        forms2 = set()
+        for f in forms:
+            f = re.sub(r"[.']", "", f)                       # "u.s. bancorp" -> "us bancorp"
+            forms2.add(f)
+            if "-" in f:
+                forms2.add(f.replace("-", " "))
+                forms2.add(f.replace("-", ""))               # "tmobile"
+            if "&" in f:                                     # GDELT writes "&" or drops it
+                forms2.add(f.replace("&", " and "))
+                forms2.add(f.replace("&", " "))
+            if " and " in f:
+                forms2.add(f.replace(" and ", " "))
+        for f in forms2:
+            f = re.sub(r"[^a-z0-9&\-\s]", " ", f)
+            f = re.sub(r"\s+", " ", f).strip()
+            if len(f) >= 4 or re.search(r"\d", f):
+                out.add(f)
+            cores = {_strip_suffix(f),
+                     " ".join(w for w in f.split() if w not in SUFFIX_TOKENS and w != "the")}
+            for core in cores:
+                if core and core != f and core not in BARE_STOP and (len(core) >= 4 or re.search(r"\d", core)):
+                    out.add(core)
     return sorted(out)
 
 
@@ -84,24 +131,33 @@ def year_sql(year: int) -> str:
     structs = ",\n    ".join(
         f"STRUCT('{sym}' AS symbol, '{name}' AS org)" for sym, name in rows)
     return f"""-- GDELT daily tone/volume for {year} (partition-pruned)
+-- An article counts once per symbol even when it names the company several
+-- ways ("apple inc" and "apple computer"); tone = AVG over those articles.
 WITH name_map AS (
-  SELECT * FROM UNNEST([
+  SELECT DISTINCT * FROM UNNEST([
     {structs}
   ])
+),
+hits AS (
+  SELECT DISTINCT
+    DATE(g._PARTITIONTIME) AS date,
+    g.GKGRECORDID AS id,
+    nm.symbol AS symbol,
+    CAST(SPLIT(g.V2Tone, ',')[OFFSET(0)] AS FLOAT64) AS tone
+  FROM `gdelt-bq.gdeltv2.gkg_partitioned` AS g,
+    UNNEST(SPLIT(g.V2Organizations, ';')) AS org_entry,
+    UNNEST([LOWER(TRIM(SPLIT(org_entry, ',')[OFFSET(0)]))]) AS org_raw,
+    UNNEST([org_raw,
+            REGEXP_REPLACE(REGEXP_REPLACE(org_raw, r'^the ', ''), r'{SUFFIX_RE}', '')]) AS org_key
+  JOIN name_map AS nm
+    ON nm.org = org_key
+  WHERE g._PARTITIONTIME >= TIMESTAMP('{year}-01-01')
+    AND g._PARTITIONTIME < TIMESTAMP('{year + 1}-01-01')
+    AND g.V2Tone IS NOT NULL
+    AND g.V2Organizations IS NOT NULL
 )
-SELECT
-  DATE(_PARTITIONTIME) AS date,
-  nm.symbol AS symbol,
-  AVG(CAST(SPLIT(g.V2Tone, ',')[OFFSET(0)] AS FLOAT64)) AS gdelt_tone,
-  COUNT(*) AS gdelt_articles
-FROM `gdelt-bq.gdeltv2.gkg_partitioned` AS g,
-  UNNEST(SPLIT(g.V2Organizations, ';')) AS org_entry
-JOIN name_map AS nm
-  ON LOWER(SPLIT(org_entry, ',')[OFFSET(0)]) = nm.org
-WHERE _PARTITIONTIME >= TIMESTAMP('{year}-01-01')
-  AND _PARTITIONTIME < TIMESTAMP('{year + 1}-01-01')
-  AND g.V2Tone IS NOT NULL
-  AND g.V2Organizations IS NOT NULL
+SELECT date, symbol, AVG(tone) AS gdelt_tone, COUNT(*) AS gdelt_articles
+FROM hits
 GROUP BY date, symbol
 """
 

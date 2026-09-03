@@ -104,7 +104,7 @@ unchanged and the track-B family keeps counting across the change.
 **Fields (recorded 2026-09-04, after five runs; h=20 n=3 and h=5 n=2 full
 stages, no pass).** Two GDELT news fields were added (`news_tone`,
 `news_articles`; source `data/gdelt_bigquery.py` -> `data/gdelt_daily.parquet`,
-768 members, 2017-01-01 onward). Calendar day D's news is usable from the
+803 members, 2017-01-01 onward; one count per article and symbol). Calendar day D's news is usable from the
 first session strictly after D (weekend news lands on Monday), one session
 more conservative than the news experiment's same-day convention. Same
 principle as above: a search-space change, no rule change, families keep

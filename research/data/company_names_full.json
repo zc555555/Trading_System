@@ -18,10 +18,14 @@
   "Google",
   "Alphabet Inc",
   "Alphabet Corp",
-  "Alphabet Inc."
+  "Alphabet Inc.",
+  "Google Inc"
  ],
  "GOOG": [
-  "Alphabet Inc."
+  "Alphabet Inc.",
+  "Alphabet Inc",
+  "Google Inc",
+  "Google"
  ],
  "AMZN": [
   "Amazon.com",
@@ -90,7 +94,8 @@
   "Verizon Communications Inc."
  ],
  "T": [
-  "AT&T Inc."
+  "AT&T Inc.",
+  "AT&T"
  ],
  "CMCSA": [
   "Comcast Corporation"
@@ -100,7 +105,9 @@
   "Walt Disney Company (The)"
  ],
  "TMUS": [
-  "T-Mobile US, Inc."
+  "T-Mobile US, Inc.",
+  "T-Mobile",
+  "T-Mobile USA"
  ],
  "LLY": [
   "Eli Lilly",
@@ -224,15 +231,14 @@
  "CB": [
   "Chubb Limited"
  ],
- "MMC": [
-  "MMC"
- ],
  "USB": [
   "U.S. Bancorp"
  ],
  "COF": [
   "Capital One Financial Corporation",
-  "Capital One Financial Corporati"
+  "Capital One Financial Corporati",
+  "Capital One Financial",
+  "Capital One"
  ],
  "PNC": [
   "The PNC Financial Services Group, Inc.",
@@ -260,14 +266,16 @@
   "Home Depot, Inc. (The)"
  ],
  "MCD": [
-  "McDonald's Corporation"
+  "McDonald's Corporation",
+  "McDonald's"
  ],
  "NKE": [
   "NIKE, Inc.",
   "Nike, Inc."
  ],
  "LOW": [
-  "Lowe's Companies, Inc."
+  "Lowe's Companies, Inc.",
+  "Lowe's"
  ],
  "SBUX": [
   "Starbucks Corporation"
@@ -278,7 +286,11 @@
  ],
  "BKNG": [
   "Booking Holdings Inc.",
-  "Booking Holdings Inc. Common St"
+  "Booking Holdings Inc. Common St",
+  "Booking Holdings",
+  "Booking.com",
+  "Priceline Group",
+  "Priceline"
  ],
  "WMT": [
   "Walmart",
@@ -359,7 +371,9 @@
   "Automatic Data Processing, Inc."
  ],
  "MMM": [
-  "3M Company"
+  "3M Company",
+  "3M Co",
+  "3M"
  ],
  "XOM": [
   "Exxon Mobil",
@@ -389,7 +403,9 @@
  ],
  "SO": [
   "The Southern Company",
-  "Southern Company (The)"
+  "Southern Company (The)",
+  "Southern Company",
+  "Southern Co"
  ],
  "LIN": [
   "Linde plc"
@@ -476,7 +492,9 @@
   "Marvell Technology, Inc."
  ],
  "ON": [
-  "ON Semiconductor Corporation"
+  "ON Semiconductor Corporation",
+  "ON Semiconductor",
+  "onsemi"
  ],
  "MPWR": [
   "Monolithic Power Systems, Inc."
@@ -527,7 +545,8 @@
   "ResMed Inc."
  ],
  "ALGN": [
-  "Align Technology, Inc."
+  "Align Technology, Inc.",
+  "Align Technology"
  ],
  "MTD": [
   "Mettler-Toledo International Inc.",
@@ -555,9 +574,6 @@
  "PYPL": [
   "PayPal Holdings, Inc."
  ],
- "FI": [
-  "FI"
- ],
  "FIS": [
   "Fidelity National Information Services, Inc.",
   "Fidelity National Information S"
@@ -574,7 +590,10 @@
  ],
  "ALL": [
   "The Allstate Corporation",
-  "Allstate Corporation (The)"
+  "Allstate Corporation (The)",
+  "Allstate Corporation",
+  "Allstate Corp",
+  "Allstate Insurance"
  ],
  "TRV": [
   "The Travelers Companies, Inc."
@@ -587,10 +606,13 @@
   "Ameriprise Financial, Inc."
  ],
  "DFS": [
-  "DFS"
+  "Discover Financial Services",
+  "Discover Financial"
  ],
  "STT": [
-  "State Street Corporation"
+  "State Street Corporation",
+  "State Street Corp",
+  "State Street"
  ],
  "BK": [
   "Bank of New York Mellon Corp",
@@ -603,7 +625,8 @@
   "M&T Bank Corporation"
  ],
  "FITB": [
-  "Fifth Third Bancorp"
+  "Fifth Third Bancorp",
+  "Fifth Third Bank"
  ],
  "RF": [
   "Regions Financial Corporation"
@@ -620,7 +643,9 @@
   "Willis Towers Watson Public Lim"
  ],
  "MCO": [
-  "Moody's Corporation"
+  "Moody's Corporation",
+  "Moody's",
+  "Moody's Investors Service"
  ],
  "MSCI": [
   "MSCI Inc."
@@ -645,10 +670,12 @@
   "Chipotle Mexican Grill, Inc."
  ],
  "YUM": [
-  "Yum! Brands, Inc."
+  "Yum! Brands, Inc.",
+  "Yum Brands"
  ],
  "ORLY": [
-  "O'Reilly Automotive, Inc."
+  "O'Reilly Automotive, Inc.",
+  "O'Reilly Automotive"
  ],
  "AZO": [
   "AutoZone, Inc."
@@ -684,10 +711,14 @@
   "General Mills, Inc."
  ],
  "K": [
-  "K"
+  "Kellogg Company",
+  "Kellanova",
+  "Kellogg Co"
  ],
  "HSY": [
-  "The Hershey Company"
+  "The Hershey Company",
+  "Hershey Company",
+  "Hershey Co"
  ],
  "STZ": [
   "Constellation Brands, Inc."
@@ -801,7 +832,8 @@
   "Occidental Petroleum Corporatio"
  ],
  "HES": [
-  "HES"
+  "Hess Corporation",
+  "Hess Corp"
  ],
  "DVN": [
   "Devon Energy Corporation"
@@ -835,7 +867,8 @@
  ],
  "SRE": [
   "Sempra",
-  "DBA Sempra"
+  "DBA Sempra",
+  "Sempra Energy"
  ],
  "XEL": [
   "Xcel Energy Inc."
@@ -970,9 +1003,6 @@
  "WBD": [
   "Warner Bros. Discovery, Inc.",
   "Warner Bros. Discovery, Inc. - "
- ],
- "PARA": [
-  "PARA"
  ],
  "SPY": [
   "State Street SPDR S&P 500 ETF Trust",
@@ -1279,7 +1309,9 @@
  ],
  "AYI": [
   "ACUITY INC (DE)",
-  "Acuity Inc (De)"
+  "Acuity Inc (De)",
+  "Acuity Brands, Inc.",
+  "Acuity Brands"
  ],
  "BALL": [
   "BALL CORP",
@@ -1287,7 +1319,9 @@
  ],
  "BBBY": [
   "NEIGHBORHOOD INTELLIGENCE INC",
-  "Neighborhood Intelligence Inc"
+  "Neighborhood Intelligence Inc",
+  "Bed Bath & Beyond Inc",
+  "Bed Bath & Beyond"
  ],
  "BBWI": [
   "BATH & BODY WORKS INC",
@@ -1551,7 +1585,10 @@
  ],
  "CPB": [
   "CAMPBELL'S CO",
-  "Campbell'S Co"
+  "Campbell'S Co",
+  "Campbell's Co",
+  "Campbell Soup Company",
+  "Campbell Soup"
  ],
  "CPGX": [
   "COLUMBIA PIPELINE GROUP INC",
@@ -2363,7 +2400,9 @@
  ],
  "M": [
   "MACY'S INC",
-  "Macy'S Inc"
+  "Macy'S Inc",
+  "Macy's Inc",
+  "Macy's"
  ],
  "MAA": [
   "MID AMERICA APARTMENT COMMUNITIES INC",
@@ -3227,7 +3266,10 @@
  ],
  "WYN": [
   "TRAVEL & LEISURE CO",
-  "Travel & Leisure Co"
+  "Travel & Leisure Co",
+  "Wyndham Worldwide",
+  "Wyndham Destinations",
+  "Travel + Leisure Co"
  ],
  "WYNN": [
   "WYNN RESORTS LTD",
@@ -3276,5 +3318,18 @@
  "ZION": [
   "ZIONS BANCORPORATION NATIONAL ASSOCIATION",
   "Zions Bancorporation National Association"
+ ],
+ "FB": [
+  "Meta Platforms",
+  "Facebook Inc",
+  "Facebook"
+ ],
+ "BRK.B": [
+  "Berkshire Hathaway Inc",
+  "Berkshire Hathaway"
+ ],
+ "BF.B": [
+  "Brown-Forman Corporation",
+  "Brown-Forman"
  ]
 }
