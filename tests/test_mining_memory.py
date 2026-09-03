@@ -58,18 +58,18 @@ def test_memory_merges_beliefs_latest_wins_and_indexes_expressions(tmp_path):
     led = tmp_path / "mined.csv"; _ledger(led)
     runs = _runs(tmp_path / "runs")
     doc = memory.build_memory(led, runs)
-    assert "| 量价相关 | dead |" in doc and "cc_run2" in doc
-    assert "| 隔夜反转 | untested |" in doc
-    assert "`rank(ts_corr(close, volume, 20))` | negative | -0.0300 | -2.40 | 是 |  |  | cc_run2" in doc
-    assert "`ts_sum(returns, 5)` | positive | +0.0110 | +0.95 | 否 |  |  | cc_run1" in doc
+    assert "| 量价相关 | 20 | dead |" in doc and "cc_run2" in doc
+    assert "| 隔夜反转 | 20 | untested |" in doc
+    assert "`rank(ts_corr(close, volume, 20))` | 20 | negative | -0.0300 | -2.40 | 是 |  |  | cc_run2" in doc
+    assert "`ts_sum(returns, 5)` | 20 | positive | +0.0110 | +0.95 | 否 |  |  | cc_run1" in doc
     assert "run2 笔记" in doc and "截断" in doc
     for num in HIDDEN_NUMBERS:
         assert num not in doc, f"hidden tier number {num} leaked into the memory document"
     assert "PASS" not in doc and "holdout_ic" not in doc
     # the pre-registered one-bit feedback: b1 went through the full stage and was not adopted
-    assert "| b1 | （无标签） | 未采纳 |" in doc
+    assert "| b1 | （无标签） | 20 | 未采纳 |" in doc
     outcomes = memory.full_stage_outcomes(led)
-    assert outcomes == {"b1": {"adopted": False, "mechanism_tag": "",
+    assert outcomes == {"b1": {"adopted": False, "horizon": 20, "mechanism_tag": "",
                                "canonical": "rank(ts_corr(close, volume, 20))"}}
     assert len(doc) <= memory.MAX_CHARS + 200
 

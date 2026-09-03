@@ -51,8 +51,8 @@ class Proposal:
         if not self.refutation_conditions or not all(
                 isinstance(c, str) and c.strip() for c in self.refutation_conditions):
             errs.append("at least one non-empty refutation condition is required")
-        if int(self.horizon) != 20:
-            errs.append("only the production horizon (20) is evaluated in track B")
+        if int(self.horizon) not in (5, 20):
+            errs.append("track B evaluates horizons 5 and 20 only")
         stats = {}
         try:
             stats = dsl.validate(dsl.parse(self.expression))

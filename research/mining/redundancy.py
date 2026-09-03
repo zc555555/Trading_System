@@ -116,7 +116,7 @@ def load_incumbent_refs(panel: pd.DataFrame, source: Path = SURV_PANEL,
     return ref.drop(columns=["date", "symbol"])
 
 
-def prior_representatives(ledger_path: Path, panel: pd.DataFrame) -> dict[str, np.ndarray]:
+def prior_representatives(ledger_path: Path, panel: pd.DataFrame, horizon: int | None = None) -> dict[str, np.ndarray]:
     """Compiled features of every earlier screen pass that is a cluster
     representative (or predates clustering), keyed by candidate id."""
     from mining import dsl
@@ -127,6 +127,8 @@ def prior_representatives(ledger_path: Path, panel: pd.DataFrame) -> dict[str, n
     if led.empty or "screen_pass" not in led.columns:
         return {}
     scr = led[(led["stage"].astype(str) == "screen") & (led["screen_pass"].map(lambda v: v is True))]
+    if horizon is not None:
+        scr = scr[rb.horizon_of(scr) == int(horizon)]
     if "cluster_rep" in scr.columns:
         scr = scr[scr["cluster_rep"].isna() | scr["cluster_rep"].map(lambda v: v is True)]
     scr = scr.drop_duplicates("canonical", keep="last")

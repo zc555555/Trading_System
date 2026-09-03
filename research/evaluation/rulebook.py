@@ -79,8 +79,9 @@ MINED_COLUMNS = [
     "max_corr", "corr_with", "cluster_id", "cluster_rep", "redundant_with",
     "residual_dev_ic", "residual_dev_t", "residual_vs",
     "model_dev_t", "model_holdout_t",
-    "oracle_flags", "quarantined",
+    "oracle_flags", "quarantined", "horizon",
 ]
+PRODUCTION_HORIZON = 20
 
 
 # --------------------------------------------------------------------------
@@ -211,13 +212,23 @@ def update_mined(candidate_id: str, fields: dict, path: Path = MINED_LEDGER,
     return True
 
 
-def family_holdout_pvalues(path: Path = MINED_LEDGER) -> list[float]:
+def horizon_of(led: pd.DataFrame) -> pd.Series:
+    """Per-row label horizon; rows written before the column existed are
+    production-horizon rows."""
+    if "horizon" not in led.columns:
+        return pd.Series(PRODUCTION_HORIZON, index=led.index)
+    return pd.to_numeric(led["horizon"], errors="coerce").fillna(PRODUCTION_HORIZON).astype(int)
+
+
+def family_holdout_pvalues(path: Path = MINED_LEDGER, horizon: int | None = None) -> list[float]:
     """Track B family: one-sided holdout p of every candidate that reached
-    the full stage, cumulative over the project."""
+    the full stage, cumulative over the project, ONE FAMILY PER HORIZON."""
     led = load_mined_ledger(path)
     if led.empty:
         return []
     full = led[led["stage"].astype(str) == "full"]
+    if horizon is not None:
+        full = full[horizon_of(full) == int(horizon)]
     return [float(x) for x in full["holdout_p_onesided"].dropna()]
 
 

@@ -4,7 +4,7 @@ Claude Code runs this before EVERY tool call. For any caller that is not the
 `miner` subagent it prints nothing and exits 0 (no effect). For the miner it
 is a default-deny allowlist:
 
-  Bash   only  <venv python> research/mining/harness.py ops | memory
+  Bash   only  <venv python> research/mining/harness.py [--horizon 5|20] ops | memory
          and   <venv python> research/mining/harness.py screen
                research/mining/runs/cc_<run>/proposals[_N].json
                [--out research/mining/runs/cc_<run>/screen[_N].json]
@@ -33,9 +33,10 @@ MAX_SCREENS = 40
 
 PY = r'(?:"?C:/Trading_System/research/venv/Scripts/python\.exe"?|\./?research/venv/Scripts/python\.exe|research/venv/Scripts/python\.exe)'
 RUN = r"research/mining/runs/cc_[A-Za-z0-9_]{1,40}"
-BASH_OPS = re.compile(rf"^{PY} research/mining/harness\.py (ops|memory)$")
+HZ = r"(?:--horizon (?:5|20) )?"
+BASH_OPS = re.compile(rf"^{PY} research/mining/harness\.py {HZ}(ops|memory)$")
 BASH_SCREEN = re.compile(
-    rf"^{PY} research/mining/harness\.py screen ({RUN})/proposals(?:_\d{{1,3}})?\.json"
+    rf"^{PY} research/mining/harness\.py {HZ}screen ({RUN})/proposals(?:_\d{{1,3}})?\.json"
     rf"(?: --out \1/screen(?:_\d{{1,3}})?\.json)?$")
 WRITE_OK = re.compile(r"^(proposals(?:_\d{1,3})?\.json|full_queue\.json|notes\.md|beliefs\.json|reflection\.md)$")
 

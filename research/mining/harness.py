@@ -1,5 +1,7 @@
 """Two-stage evaluation harness for agent-mined factors (rulebook track B).
 
+    python mining/harness.py [--horizon 5|20] <command>       one track-B family per horizon (default 20)
+    python mining/harness.py baseline                         HUMAN: incumbent walk-forward at --horizon
     python mining/harness.py ops                              operator registry (for the agent)
     python mining/harness.py memory                           cross-run research memory (dev-only)
     python mining/harness.py audit-run RUN_ID                 HUMAN: did the run learn from memory?
@@ -51,8 +53,9 @@ DATA = RESEARCH / "data"
 RESULTS = RESEARCH / "evaluation" / "results"
 SURV_PANEL = DATA / "stocks_with_time_windows_surv.parquet"
 MEMBERSHIP = DATA / "sp500_membership.parquet"
-SCREEN_CACHE = RESULTS / "_mining_screen_panel_v2.parquet"   # v2: carries the auxiliary fields
 BASELINE_TAG = "surv"
+PRODUCTION_HORIZON = 20
+HORIZONS = (5, 20)
 
 HORIZON = 20
 NW_LAGS = HORIZON - 1
@@ -60,6 +63,24 @@ MIN_NAMES = 40
 LABEL = f"future_return_{HORIZON}d"
 SCREEN_T = 2.0
 SCREEN_COVERAGE = 0.90
+
+
+def configure(horizon: int) -> None:
+    """Select the label horizon for this process (RULEBOOK: track B runs
+    one family per horizon; only the production horizon can reach the
+    live book). Everything downstream reads these module globals."""
+    global HORIZON, NW_LAGS, LABEL
+    if int(horizon) not in HORIZONS:
+        raise ValueError(f"horizon must be one of {HORIZONS}")
+    HORIZON = int(horizon)
+    NW_LAGS = HORIZON - 1
+    LABEL = f"future_return_{HORIZON}d"
+
+
+def screen_cache_path() -> Path:
+    # v2: carries the auxiliary fields; the production horizon keeps the original name
+    return RESULTS / ("_mining_screen_panel_v2.parquet" if HORIZON == PRODUCTION_HORIZON
+                      else f"_mining_screen_panel_v2_h{HORIZON}.parquet")
 
 AGENT_VISIBLE = ("candidate_id", "stage", "expression", "canonical", "proposal_hash",
                  "lookback", "n_nodes", "dev_ic", "dev_t", "dev_n", "coverage",
@@ -73,12 +94,13 @@ AGENT_VISIBLE = ("candidate_id", "stage", "expression", "canonical", "proposal_h
 # --------------------------------------------------------------------------
 # panel helpers
 # --------------------------------------------------------------------------
-def add_label(df: pd.DataFrame, horizon: int = HORIZON) -> pd.DataFrame:
+def add_label(df: pd.DataFrame, horizon: int | None = None) -> pd.DataFrame:
     """Attach the sealed label: per-symbol log(close[t+horizon] / close[t]).
     Rows must be date-ordered within each symbol."""
+    h = int(horizon or HORIZON)
     df = df.sort_values(["date", "symbol"]).reset_index(drop=True)
-    df[LABEL] = df.groupby("symbol")["close"].transform(
-        lambda x: np.log(x.shift(-horizon) / x))
+    df[f"future_return_{h}d"] = df.groupby("symbol")["close"].transform(
+        lambda x: np.log(x.shift(-h) / x))
     return df
 
 
@@ -107,8 +129,9 @@ def load_screen_panel(rebuild: bool = False) -> pd.DataFrame:
     survivorship-complete panel, with a `pit` flag. Features are compiled on
     all member rows (trailing windows need the true history); IC is scored
     on `pit` rows only. Cached because the screen is meant to be cheap."""
-    if SCREEN_CACHE.exists() and not rebuild:
-        return pd.read_parquet(SCREEN_CACHE)
+    cache = screen_cache_path()
+    if cache.exists() and not rebuild:
+        return pd.read_parquet(cache)
     cols = ["date", "symbol", "open", "high", "low", "close", "volume"]
     df = pd.read_parquet(SURV_PANEL, columns=cols)
     df = df[df["symbol"].isin(_members())].copy()
@@ -116,7 +139,7 @@ def load_screen_panel(rebuild: bool = False) -> pd.DataFrame:
     df["pit"] = _pit_mask(df).to_numpy()
     from mining import aux_fields
     df = aux_fields.attach(df)                 # marketcap / turnover / earn_days when sources exist
-    df.to_parquet(SCREEN_CACHE, index=False)
+    df.to_parquet(cache, index=False)
     return df
 
 
@@ -129,7 +152,7 @@ def base_row(p: Proposal, stage: str) -> dict:
                 "proposal_hash": p.proposal_hash, "source": p.source,
                 "expected_direction": p.expected_direction, "stage": stage,
                 "expression": p.expression, "reasons": "",
-                "mechanism_tag": p.mechanism_tag})
+                "mechanism_tag": p.mechanism_tag, "horizon": HORIZON})
     return row
 
 
@@ -160,10 +183,12 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
     row = base_row(p, "screen")
     try:
         stats = p.validate()
-        # Memory: an expression already screened (any run) is not re-scored
-        # and not re-recorded; the agent gets the old dev record back.
+        if int(p.horizon) != HORIZON:
+            raise ValueError(f"proposal horizon {p.horizon} != harness horizon {HORIZON}")
+        # Memory: an expression already screened (any run, SAME horizon) is not
+        # re-scored and not re-recorded; the agent gets the old dev record back.
         from mining.memory import find_duplicate
-        prior = find_duplicate(ledger_path, stats["canonical"])
+        prior = find_duplicate(ledger_path, stats["canonical"], horizon=HORIZON)
         if prior is not None and prior.get("candidate_id") != p.candidate_id:
             # the old dev statistics are reused; the pass rule is re-applied in
             # THIS proposal's declared direction (a sign flip is not a free pass)
@@ -256,7 +281,7 @@ def cluster_passes(rows: list[dict], panel: pd.DataFrame, ledger_path: Path = rb
     batch_ids = {r["candidate_id"] for r in passes}
     # earlier representatives only: this batch's own rows are already in the
     # ledger (screen_one appended them) and must not count as their own priors
-    priors = {k: v[dev_mask] for k, v in rd.prior_representatives(ledger_path, panel).items()
+    priors = {k: v[dev_mask] for k, v in rd.prior_representatives(ledger_path, panel, horizon=HORIZON).items()
               if k not in batch_ids}
     batch = [{"candidate_id": r["candidate_id"], "dev_t": r["dev_t"], "x": r["_feature"][dev_mask]}
              for r in passes]
@@ -328,12 +353,13 @@ def screen(proposals: list[Proposal], panel: pd.DataFrame,
 # stage 2: full walk-forward + hidden adjudication
 # --------------------------------------------------------------------------
 def prior_family(candidate_id: str, ledger_path: Path = rb.MINED_LEDGER) -> list[float]:
-    """One-sided holdout p of every earlier full-stage candidate except this
-    id (a re-run replaces, it does not double-count)."""
+    """One-sided holdout p of every earlier full-stage candidate at THIS
+    horizon except this id (a re-run replaces, it does not double-count)."""
     led = rb.load_mined_ledger(ledger_path)
     if led.empty:
         return []
-    full = led[(led["stage"].astype(str) == "full") & (led["candidate_id"] != candidate_id)]
+    full = led[(led["stage"].astype(str) == "full") & (led["candidate_id"] != candidate_id)
+              & (rb.horizon_of(led) == HORIZON)]
     return [float(x) for x in full["holdout_p_onesided"].dropna()]
 
 
@@ -475,7 +501,10 @@ def adopt(candidate_id: str, removal_trigger: str, ledger_path: Path = rb.MINED_
              "adopted_on": date.today().isoformat(),
              "lookback": int(last["lookback"]), "family_n": int(last["family_n"]),
              "holdout_p_onesided": float(last["holdout_p_onesided"]),
-             "removal_trigger": removal_trigger, "rule_version": rb.RULE_VERSION}
+             "removal_trigger": removal_trigger, "rule_version": rb.RULE_VERSION,
+             "horizon": int(last.get("horizon") or PRODUCTION_HORIZON)}
+    if entry["horizon"] != PRODUCTION_HORIZON:
+        entry["status"] = "shelf"        # validated at a non-production horizon; never compiled for the live book
     register_adopted(entry)
     rec = dict(last)
     rec.update({"date": date.today().isoformat(), "stage": "adopted",
@@ -489,9 +518,12 @@ def main(argv=None):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--horizon", type=int, default=PRODUCTION_HORIZON, choices=HORIZONS,
+                    help="label horizon in sessions (one track-B family per horizon)")
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("ops")
     sp.add_parser("memory")
+    sp.add_parser("baseline", help="HUMAN: incumbent walk-forward at --horizon on the surv PIT panel")
     au = sp.add_parser("audit-run"); au.add_argument("run_id")
     s = sp.add_parser("screen"); s.add_argument("proposals"); s.add_argument("--out")
     s.add_argument("--rebuild-cache", action="store_true"); s.add_argument("--no-record", action="store_true")
@@ -501,17 +533,26 @@ def main(argv=None):
     h = sp.add_parser("show"); h.add_argument("candidate_id")
     a = sp.add_parser("adopt"); a.add_argument("candidate_id"); a.add_argument("--removal-trigger", required=True)
     args = ap.parse_args(argv)
+    configure(args.horizon)
 
+    if args.cmd == "baseline":
+        from evaluation.purged_walk_forward import WalkForwardConfig, run_walk_forward
+        df = pd.read_parquet(SURV_PANEL)
+        sub_ = df[df["symbol"].isin(_members())].copy()
+        data = sub_[_pit_mask(sub_).to_numpy()].copy()
+        run_walk_forward(WalkForwardConfig(horizon=HORIZON, min_tail_test=15), df=data, tag=BASELINE_TAG)
+        print(f"baseline written: oos_predictions_h{HORIZON}_{BASELINE_TAG}.parquet")
+        return
     if args.cmd == "ops":
         print(dsl.describe_ops())
         return
     if args.cmd == "memory":
         from mining.memory import build_memory
-        print(build_memory(rb.MINED_LEDGER))
+        print(build_memory(rb.MINED_LEDGER, horizon=HORIZON))
         return
     if args.cmd == "audit-run":
         from mining.memory import audit_run, RUNS
-        print(json.dumps(audit_run(RUNS / args.run_id, rb.MINED_LEDGER), ensure_ascii=False, indent=1))
+        print(json.dumps(audit_run(RUNS / args.run_id, rb.MINED_LEDGER, horizon=HORIZON), ensure_ascii=False, indent=1))
         return
     if args.cmd == "screen":
         props = load_proposals(args.proposals)

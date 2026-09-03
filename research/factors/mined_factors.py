@@ -24,12 +24,22 @@ import pandas as pd
 REGISTRY = Path(__file__).resolve().with_name("mined_factors.json")
 
 
-def load_adopted(path: Path = REGISTRY) -> list[dict]:
+PRODUCTION_HORIZON = 20
+
+
+def load_adopted(path: Path = REGISTRY, production_only: bool = True) -> list[dict]:
+    """Adopted entries. With production_only (the default, used by every
+    production consumer) entries validated at another horizon -- the
+    "shelf" -- are excluded, so they can never reach the live book."""
     path = Path(path)
     if not path.exists():
         return []
     data = json.loads(path.read_text(encoding="utf-8"))
-    return list(data.get("adopted", []))
+    entries = list(data.get("adopted", []))
+    if production_only:
+        entries = [e for e in entries if int(e.get("horizon", PRODUCTION_HORIZON)) == PRODUCTION_HORIZON
+                   and e.get("status", "production") != "shelf"]
+    return entries
 
 
 def feature_column(entry: dict) -> str:

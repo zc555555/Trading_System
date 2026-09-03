@@ -110,6 +110,19 @@ the full stage without a human audit and `--force`, and it is never a
 cluster representative. These are integrity checks, not adoption rules;
 their detection power is measured by the mutation-injection experiment.
 
+**Horizons (pre-registered 2026-09-03 16:00, user decision, before any
+5-session candidate existed).** Track B runs one family per label
+horizon: h = 20 (production) and h = 5. Same screen, same gate, same
+oracles; the label is the h-session log return and Newey–West uses
+h − 1 lags. Duplicates, representatives and the BH family are all
+per horizon: the same expression at another horizon is a different
+test. An h = 5 adoption is a *shelf* entry (`status: shelf` in the
+registry): production consumers compile only production-horizon
+entries, so nothing validated at h = 5 can reach the live book until an
+h = 5 book exists (gated on the execution A/B, ~2026-11) and its own
+adoption is decided then. Rationale: the only honest signals ever
+measured at t > 2 on this ruler were at h = 5 (trend, volatility, news).
+
 **Gate (all clauses required).**
 
 | Clause | Rule |
