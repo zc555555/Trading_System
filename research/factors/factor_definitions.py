@@ -227,6 +227,20 @@ FACTOR_WEIGHTS = {
     'high52': 0.05,        # 52w-high anchoring (conditional, 2026-08)
 }
 
+# Agent-mined factors adopted under rulebook track B (factors/mined_factors.json).
+# Each gets the same 5% static-fallback weight high52 got; the static dict is
+# renormalised. Production weights come from the IC resolver anyway.
+try:
+    from .mined_factors import mined_factor_groups as _mined_factor_groups
+except ImportError:
+    from mined_factors import mined_factor_groups as _mined_factor_groups
+_MINED_GROUPS = _mined_factor_groups()
+if _MINED_GROUPS:
+    FACTOR_GROUPS.update(_MINED_GROUPS)
+    _scale = 1.0 - 0.05 * len(_MINED_GROUPS)
+    FACTOR_WEIGHTS = {f: w * _scale for f, w in FACTOR_WEIGHTS.items()}
+    FACTOR_WEIGHTS.update({f: 0.05 for f in _MINED_GROUPS})
+
 # Verify weights sum to 1.0
 assert abs(sum(FACTOR_WEIGHTS.values()) - 1.0) < 0.001, "Factor weights must sum to 1.0"
 

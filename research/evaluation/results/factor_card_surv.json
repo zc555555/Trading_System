@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-26T07:43:03.645112",
-  "panel": "C:\\Users\\13785\\OneDrive\\Desktop\\stock_predict\\research\\evaluation\\results\\oos_predictions_h20_surv.parquet",
-  "n_hypotheses_in_family": 20,
-  "family_bar_t": 3.016,
+  "generated_at": "2026-09-02T13:11:29.663119",
+  "panel": "C:\\Trading_System\\research\\evaluation\\results\\oos_predictions_h20_surv.parquet",
+  "n_hypotheses_in_family": 22,
+  "family_bar_t": 3.045,
   "factor_corr": {
     "factor_momentum": {
       "factor_momentum": 1.0,
@@ -155,8 +155,9 @@
         "nw_lags": 19
       },
       "gate": {
-        "rule_version": "v1 (Sidak family-wise bar on holdout t; no negative tier)",
-        "family_bar": 3.015994533489952,
+        "track": "A",
+        "rule_version": "v2 (two-track, pre-registered 2026-09-02): A literature = Sidak FWER 5% on two-sided holdout t; B mined = BH FDR q=0.10 on one-sided holdout p in the pre-declared direction + dev blend gain > 0",
+        "family_bar": 3.044742308606386,
         "holdout_t": -0.14294826047548545,
         "negative_tiers": [],
         "fresh_n_days": 37,
@@ -264,8 +265,9 @@
         "nw_lags": 19
       },
       "gate": {
-        "rule_version": "v1 (Sidak family-wise bar on holdout t; no negative tier)",
-        "family_bar": 3.015994533489952,
+        "track": "A",
+        "rule_version": "v2 (two-track, pre-registered 2026-09-02): A literature = Sidak FWER 5% on two-sided holdout t; B mined = BH FDR q=0.10 on one-sided holdout p in the pre-declared direction + dev blend gain > 0",
+        "family_bar": 3.044742308606386,
         "holdout_t": -1.0268916459434452,
         "negative_tiers": [],
         "fresh_n_days": 37,
@@ -373,8 +375,9 @@
         "nw_lags": 19
       },
       "gate": {
-        "rule_version": "v1 (Sidak family-wise bar on holdout t; no negative tier)",
-        "family_bar": 3.015994533489952,
+        "track": "A",
+        "rule_version": "v2 (two-track, pre-registered 2026-09-02): A literature = Sidak FWER 5% on two-sided holdout t; B mined = BH FDR q=0.10 on one-sided holdout p in the pre-declared direction + dev blend gain > 0",
+        "family_bar": 3.044742308606386,
         "holdout_t": 2.883669159186638,
         "negative_tiers": [],
         "fresh_n_days": 37,
@@ -482,8 +485,9 @@
         "nw_lags": 19
       },
       "gate": {
-        "rule_version": "v1 (Sidak family-wise bar on holdout t; no negative tier)",
-        "family_bar": 3.015994533489952,
+        "track": "A",
+        "rule_version": "v2 (two-track, pre-registered 2026-09-02): A literature = Sidak FWER 5% on two-sided holdout t; B mined = BH FDR q=0.10 on one-sided holdout p in the pre-declared direction + dev blend gain > 0",
+        "family_bar": 3.044742308606386,
         "holdout_t": 1.12046151754942,
         "negative_tiers": [],
         "fresh_n_days": 37,
@@ -591,8 +595,9 @@
         "nw_lags": 19
       },
       "gate": {
-        "rule_version": "v1 (Sidak family-wise bar on holdout t; no negative tier)",
-        "family_bar": 3.015994533489952,
+        "track": "A",
+        "rule_version": "v2 (two-track, pre-registered 2026-09-02): A literature = Sidak FWER 5% on two-sided holdout t; B mined = BH FDR q=0.10 on one-sided holdout p in the pre-declared direction + dev blend gain > 0",
+        "family_bar": 3.044742308606386,
         "holdout_t": 1.449686830872969,
         "negative_tiers": [],
         "fresh_n_days": 37,
@@ -700,8 +705,9 @@
         "nw_lags": 19
       },
       "gate": {
-        "rule_version": "v1 (Sidak family-wise bar on holdout t; no negative tier)",
-        "family_bar": 3.015994533489952,
+        "track": "A",
+        "rule_version": "v2 (two-track, pre-registered 2026-09-02): A literature = Sidak FWER 5% on two-sided holdout t; B mined = BH FDR q=0.10 on one-sided holdout p in the pre-declared direction + dev blend gain > 0",
+        "family_bar": 3.044742308606386,
         "holdout_t": 1.8240096805936008,
         "negative_tiers": [],
         "fresh_n_days": 37,

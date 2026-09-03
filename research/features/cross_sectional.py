@@ -212,3 +212,13 @@ DEFAULT_XS_FEATURES: List[str] = [
     "pct_52w_high",
     "days_from_high",
 ]
+
+# Agent-mined factors adopted under rulebook track B (factors/mined_factors.json)
+# get the same cross-sectional z-score. Empty registry -> nothing added.
+try:
+    from factors.mined_factors import adopted_feature_columns as _adopted_mined_columns
+except ImportError:  # run from a subdirectory: put research/ on the path
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from factors.mined_factors import adopted_feature_columns as _adopted_mined_columns
+DEFAULT_XS_FEATURES += _adopted_mined_columns()

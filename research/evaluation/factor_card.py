@@ -44,6 +44,8 @@ import pandas as pd
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from evaluation.metrics import daily_rank_ic, summarize_ic  # noqa: E402
+from evaluation.rulebook import (  # noqa: E402
+    RULE_VERSION, family_size_literature, gate_literature, sidak_bar)
 
 RESULTS = Path(__file__).resolve().parent / "results"
 IMG = Path(__file__).resolve().parent.parent.parent / "docs" / "img"
@@ -57,7 +59,7 @@ SEGMENTS = [
     ("holdout", "2025-07-01", "2026-05-16"),
     ("fresh", "2026-05-16", None),
 ]
-RULE_VERSION = "v1 (Sidak family-wise bar on holdout t; no negative tier)"
+# RULE_VERSION now lives in evaluation/rulebook.py (v2, two-track).
 
 
 # --------------------------------------------------------------------------
@@ -142,28 +144,18 @@ def residual_ic(df: pd.DataFrame, col: str, others: list[str], label: str) -> pd
 
 
 def gate(ic_by_tier: dict, family_bar: float) -> dict:
-    """Current rulebook: holdout |t| >= family bar, and no tier significantly
-    negative (t <= -2). Fresh tier vetoes only if it has >= 60 sessions."""
-    ho = ic_by_tier.get("holdout", {})
-    fr = ic_by_tier.get("fresh", {})
-    neg = [k for k, v in ic_by_tier.items()
-           if v.get("t_stat", 0) <= -2.0 and (k != "fresh" or v.get("n_days", 0) >= 60)]
-    passes = ho.get("t_stat", 0) >= family_bar and not neg
-    return {"rule_version": RULE_VERSION, "family_bar": family_bar,
-            "holdout_t": ho.get("t_stat"), "negative_tiers": neg,
-            "fresh_n_days": fr.get("n_days", 0), "verdict": "PASS" if passes else "FAIL"}
+    """Track-A (literature) gate of the rulebook: holdout |t| >= family bar,
+    and no tier significantly negative (t <= -2); fresh vetoes only with
+    >= 60 sessions. Production factors are literature-backed, so the card
+    reports them under track A. See evaluation/rulebook.py."""
+    return gate_literature(ic_by_tier, family_bar)
 
 
 # --------------------------------------------------------------------------
 def family_bar_from_ledger() -> tuple[int, float]:
-    from scipy.stats import norm
-    led = RESULTS / "hypothesis_ledger.csv"
-    n = 20
-    if led.exists():
-        rows = pd.read_csv(led)
-        n = int((~rows["verdict"].astype(str).str.startswith("finding")).sum())
-    alpha_fw = 1 - (1 - 0.05) ** (1.0 / n)          # Sidak
-    return n, float(norm.ppf(1 - alpha_fw / 2))
+    """Track-A family size (non-'finding' ledger rows) and its Sidak bar."""
+    n = family_size_literature()
+    return n, sidak_bar(n)
 
 
 def run(panel_path: Path, factors: list[str] | None, tag: str) -> dict:

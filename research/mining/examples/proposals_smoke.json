@@ -1,0 +1,31 @@
+{
+  "proposals": [
+    {
+      "candidate_id": "smoke_high52_proxy",
+      "expression": "close / ts_max(high, 250)",
+      "expected_direction": "positive",
+      "hypothesis": "Proximity to the trailing one-year high predicts continuation over the next month.",
+      "mechanism": "Anchoring on the 52-week high makes investors under-react to good news near the high (George and Hwang 2004).",
+      "refutation_conditions": ["seen_dev IC not positive", "decile spread not monotone"],
+      "source": "smoke: hand-written re-statement of the adopted high52 factor, expected to screen positive"
+    },
+    {
+      "candidate_id": "smoke_reversal_5d",
+      "expression": "neg(ts_sum(returns, 5))",
+      "expected_direction": "positive",
+      "hypothesis": "Last week's losers outperform over the next month via short-term reversal.",
+      "mechanism": "Liquidity provision: temporary price pressure reverts (Jegadeesh 1990).",
+      "refutation_conditions": ["dev IC not positive"],
+      "source": "smoke: known ledger rejection (factor_reversal, 2026-08-10), expected to screen fail"
+    },
+    {
+      "candidate_id": "smoke_noise",
+      "expression": "rank(ts_corr(open, volume, 7))",
+      "expected_direction": "positive",
+      "hypothesis": "A seven-session open-to-volume correlation carries no economic content.",
+      "mechanism": "None; this is the harness's null control and must not pass the screen.",
+      "refutation_conditions": ["any pass is a harness bug"],
+      "source": "smoke: null control"
+    }
+  ]
+}

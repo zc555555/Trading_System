@@ -126,6 +126,15 @@ selected_features = [
     'days_from_high',
 ]
 
+# Agent-mined factors adopted under rulebook track B (factors/mined_factors.json).
+try:
+    from factors.mined_factors import adopted_feature_columns as _adopted_mined_columns
+except ImportError:  # run from a subdirectory: put research/ on the path
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from factors.mined_factors import adopted_feature_columns as _adopted_mined_columns
+selected_features += _adopted_mined_columns()
+
 # Meta columns to keep
 meta_cols = ['date', 'symbol', 'open', 'high', 'low', 'close', 'volume', 'future_return', 'label']
 

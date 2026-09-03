@@ -99,3 +99,8 @@ research/config_alpaca.py
 research/config_finnhub.py
 research/data/gdelt_sql/
 research/data/edgar_cache/
+
+# agent mining runs (transcripts, queues) -- local audit trail, not for git
+research/mining/runs/
+research/evaluation/results/_mining_screen_panel.parquet
+research/evaluation/results/_mining_*

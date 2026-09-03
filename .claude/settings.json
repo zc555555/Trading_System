@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"C:/Trading_System/.claude/hooks/miner_guard.py\"",
+            "timeout": 15,
+            "statusMessage": "miner guard"
+          }
+        ]
+      }
+    ]
+  }
+}

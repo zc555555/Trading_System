@@ -21,6 +21,7 @@ FEATURE_MODULES = [
     RESEARCH / "features" / "alphas_101_subset.py",
     RESEARCH / "features" / "cross_sectional.py",
     RESEARCH / "features" / "add_time_windows.py",
+    RESEARCH / "mining" / "dsl.py",          # agent factor DSL (track B)
 ]
 
 

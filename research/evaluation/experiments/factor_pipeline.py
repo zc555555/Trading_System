@@ -17,6 +17,9 @@ adjudicated lives in hypothesis_ledger.csv; each new verdict prints the
 family size N and the Sidak-adjusted t threshold for a 5% family-wise
 error rate. A candidate that clears the per-test bar but not the
 family bar is labeled accordingly -- no silent cherry-picking.
+Rulebook v2 (2026-09-02, evaluation/rulebook.py): this script is TRACK A
+(literature-backed, human-written candidates). Agent-mined candidates
+are track B and never enter this family or this bar.
 
 Usage:
     python evaluation/experiments/factor_pipeline.py --factor amihud --max-folds 1
@@ -32,7 +35,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from scipy import stats
 
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
@@ -42,6 +44,7 @@ from evaluation.purged_walk_forward import (  # noqa: E402
     WalkForwardConfig, run_walk_forward, DATA_PATH, RESULTS_DIR)
 from evaluation.metrics import daily_rank_ic, summarize_ic  # noqa: E402
 from evaluation.experiments.pit_universe_test import membership_mask  # noqa: E402
+from evaluation.rulebook import family_size_literature, sidak_bar  # noqa: E402
 
 MEMBERSHIP = Path(__file__).resolve().parent.parent.parent / "data" / "sp500_membership.parquet"
 LEDGER = RESULTS_DIR / "hypothesis_ledger.csv"
@@ -147,9 +150,8 @@ CANDIDATES = {
 
 
 def family_threshold(n_tests: int, alpha: float = 0.05) -> float:
-    """Sidak-adjusted two-sided t threshold for the hypothesis family."""
-    per_test = 1 - (1 - alpha) ** (1 / max(n_tests, 1))
-    return float(stats.norm.ppf(1 - per_test / 2))
+    """Sidak-adjusted two-sided t threshold (track A of the rulebook)."""
+    return sidak_bar(n_tests, alpha)
 
 
 def load_ledger() -> pd.DataFrame:
@@ -175,11 +177,13 @@ def verdict(tag: str, factor_name: str):
     base = pd.read_parquet(RESULTS_DIR / "oos_predictions_h20_pitON.parquet")
     var = pd.read_parquet(RESULTS_DIR / f"oos_predictions_h20_{tag}.parquet")
 
-    led = load_ledger()
-    n_family = len(led) + 1
+    load_ledger()                      # creates the file on first use
+    # Track A family = non-'finding' ledger rows (+ this candidate); the same
+    # definition factor_card.py uses, so both print the same bar.
+    n_family = family_size_literature() + 1
     thr = family_threshold(n_family)
-    print(f"\n[multiple testing] hypothesis #{n_family} in this project's "
-          f"family; family-wise 5% needs |t| >= {thr:.2f}")
+    print(f"\n[multiple testing] track A hypothesis #{n_family} in this "
+          f"project's literature family; family-wise 5% needs |t| >= {thr:.2f}")
 
     print(f"{'segment':<14}{'baseline':>20}{'with ' + factor_name:>20}"
           f"{factor_name + ' alone':>20}")

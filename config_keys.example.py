@@ -8,7 +8,10 @@ chat, commits, or logs.
                      "test-api-key" works for the free DJIA-30 sample.
   MASSIVE_API_KEY  : massive.com (ex-Polygon) -> free Basic tier is enough
                      for the options IV prototype (5 calls/min, 2y history).
+  ANTHROPIC_API_KEY: console.anthropic.com -> API keys; used only by the
+                     factor-mining agent (research/mining/agent.py).
 """
 
 SHARADAR_API_KEY = ""
 MASSIVE_API_KEY = ""
+ANTHROPIC_API_KEY = ""

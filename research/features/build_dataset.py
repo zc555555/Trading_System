@@ -114,10 +114,29 @@ class DatasetBuilder:
         if 'technical' in self.config['features']:
             df_features = self._add_technical_features(df_features)
 
+        # Agent-mined factors adopted under rulebook track B are compiled
+        # from the frozen registry (factors/mined_factors.json) with the same
+        # causal DSL the mining harness evaluated them with. Empty -> no-op.
+        df_features = self._add_mined_features(df_features)
+
         if len(alpha_list) > 0:
             print(f"\nTotal alpha features computed: {len(available_alphas)}")
 
         return df_features
+
+    def _add_mined_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Compile every adopted agent-mined expression (track B)."""
+        try:
+            from factors.mined_factors import add_adopted_mined_features, adopted_feature_columns
+        except ImportError:  # run from a subdirectory: put research/ on the path
+            import sys as _sys
+            _sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+            from factors.mined_factors import add_adopted_mined_features, adopted_feature_columns
+        cols = adopted_feature_columns()
+        if not cols:
+            return df
+        print(f"\nComputing {len(cols)} adopted mined factor(s): {cols}")
+        return add_adopted_mined_features(df)
 
     def _add_technical_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Add technical indicators beyond alphas."""
