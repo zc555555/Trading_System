@@ -554,23 +554,41 @@ def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list
     from mining import pool as pl
     mask, dates, label = dev_rows(panel)
     refs = {k: v[mask] for k, v in _incumbent_refs_for(panel).items()}
-    admitted = []
+    pool = pl.load_pool(HORIZON)
+    feats = pl.member_features(panel, pool["members"], HORIZON)          # full-panel signed ranks (cached)
+    feats_dev = feats[mask].reset_index(drop=True)
+    comp = pl.composite(feats_dev)
+    have = {m["hash"] for m in pool["members"]}
+    all_dates = pd.to_datetime(panel["date"]).to_numpy()
+    admitted, new_cols = [], {}
     for r in sorted(cands, key=lambda z: -abs(float(z.get("dev_t") or 0.0))):
-        pool = pl.load_pool(HORIZON)
-        if any(m["hash"] == dsl.expression_hash(r["expression"]) for m in pool["members"]):
+        h = dsl.expression_hash(r["expression"])
+        if h in have:
             continue
-        feats = pl.member_features(panel, pool["members"], HORIZON)
-        feats_dev = feats[mask].reset_index(drop=True)
-        comp = pl.composite(feats_dev)
-        feat = dsl.compile_expression(r["expression"], panel).to_numpy(dtype=float)
+        try:
+            feat = dsl.compile_expression(r["expression"], panel).to_numpy(dtype=float)
+        except dsl.DSLError as e:
+            print(f"  {r['candidate_id']:<28} -> error {e}")
+            continue
         sign = 1.0 if r.get("expected_direction") == "positive" else -1.0
         r = dict(r)
         r.update(pl.assess_against_pool(feat[mask], sign, dates, label, feats_dev, comp, NW_LAGS, incumbents=refs))
         ok, why = pl.admissible(r)
         print(f"  {r['candidate_id']:<28} dev_t {float(r.get('dev_t') or 0):+.2f} corr {r.get('pool_corr_max')} "
-              f"resid {r.get('residual_vs_pool_t')} -> {why}")
+              f"resid {r.get('residual_vs_pool_t')} -> {why}", flush=True)
         if ok:
-            admitted += pl.admit(HORIZON, [r], source)
+            new = pl.admit(HORIZON, [r], source)
+            if new:                                    # extend the in-memory pool; the cache is written once at the end
+                admitted += new
+                have.add(h)
+                col = pl.signed_rank(all_dates, feat, sign)
+                new_cols[h] = col
+                feats[h] = col
+                feats_dev = feats[mask].reset_index(drop=True)
+                comp = pl.composite(feats_dev)
+    if new_cols:
+        pl.POOL_DIR.mkdir(parents=True, exist_ok=True)
+        feats.to_parquet(pl.features_path(HORIZON), index=False)
     return admitted
 
 
