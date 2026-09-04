@@ -139,6 +139,42 @@ with `full --force` (its ledger row is then under the rotated segments) and
 predictions and is exact for the raw-feature tiers. External sources
 refresh monthly through `scripts/run_refresh_sources_scheduled.bat`.
 
+## Track P: the factor pool (v3.1, pre-registered 2026-09-04)
+
+Motivation. Nine rounds of single-candidate adjudication produced zero
+adoptions: on S&P 500 large caps every honest signal has |IC| 0.01-0.02
+and no single one clears a hidden-tier gate. The industry answer is
+breadth: many weak, low-correlation signals combined and tested as one
+object. Track P adds that path without weakening track B.
+
+Admission (development segment only; nothing hidden is consulted):
+  * screen pass in the declared direction (dev t >= 2.0, coverage >= 0.90),
+    no process-oracle flag, not a duplicate;
+  * not redundant with a production feature (|rho| < 0.7, the existing
+    screen rule); |rho| < 0.7 with every current pool member;
+  * residual dev t against the current composite >= 1.5 in the declared
+    direction (the first member has no composite to beat).
+  Screen output carries pool_size, pool_corr_max, pool_corr_with and
+  residual_vs_pool_t so the miner can target information the pool lacks.
+
+Composite. Per member: cross-sectional percentile rank per date, centred,
+times the declared sign. Composite = plain mean over members with a value
+(at least 30% of members non-missing). Equal weights by design.
+
+Release and adoption. At member counts 25, 50, 100, 200, 400 the composite
+is scored exactly like a track-B full-stage candidate (purged walk-forward
+as its own factor group, raw-feature tiers, v3 two-path gate, blend gain)
+under the ledger id pool_h<H>_r<k>. EACH RELEASE IS ONE MEMBER OF THE
+HORIZON'S BH FAMILY; individual pool members never enter the family. A
+PASS adopts the composite as one production factor; members are then
+frozen for that release and later admissions form the next release.
+
+Honesty notes. The pool's development-segment IC is not evidence (the
+development segment is reused by every admission); only release rows are.
+A release that fails does not remove members; the pool keeps growing and
+the next checkpoint is the next test. The segment-rotation review
+re-adjudicates release rows like any full-stage row.
+
 **Fields (recorded 2026-09-04, mining paused).** Thirteen more fields while
 rounds are paused: twelve point-in-time accounting ratios from the EDGAR
 XBRL cache (`book_to_market` ... `op_margin`, see mining/README) and the

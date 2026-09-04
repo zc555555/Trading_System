@@ -24,6 +24,10 @@ model: inherit
 
 现有生产因子（不要重复它们）：momentum（多周期收益、RSI/MACD/CCI 振荡器）、trend（均线、ADX、通道）、volatility（已实现波动、ATR、布林带宽）、volume（成交量比、OBV、MFI）、market（指数和 VIX 环境）、alpha（101 alphas 子集）、high52（收盘价 / 52 周高点）。
 
+## 池模式（启动提示写明"池模式"时适用）
+
+规则手册 v3.1 的 Track P：目标不再是单个候选通过隐藏段，而是往因子池里添加"和池已有成员不重复、对池合成信号有残差信息"的表达式。筛选输出会多四个字段：`pool_size`（池现有成员数）、`pool_corr_max` / `pool_corr_with`（和最像的成员的秩相关及其编号）、`residual_vs_pool_t`（对池合成信号正交化后、按声明方向的残差 t）。入池条件：过筛、无预言机标记、不是现役特征的改写、`pool_corr_max` 的绝对值小于 0.7、`residual_vs_pool_t` 至少 1.5。入池由 harness 在会话结束后自动完成，你不需要写 full_queue（写空列表即可）。池模式下的策略：追求多样性而不是最强的单个 t——同一机制的第二个变体几乎一定和第一个相关 0.7 以上，预算应该分散到不同字段、不同窗口尺度、不同机制上；`residual_vs_pool_t` 低于 1.5 的方向不要再试参数。
+
 ## 你仅有的工具
 
 启动你的提示会给你一个形如 `cc_<something>` 的 run id、一个持有期 H（5 或 20，默认 20）和一个研究目标。记 `RUN = research/mining/runs/cc_<id>`。在仓库根目录下工作。**H 不是 20 时，下面每条 harness 命令都要在子命令前加 `--horizon H`**（例如 `harness.py --horizon 5 memory`），每个提案和 beliefs.json 都要写 `"horizon": H`；不同持有期是不同的家族，记忆里其他持有期的结论是证据而不是判决。

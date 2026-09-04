@@ -88,7 +88,8 @@ AGENT_VISIBLE = ("candidate_id", "stage", "expression", "canonical", "proposal_h
                  "duplicate_of", "note",
                  "max_corr", "corr_with", "cluster_id", "cluster_rep", "redundant_with",
                  "cluster_size", "residual_dev_ic", "residual_dev_t", "residual_vs",
-                 "oracle_flags", "quarantined")
+                 "oracle_flags", "quarantined",
+                 "pool_size", "pool_corr_max", "pool_corr_with", "residual_vs_pool_t")
 
 
 # --------------------------------------------------------------------------
@@ -259,6 +260,35 @@ def _incumbent_refs_for(panel: pd.DataFrame) -> dict[str, np.ndarray]:
     return {c: ref[c].to_numpy(dtype=float) for c in ref.columns}
 
 
+def dev_rows(panel: pd.DataFrame):
+    """(mask, dates, label) of the point-in-time seen_dev rows of the panel."""
+    pit = panel["pit"].to_numpy(dtype=bool)
+    dates_all = pd.to_datetime(panel["date"])
+    if dates_all.dt.tz is None and panel["date"].dt.tz is not None:
+        dates_all = dates_all.dt.tz_localize(panel["date"].dt.tz)
+    tmp = pd.DataFrame({"date": dates_all}).reset_index(drop=True)
+    mask = pit & np.isin(np.arange(len(panel)), segment(tmp, "seen_dev").index.to_numpy())
+    return mask, dates_all.to_numpy()[mask], panel[LABEL].to_numpy(dtype=float)[mask]
+
+
+def pool_fields(rows: list[dict], panel: pd.DataFrame) -> None:
+    """Track P: how much each pass adds to the current pool (dev segment)."""
+    from mining import pool as pl
+    pool = pl.load_pool(HORIZON)
+    passes = [r for r in rows if r.get("screen_pass") and "_feature" in r and not r.get("duplicate_of")]
+    if not passes:
+        return
+    mask, dates, label = dev_rows(panel)
+    feats = pl.member_features(panel, pool["members"], HORIZON)
+    feats_dev = feats[mask].reset_index(drop=True)
+    comp = pl.composite(feats_dev)
+    for r in passes:
+        sign = 1.0 if r.get("expected_direction") == "positive" else -1.0
+        r.update(pl.assess_against_pool(r["_feature"][mask], sign, dates, label, feats_dev, comp, NW_LAGS))
+    for r in rows:
+        r.setdefault("pool_size", len(pool["members"]))
+
+
 def cluster_passes(rows: list[dict], panel: pd.DataFrame, ledger_path: Path = rb.MINED_LEDGER,
                    record: bool = True) -> None:
     """Screen-rule refinement (RULEBOOK): cluster this batch's passes against
@@ -328,6 +358,7 @@ def screen(proposals: list[Proposal], panel: pd.DataFrame,
     from mining import oracles
     rows = [screen_one(p, panel, ledger_path, record) for p in proposals]
     cluster_passes(rows, panel, ledger_path, record)
+    pool_fields(rows, panel)
     for r in rows:
         r.pop("_feature", None)
     views = []
@@ -423,13 +454,16 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
     fam = prior_family(p.candidate_id, ledger_path) if family is None else list(family)
     gate = rb.gate_mined(ic_by_tier, p.expected_direction, blend_dev_gain, fam, pooled=pooled, recent=recent)
 
-    dev_rows = segment(var, "seen_dev")
+    dev_rows_ = segment(var, "seen_dev")
     row = base_row(p, "full")
-    stats = dsl.validate(dsl.parse(p.expression))
+    if p.expression.startswith("pool:"):
+        stats = {"lookback": np.nan, "n_nodes": np.nan, "canonical": p.expression}
+    else:
+        stats = dsl.validate(dsl.parse(p.expression))
     row.update({
         "lookback": stats["lookback"], "n_nodes": stats["n_nodes"], "canonical": stats["canonical"],
         "dev_ic": dev["alone"]["ic_mean"], "dev_t": dev["alone"]["t_stat"], "dev_n": dev["alone"]["n_days"],
-        "coverage": float(dev_rows["_raw"].notna().mean()) if len(dev_rows) else 0.0,
+        "coverage": float(dev_rows_["_raw"].notna().mean()) if len(dev_rows_) else 0.0,
         "blend_dev_gain": blend_dev_gain,
         "model_dev_t": tiers["seen_dev"]["model"]["t_stat"],
         "model_holdout_t": tiers["holdout"]["model"]["t_stat"],
@@ -456,7 +490,8 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
     return row
 
 
-def walk_forward_for(p: Proposal, max_folds: int | None = None) -> str:
+def walk_forward_for(p: Proposal, max_folds: int | None = None,
+                     feature_frame: pd.DataFrame | None = None) -> str:
     """Purged walk-forward of the incumbent groups plus the candidate's own
     group on the surv PIT panel; writes oos_predictions_h<H>_<tag>.parquet
     and returns the tag."""
@@ -468,7 +503,16 @@ def walk_forward_for(p: Proposal, max_folds: int | None = None) -> str:
     from mining import aux_fields
     sub = aux_fields.attach(sub)
     col = f"mined_{p.candidate_id}"
-    sub[col] = dsl.compile_expression(p.expression, sub)     # on the true history
+    if feature_frame is not None:                             # Track P composite, precomputed on the screen panel
+        key = pd.DataFrame({"date": pd.to_datetime(sub["date"]).dt.tz_localize(None).to_numpy(),
+                            "symbol": sub["symbol"].to_numpy()}, index=sub.index)
+        ff = feature_frame.copy()
+        ff["date"] = pd.to_datetime(ff["date"]).dt.tz_localize(None) if pd.to_datetime(ff["date"]).dt.tz is not None \
+            else pd.to_datetime(ff["date"])
+        merged = key.merge(ff.rename(columns={"value": col}), on=["date", "symbol"], how="left")
+        sub[col] = merged[col].to_numpy(dtype=float)
+    else:
+        sub[col] = dsl.compile_expression(p.expression, sub)     # on the true history
     data = sub[_pit_mask(sub).to_numpy()].copy()              # scored on PIT rows
     data = add_cross_sectional_zscore(data, [col], suffix="_xs", winsorize_pct=0.01)
     groups = {k: list(v) for k, v in FACTOR_GROUPS.items()}
@@ -491,6 +535,97 @@ def full_one(p: Proposal, max_folds: int | None = None,
     row = adjudicate_full(p, tag, ledger_path=ledger_path)
     rb.append_mined(row, ledger_path)
     row["recorded"] = True
+    return row
+
+
+# --------------------------------------------------------------------------
+# Track P: pool admission and release (RULEBOOK v3.1)
+# --------------------------------------------------------------------------
+def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list[dict]:
+    """Sequential admission (strongest dev t first): each candidate is scored
+    against the pool AS IT STANDS after the previous admissions. `cands`
+    rows need candidate_id, expression, expected_direction, dev_t, dev_ic,
+    canonical and the screen flags (screen_pass, quarantined, duplicate_of,
+    redundant_with). Returns the admitted members."""
+    from mining import pool as pl
+    mask, dates, label = dev_rows(panel)
+    admitted = []
+    for r in sorted(cands, key=lambda z: -abs(float(z.get("dev_t") or 0.0))):
+        pool = pl.load_pool(HORIZON)
+        if any(m["hash"] == dsl.expression_hash(r["expression"]) for m in pool["members"]):
+            continue
+        feats = pl.member_features(panel, pool["members"], HORIZON)
+        feats_dev = feats[mask].reset_index(drop=True)
+        comp = pl.composite(feats_dev)
+        feat = dsl.compile_expression(r["expression"], panel).to_numpy(dtype=float)
+        sign = 1.0 if r.get("expected_direction") == "positive" else -1.0
+        r = dict(r)
+        r.update(pl.assess_against_pool(feat[mask], sign, dates, label, feats_dev, comp, NW_LAGS))
+        ok, why = pl.admissible(r)
+        print(f"  {r['candidate_id']:<28} dev_t {float(r.get('dev_t') or 0):+.2f} corr {r.get('pool_corr_max')} "
+              f"resid {r.get('residual_vs_pool_t')} -> {why}")
+        if ok:
+            admitted += pl.admit(HORIZON, [r], source)
+    return admitted
+
+
+def pool_candidates_from_run(run_dir: Path) -> list[dict]:
+    """Screen views of a finished run joined with its proposals (direction)."""
+    props = {}
+    for f in sorted(run_dir.glob("proposals_*.json")):
+        for p in json.load(open(f, encoding="utf-8")).get("proposals", []):
+            props[p["candidate_id"]] = p
+    out = []
+    for f in sorted(run_dir.glob("screen_*.json")):
+        for r in json.load(open(f, encoding="utf-8")):
+            pr = props.get(r.get("candidate_id"))
+            if pr and r.get("screen_pass") and not r.get("error"):
+                out.append({**r, "expected_direction": pr["expected_direction"], "expression": pr["expression"]})
+    return out
+
+
+def pool_candidates_from_ledger(ledger_path: Path = rb.MINED_LEDGER) -> list[dict]:
+    """Every screen pass of this horizon recorded so far (seeding)."""
+    led = rb.load_mined_ledger(ledger_path)
+    scr = led[(led["stage"].astype(str) == "screen") & (rb.horizon_of(led) == HORIZON)]
+    scr = scr[scr["screen_pass"].map(rb.truthy) == True]        # noqa: E712
+    scr = scr.sort_values("date").drop_duplicates("candidate_id", keep="last")
+    return [{k: (None if _isnan(v) else v) for k, v in r.items()} for _, r in scr.iterrows()]
+
+
+def pool_release(max_folds: int | None = None, ledger_path: Path = rb.MINED_LEDGER) -> dict:
+    """Score the composite as one full-stage candidate (pool_h<H>_r<k>)."""
+    from mining import pool as pl
+    pool = pl.load_pool(HORIZON)
+    n = len(pool["members"])
+    if n == 0:
+        raise SystemExit("empty pool")
+    k = len(pool["releases"]) + 1
+    cid = f"pool_h{HORIZON}_r{k}"
+    panel = load_screen_panel()
+    comp = pl.pool_signal(panel, HORIZON, pool)
+    ff = pd.DataFrame({"date": pd.to_datetime(panel["date"]).dt.tz_localize(None).to_numpy(),
+                       "symbol": panel["symbol"].to_numpy(), "value": comp})
+    p = Proposal(candidate_id=cid, expression=f"pool:h{HORIZON}:{n} members",
+                 expected_direction="positive",
+                 hypothesis="the equal-weight signed-rank composite of the pool predicts the label out of sample",
+                 mechanism="breadth: many weak, low-correlation signals combined (RULEBOOK Track P)",
+                 refutation_conditions=["release fails the v3 gate"], mechanism_tag="pool",
+                 source=f"pool-release:{HORIZON}", horizon=HORIZON)
+    tag = walk_forward_for(p, max_folds=max_folds, feature_frame=ff)
+    if max_folds:
+        return {"candidate_id": cid, "stage": "smoke", "n_members": n}
+    var = pd.read_parquet(RESULTS / f"oos_predictions_h{HORIZON}_{tag}.parquet")
+    raw = var[["date", "symbol"]].copy()
+    raw["date"] = pd.to_datetime(raw["date"]).dt.tz_localize(None) if pd.to_datetime(raw["date"]).dt.tz is not None \
+        else pd.to_datetime(raw["date"])
+    raw = raw.merge(ff, on=["date", "symbol"], how="left")
+    row = adjudicate_full(p, tag, ledger_path=ledger_path, raw_feature=raw["value"].to_numpy(dtype=float))
+    row["n_members"] = n
+    rb.append_mined(row, ledger_path)
+    pool["releases"].append({"release_id": cid, "n_members": n, "date": datetime.now().strftime("%Y-%m-%d"),
+                             "verdict": row["verdict"], "members": [m["hash"] for m in pool["members"]]})
+    pl.save_pool(pool)
     return row
 
 
@@ -651,6 +786,10 @@ def main(argv=None):
     f.add_argument("--force", action="store_true", help="run a non-representative anyway (human)")
     h = sp.add_parser("show"); h.add_argument("candidate_id")
     a = sp.add_parser("adopt"); a.add_argument("candidate_id"); a.add_argument("--removal-trigger", required=True)
+    pq = sp.add_parser("pool", help="HUMAN: Track P pool -- status | seed | admit --run RUN_ID | release")
+    pq.add_argument("action", choices=["status", "seed", "admit", "release"])
+    pq.add_argument("--run", help="run id whose screen passes are offered to the pool (admit)")
+    pq.add_argument("--max-folds", type=int, default=None)
     rv = sp.add_parser("review", help="HUMAN: re-adjudicate every full-stage candidate under the segments of --date")
     rv.add_argument("--date", required=True, help="review date, e.g. 2026-11-15 (rulebook.REVIEW_SCHEDULE)")
     rv.add_argument("--rerun", action="store_true", help="recompute each candidate's walk-forward first")
@@ -706,6 +845,29 @@ def main(argv=None):
                 if k not in ("date", "stage") and not _isnan(v):
                     print(f"  {k:<20}{v}")
         return
+    if args.cmd == "pool":
+        from mining import pool as pl
+        if args.action == "status":
+            print(json.dumps(pl.status(HORIZON), ensure_ascii=False, indent=1, default=str))
+            return
+        if args.action == "seed":
+            panel = load_screen_panel()
+            new = pool_admit_rows(pool_candidates_from_ledger(), panel, source="seed:ledger")
+            print(f"admitted {len(new)}; pool now {len(pl.load_pool(HORIZON)['members'])} members")
+            return
+        if args.action == "admit":
+            from mining.memory import RUNS
+            panel = load_screen_panel()
+            new = pool_admit_rows(pool_candidates_from_run(RUNS / args.run), panel, source=f"run:{args.run}")
+            print(f"admitted {len(new)}; pool now {len(pl.load_pool(HORIZON)['members'])} members")
+            return
+        if args.action == "release":
+            t0 = datetime.now()
+            row = pool_release(max_folds=args.max_folds)
+            row = {k: (None if _isnan(v) else v) for k, v in row.items() if k != "blend_by_tier"}
+            row["elapsed_s"] = round((datetime.now() - t0).total_seconds())
+            print(json.dumps(row, ensure_ascii=False, indent=1, default=str))
+            return
     if args.cmd == "review":
         t0 = datetime.now()
         out = review(args.date, rerun=args.rerun)
