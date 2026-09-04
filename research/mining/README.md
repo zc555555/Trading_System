@@ -22,6 +22,18 @@ and one JSON blob out. Rules: [`evaluation/RULEBOOK.md`](../evaluation/RULEBOOK.
    `blend_dev_gain` (blended seen_dev IC with the candidate minus without).
    Nothing else.
 
+## Review and refresh (human commands)
+
+- `harness.py [--horizon H] review --date 2026-11-15 [--rerun]`: re-adjudicate
+  every full-stage candidate of the horizon under the segments of that date
+  (RULEBOOK "Review procedure"); writes `evaluation/results/review_<date>_h<H>.md`.
+- `scripts/run_review_scheduled.bat <date>`: the whole review night (surv
+  panel, baselines, `--rerun` at both horizons); scheduled for each
+  `rulebook.REVIEW_SCHEDULE` date.
+- `data/refresh_mining_sources.py`: SEC insider quarters, FINRA short
+  interest, GDELT current year, both screen caches; scheduled monthly by
+  `scripts/run_refresh_sources_scheduled.bat`.
+
 ## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest; point-in-time)
 
 Insider trades: `insider_buys` / `insider_sells` (distinct insiders whose

@@ -415,10 +415,11 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
     blend_dev_gain = float(dev["blend"]["ic_mean"] - dev["base"]["ic_mean"])
     # v3: two test statistics -- the IC series pooled over every unseen tier
     # (structural path) and over holdout + fresh (probation path)
-    pooled = summarize_ic(pd.concat([ic_series[k] for k in rb.UNSEEN_TIERS if k in ic_series]).sort_index(),
-                          nw_lags=NW_LAGS)
-    recent = summarize_ic(pd.concat([ic_series[k] for k in rb.RECENT_TIERS if k in ic_series]).sort_index(),
-                          nw_lags=NW_LAGS)
+    def _pool(keys):
+        parts = [ic_series[k] for k in keys if k in ic_series and len(ic_series[k])]
+        return summarize_ic(pd.concat(parts).sort_index() if parts else pd.Series(dtype=float), nw_lags=NW_LAGS)
+    pooled = _pool(rb.UNSEEN_TIERS)
+    recent = _pool(rb.RECENT_TIERS)
     fam = prior_family(p.candidate_id, ledger_path) if family is None else list(family)
     gate = rb.gate_mined(ic_by_tier, p.expected_direction, blend_dev_gain, fam, pooled=pooled, recent=recent)
 
@@ -455,15 +456,13 @@ def adjudicate_full(p: Proposal, tag: str, results_dir: Path = RESULTS,
     return row
 
 
-def full_one(p: Proposal, max_folds: int | None = None,
-             ledger_path: Path = rb.MINED_LEDGER, force: bool = False) -> dict:
+def walk_forward_for(p: Proposal, max_folds: int | None = None) -> str:
+    """Purged walk-forward of the incumbent groups plus the candidate's own
+    group on the surv PIT panel; writes oos_predictions_h<H>_<tag>.parquet
+    and returns the tag."""
     from evaluation.purged_walk_forward import WalkForwardConfig, run_walk_forward
-    if not max_folds:
-        assert_representative(p.candidate_id, ledger_path, force=force)
     from features.cross_sectional import add_cross_sectional_zscore
     from factors.factor_definitions import FACTOR_GROUPS
-
-    p.validate()
     df = pd.read_parquet(SURV_PANEL)
     sub = df[df["symbol"].isin(_members())].copy()
     from mining import aux_fields
@@ -474,10 +473,18 @@ def full_one(p: Proposal, max_folds: int | None = None,
     data = add_cross_sectional_zscore(data, [col], suffix="_xs", winsorize_pct=0.01)
     groups = {k: list(v) for k, v in FACTOR_GROUPS.items()}
     groups[p.candidate_id] = [col, col + "_xs"]
-
     tag = f"mined_{p.candidate_id}" + ("_smoke" if max_folds else "")
     run_walk_forward(WalkForwardConfig(horizon=HORIZON, min_tail_test=15),
                      max_folds=max_folds, df=data, factor_groups=groups, tag=tag)
+    return tag
+
+
+def full_one(p: Proposal, max_folds: int | None = None,
+             ledger_path: Path = rb.MINED_LEDGER, force: bool = False) -> dict:
+    if not max_folds:
+        assert_representative(p.candidate_id, ledger_path, force=force)
+    p.validate()
+    tag = walk_forward_for(p, max_folds=max_folds)
     if max_folds:
         return {"candidate_id": p.candidate_id, "stage": "smoke", "recorded": False,
                 "note": f"smoke run ({max_folds} folds) -- not adjudicated, not in the family"}
@@ -485,6 +492,102 @@ def full_one(p: Proposal, max_folds: int | None = None,
     rb.append_mined(row, ledger_path)
     row["recorded"] = True
     return row
+
+
+# --------------------------------------------------------------------------
+# segment-rotation review (RULEBOOK v3, REVIEW_SCHEDULE)
+# --------------------------------------------------------------------------
+
+REVIEW_TIER_COLS = ("virgin", "holdout", "fresh")
+
+
+def _proposal_from_row(r: pd.Series) -> Proposal:
+    return Proposal(candidate_id=str(r["candidate_id"]), expression=str(r["expression"]),
+                    expected_direction=str(r["expected_direction"]),
+                    hypothesis="segment-rotation review of the recorded expression (see its run notes)",
+                    mechanism="segment-rotation review of the recorded expression (see its run notes)",
+                    refutation_conditions=["see the original proposal"],
+                    mechanism_tag=str(r.get("mechanism_tag") or ""), source=f"review:{r.get('source', '')}",
+                    horizon=HORIZON)
+
+
+def _gate_from_row(row: dict, family: list[float]) -> dict:
+    ic_by_tier = {f"{k}_early" if k == "virgin" else k: {"ic_mean": row[f"{k}_ic"], "t_stat": row[f"{k}_t"],
+                                                          "n_days": row[f"{k}_n"]} for k in REVIEW_TIER_COLS}
+    ic_by_tier["seen_dev"] = {"ic_mean": row["dev_ic"], "t_stat": row["dev_t"], "n_days": row["dev_n"]}
+    pooled = {"ic_mean": row["pooled_ic"], "t_stat": row["pooled_t"], "n_days": row["pooled_n"]}
+    recent = {"ic_mean": row["recent_ic"], "t_stat": row["recent_t"], "n_days": row["recent_n"]}
+    return rb.gate_mined(ic_by_tier, row["expected_direction"], row["blend_dev_gain"], family,
+                         pooled=pooled, recent=recent)
+
+
+def review(review_date: str, rerun: bool = False, ledger_path: Path = rb.MINED_LEDGER,
+           results_dir: Path = RESULTS, adjudicate=None) -> dict:
+    """Re-adjudicate every track-B full-stage candidate of this horizon under
+    the segments of `review_date` (rulebook.segments_for): holdout = the
+    twelve months before it, fresh = after it, seen_dev grows to it.
+
+    The rotation is applied at runtime only; rulebook.ACTIVE_REVIEW (the
+    committed switch) is not touched, and nothing is written to the ledger.
+    The whole set is one BH family (each candidate's pooled and recent p,
+    every other candidate's p-values as its family). With rerun=True the
+    walk-forward of every candidate is recomputed first (the baseline must
+    have been re-run with `baseline` beforehand); otherwise the recorded
+    out-of-sample predictions are re-scored on the new segments, which is
+    exact for the raw-feature tiers and only truncates the model blend
+    where the old predictions end. Writes review_<date>_h<H>.{json,md}."""
+    global SEGMENTS
+    previous = SEGMENTS
+    SEGMENTS = rb.segments_for(review_date)
+    adjudicate = adjudicate or adjudicate_full
+    try:
+        led = rb.load_mined_ledger(ledger_path)
+        full = led[(led["stage"].astype(str) == "full") & (rb.horizon_of(led) == HORIZON)].copy()
+        latest = full.sort_values("date").groupby("candidate_id").tail(1)
+        rows = []
+        for _, r in latest.iterrows():
+            p = _proposal_from_row(r)
+            tag = walk_forward_for(p) if rerun else f"mined_{p.candidate_id}"
+            row = adjudicate(p, tag, results_dir=results_dir, family=[], ledger_path=ledger_path)
+            row["previous_verdict"] = str(r.get("verdict"))
+            row["previous_date"] = str(r.get("date"))
+            rows.append(row)
+        fam_all = rb.family_pvalues_of(pd.DataFrame(rows)) if rows else []
+        for row in rows:                       # pass 2: BH over the whole review family
+            own = [x for x in (row.get("pooled_p_onesided"), row.get("recent_p_onesided")) if x is not None]
+            others = list(fam_all)
+            for x in own:
+                if x in others:
+                    others.remove(x)
+            g = _gate_from_row(row, others)
+            row.update({"verdict": g["verdict"], "reasons": " | ".join(g["reasons"]), "family_n": g["family_n"],
+                        "bh_threshold": g["bh_threshold"], "adoption_tier": g["adoption_tier"]})
+        out = {"review_date": review_date, "horizon": HORIZON, "rule_version": rb.RULE_VERSION,
+               "segments": [list(x) for x in SEGMENTS], "rerun": rerun, "n_candidates": len(rows),
+               "passes": [r["candidate_id"] for r in rows if r["verdict"] == "PASS"], "rows": rows}
+        stem = results_dir / f"review_{review_date}_h{HORIZON}"
+        stem.with_suffix(".json").write_text(json.dumps(out, indent=1, default=str), encoding="utf-8")
+        stem.with_suffix(".md").write_text(_review_markdown(out), encoding="utf-8")
+        return out
+    finally:
+        SEGMENTS = previous
+
+
+def _review_markdown(out: dict) -> str:
+    seg = "; ".join(f"{n}: {s or '...'} .. {e or '...'}" for n, s, e in out["segments"])
+    lines = [f"# Segment-rotation review {out['review_date']} (h={out['horizon']}, {out['rule_version']})", "",
+             f"Segments: {seg}", f"Re-run walk-forward: {out['rerun']}", "",
+             "| candidate | dir | prev | now | tier | dev t | virgin t | holdout t (n) | fresh t (n) | pooled t | recent t | blend gain | reasons |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    for r in out["rows"]:
+        lines.append("| {cid} | {d} | {pv} | **{v}** | {tier} | {dt:+.2f} | {vt:+.2f} | {ht:+.2f} ({hn:.0f}) | {ft:+.2f} ({fn:.0f}) | {pt:+.2f} | {rt:+.2f} | {bg:+.4f} | {rs} |".format(
+            cid=r["candidate_id"], d=r["expected_direction"][:3], pv=r["previous_verdict"], v=r["verdict"],
+            tier=r.get("adoption_tier") or "-", dt=r["dev_t"], vt=r["virgin_t"], ht=r["holdout_t"], hn=r["holdout_n"],
+            ft=r["fresh_t"], fn=r["fresh_n"], pt=r["pooled_t"], rt=r["recent_t"], bg=r["blend_dev_gain"], rs=r["reasons"]))
+    lines += ["", f"Passes: {', '.join(out['passes']) or 'none'}", "",
+              "A PASS here is not an adoption: switch rulebook.ACTIVE_REVIEW to this date, commit, re-run the",
+              "candidate with `full --force` (ledger row under the rotated segments), then `adopt`."]
+    return "\n".join(lines) + "\n"
 
 
 # --------------------------------------------------------------------------
@@ -548,6 +651,9 @@ def main(argv=None):
     f.add_argument("--force", action="store_true", help="run a non-representative anyway (human)")
     h = sp.add_parser("show"); h.add_argument("candidate_id")
     a = sp.add_parser("adopt"); a.add_argument("candidate_id"); a.add_argument("--removal-trigger", required=True)
+    rv = sp.add_parser("review", help="HUMAN: re-adjudicate every full-stage candidate under the segments of --date")
+    rv.add_argument("--date", required=True, help="review date, e.g. 2026-11-15 (rulebook.REVIEW_SCHEDULE)")
+    rv.add_argument("--rerun", action="store_true", help="recompute each candidate's walk-forward first")
     args = ap.parse_args(argv)
     configure(args.horizon)
 
@@ -599,6 +705,12 @@ def main(argv=None):
             for k, v in r.items():
                 if k not in ("date", "stage") and not _isnan(v):
                     print(f"  {k:<20}{v}")
+        return
+    if args.cmd == "review":
+        t0 = datetime.now()
+        out = review(args.date, rerun=args.rerun)
+        print((RESULTS / f"review_{args.date}_h{HORIZON}.md").read_text(encoding="utf-8"))
+        print(f"elapsed: {round((datetime.now() - t0).total_seconds())}s")
         return
     if args.cmd == "adopt":
         entry = adopt(args.candidate_id, args.removal_trigger)

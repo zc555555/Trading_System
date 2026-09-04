@@ -121,6 +121,24 @@ sessions after settlement, from 2018). Again a search-space change only.
 Short-interest evidence before 2018 does not exist, so its virgin_early tier
 is the shortest of any field family (2018 to 2021-12-30).
 
+**Review procedure (recorded 2026-09-04; first review 2026-11-15).** Mining
+rounds are paused after round 8 (eight runs, zero adoptions; the
+short-interest level family is the only mechanism significant on seen_dev
+and holdout at both horizons, failing once on blend gain and once on a
+37-session fresh tier). On each REVIEW_SCHEDULE date
+`scripts/run_review_scheduled.bat <date>` refreshes the surv panel, re-runs
+the incumbent baseline and every track-B full-stage candidate at both
+horizons, and `harness.py --horizon H review --date <date> --rerun`
+re-adjudicates them under `segments_for(date)` as ONE BH family per horizon
+(each candidate's pooled and recent p, everyone else's as its family). The
+rotation is applied at runtime; nothing is written to the ledger and nothing
+is adopted by the script. A PASS in `results/review_<date>_h<H>.md` is acted
+on by hand: set `ACTIVE_REVIEW` to the date, commit, re-run the candidate
+with `full --force` (its ledger row is then under the rotated segments) and
+`adopt`. A dry review (no `--rerun`) re-scores the recorded out-of-sample
+predictions and is exact for the raw-feature tiers. External sources
+refresh monthly through `scripts/run_refresh_sources_scheduled.bat`.
+
 **Quarantine (process oracles, added 2026-09-03).** The harness runs
 runtime self-checks on every screened candidate (`mining/oracles.py`):
 future-perturbation, strength band (|dev t| > 6 or |dev IC| > 0.08),
