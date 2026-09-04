@@ -98,7 +98,57 @@
    "residual_vs_pool_t": 1.631,
    "pool_corr_max": 0.114,
    "pool_size_at_admission": 6
+  },
+  {
+   "candidate_id": "season_half_105",
+   "expression": "delay(ts_sum(returns,20),105)",
+   "canonical": "delay(ts_sum(returns, 20), 105)",
+   "hash": "bdd20a6092c9",
+   "expected_direction": "positive",
+   "source": "run:cc_20260904_pool2",
+   "admitted": "2026-09-04",
+   "dev_ic": 0.021979170676634734,
+   "dev_t": 1.2957557242169853,
+   "residual_vs_pool_t": 1.001,
+   "pool_corr_max": 0.063,
+   "incumbent_corr_max": 0.162,
+   "coverage": 0.9990976781454037,
+   "pool_size_at_admission": 7,
+   "rule_version": "P-3.2"
+  },
+  {
+   "candidate_id": "ivol_share_60",
+   "expression": "ts_std(demean(returns),60)/ts_std(returns,60)",
+   "canonical": "div(ts_std(demean(returns), 60), ts_std(returns, 60))",
+   "hash": "d64359064f23",
+   "expected_direction": "negative",
+   "source": "run:cc_20260904_pool2",
+   "admitted": "2026-09-04",
+   "dev_ic": -0.03375663889893517,
+   "dev_t": -1.0826910465248978,
+   "residual_vs_pool_t": 1.279,
+   "pool_corr_max": 0.138,
+   "incumbent_corr_max": -0.305,
+   "coverage": 0.9995668855097938,
+   "pool_size_at_admission": 8,
+   "rule_version": "P-3.2"
   }
  ],
- "releases": []
+ "releases": [
+  {
+   "release_id": "pool_h20_r1",
+   "n_members": 7,
+   "date": "2026-09-04",
+   "verdict": "FAIL",
+   "members": [
+    "7a554c1125e5",
+    "f2bbeb67638b",
+    "d2c9e36f6076",
+    "954ed2c00bd5",
+    "60a8b760143f",
+    "4d65cf2572ec",
+    "9bfed7f3ba8f"
+   ]
+  }
+ ]
 }
