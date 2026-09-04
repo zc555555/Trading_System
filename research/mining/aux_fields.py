@@ -38,15 +38,17 @@ SHORT = DATA / "finra_short_interest.parquet"
 XBRL = DATA / "xbrl_fundamentals.parquet"
 REGSHO = DATA / "regsho_short_volume.parquet"
 FORM13F = DATA / "form13f_quarterly.parquet"
+WIKI = DATA / "wikipedia_pageviews.parquet"
 INST_MAX_AGE = 70             # sessions a 13F quarter is carried (one quarter plus slack)
 # every path keyword attach() accepts; tests pass a nonexistent path for each to get a bare panel
-SOURCE_KWARGS = ("source", "news_source", "form4_source", "short_source", "xbrl_source", "regsho_source", "form13f_source")
+SOURCE_KWARGS = ("source", "news_source", "form4_source", "short_source", "xbrl_source", "regsho_source", "form13f_source",
+                 "wiki_source")
 FUNDAMENTAL_FIELDS = ("book_to_market", "earnings_yield", "sales_to_price", "gross_profitability", "roe",
                       "asset_growth", "accruals", "leverage", "cash_to_assets", "rd_to_sales",
                       "capex_to_assets", "op_margin")
 AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles",
               "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover") + FUNDAMENTAL_FIELDS \
-             + ("short_vol_ratio", "inst_own", "inst_holders", "inst_top5")
+             + ("short_vol_ratio", "inst_own", "inst_holders", "inst_top5", "wiki_views")
 FUNDAMENTALS_MAX_AGE = 300    # sessions without any filing -> the fundamentals are unknown
 SHARES_MAX_AGE = 130          # ~two quarters of sessions
 SHORT_INTEREST_LAG = 10       # sessions after settlement before FINRA's figure is public (~7 business days)
@@ -354,13 +356,46 @@ def attach_form13f(df: pd.DataFrame, q: pd.DataFrame) -> pd.DataFrame:
     return out.drop(columns=["_ord"])
 
 
+def attach_wikipedia(df: pd.DataFrame, pv: pd.DataFrame, known_through=None) -> pd.DataFrame:
+    """Daily English-Wikipedia page views of the company article
+    (data/fetch_wikipedia_pageviews.py), a retail-attention proxy.
+
+    wiki_views  views summed over the UTC calendar days that became usable at
+                this session (a day's count is final after the day ends, so
+                it is usable from the first session strictly after it;
+                Friday + Saturday + Sunday land on Monday); NaN before the
+                article's first observation, when the symbol has no article,
+                or after the source's last covered day."""
+    out = df.copy()
+    naive = _naive_dates(out["date"])
+    sessions = np.sort(naive.unique())
+    v = pv[["symbol", "date", "views"]].copy()
+    v["date"] = pd.to_datetime(v["date"]).dt.normalize()
+    pos = np.searchsorted(sessions, v["date"].to_numpy(dtype="datetime64[ns]"), side="right")
+    keep = pos < len(sessions)
+    v = v[keep].copy()
+    v["eff"] = sessions[pos[keep]]
+    agg = v.groupby(["symbol", "eff"])["views"].sum().rename("wiki_views").reset_index()
+    key = pd.DataFrame({"symbol": out["symbol"].to_numpy(), "eff": naive.to_numpy()}, index=out.index)
+    merged = key.merge(agg, on=["symbol", "eff"], how="left")
+    last = pd.Timestamp(known_through) if known_through is not None else v["date"].max()
+    k = np.searchsorted(sessions, np.datetime64(last, "ns"), side="right")
+    known = (naive.to_numpy() <= sessions[k]) if k < len(sessions) else np.ones(len(out), bool)
+    first = v.groupby("symbol")["eff"].min()
+    started = (naive.to_numpy() >= out["symbol"].map(first).to_numpy(dtype="datetime64[ns]"))
+    vals = merged["wiki_views"].to_numpy(dtype=float)
+    out["wiki_views"] = np.where(known & started, vals, np.nan)
+    return out
+
+
 def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None = None,
            news_source: Path = GDELT, news: pd.DataFrame | None = None,
            form4_source: Path = FORM4, form4: pd.DataFrame | None = None,
            short_source: Path = SHORT, short: pd.DataFrame | None = None,
            xbrl_source: Path = XBRL, fundamentals: pd.DataFrame | None = None,
            regsho_source: Path = REGSHO, short_volume: pd.DataFrame | None = None,
-           form13f_source: Path = FORM13F, form13f: pd.DataFrame | None = None) -> pd.DataFrame:
+           form13f_source: Path = FORM13F, form13f: pd.DataFrame | None = None,
+           wiki_source: Path = WIKI, wiki: pd.DataFrame | None = None) -> pd.DataFrame:
     """Attach every auxiliary field whose source is available; a field whose
     source is missing is simply absent (the DSL then refuses it). Order
     matters: the EDGAR share count feeds insider_net_frac and short_ratio."""
@@ -393,6 +428,10 @@ def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None 
         form13f = pd.read_parquet(form13f_source)
     if form13f is not None:
         out = attach_form13f(out, form13f)
+    if wiki is None and Path(wiki_source).exists():
+        wiki = pd.read_parquet(wiki_source)
+    if wiki is not None:
+        out = attach_wikipedia(out, wiki)
     return out
 
 

@@ -42,7 +42,8 @@ AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_article
               "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover",
               "book_to_market", "earnings_yield", "sales_to_price", "gross_profitability", "roe",
               "asset_growth", "accruals", "leverage", "cash_to_assets", "rd_to_sales",
-              "capex_to_assets", "op_margin", "short_vol_ratio", "inst_own", "inst_holders", "inst_top5")
+              "capex_to_assets", "op_margin", "short_vol_ratio", "inst_own", "inst_holders", "inst_top5",
+              "wiki_views")
 FIELDS = BASE_FIELDS + AUX_FIELDS
 FIELD_DOC = {
     "open": "session open", "high": "session high", "low": "session low",
@@ -76,6 +77,7 @@ FIELD_DOC = {
     "inst_own": "13F institutional shares / shares outstanding for the latest quarter whose 45-day filing deadline has passed (quarterly steps, carried <= 70 sessions)",
     "inst_holders": "number of 13F managers holding the stock, same timing (Chen-Hong-Stein breadth: use delta over ~63 sessions)",
     "inst_top5": "share of the institutional holdings held by the five largest managers, same timing",
+    "wiki_views": "English-Wikipedia page views of the company article over the calendar days usable at this session (a day is usable from the next session; weekend days land on Monday), from 2015-07; NaN when no article or before its first day",
 }
 MAX_WINDOW = 250
 MAX_LOOKBACK = 250

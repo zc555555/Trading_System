@@ -36,3 +36,17 @@ The LEVEL of the daily short-volume share is the strongest single-field
 seen_dev signal found at h = 5 in the whole programme (previous best: short
 interest level, t -2.9); its change is not informative. Unseen tiers are
 unknown by construction of this check. Data from 2017-12-29 only.
+
+## SEC Form 13F institutional ownership, h = 20 (all FAIL the screen rule)
+
+| expression | dir | dev IC | dev t | coverage |
+|---|---|---|---|---|
+| delta(inst_holders, 63) / (delay(inst_holders, 63) + 1) (breadth change) | + | +0.0167 | +0.93 | 0.98 |
+| delta(inst_own, 63) | + | -0.0035 | -0.47 | 0.96 |
+| rank(inst_own) (level) | + | -0.0267 | -2.75 | 0.96 |
+| rank(inst_top5) | - | -0.0081 | -0.58 | 0.98 |
+
+Breadth change has the literature sign but is weak; the ownership LEVEL is
+significantly negative on seen_dev (high institutional ownership, lower
+20-session returns), the opposite of the declared direction and most
+likely a crowding / size proxy. Not pursued while rounds are paused.

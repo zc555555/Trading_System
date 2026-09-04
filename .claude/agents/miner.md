@@ -19,6 +19,7 @@ model: inherit
 - 基本面字段（SEC XBRL，点时间，申报日次一交易日起可用、最多延续 300 个交易日）：`book_to_market`、`earnings_yield`、`sales_to_price`、`gross_profitability`、`roe`、`asset_growth`、`accruals`、`leverage`、`cash_to_assets`、`rd_to_sales`、`capex_to_assets`、`op_margin`。流量项是最近四个季度之和，同一期被后来重述时用最早申报的数字。这些是季度更新的阶梯值，横截面 rank 直接可用；变化量用 `delta(x, 63)` 这类季度窗口。
 - 日度空头成交量（FINRA Reg SHO，2018 年起）：`short_vol_ratio`，前一交易日的空头成交量占 FINRA 上报成交量的比例（日频，0.3 到 0.7 之间为常态）。缺失日为 NaN；`where` 遇到 NaN 条件仍输出 NaN，所以要补零必须用 `fillna(x, 0)`（新算子，把缺失值换成常数；只从该股票第一个有效观测起填充，数据源开始之前仍是 NaN），再做 `ts_mean` 等窗口运算。
 - 机构持仓字段（SEC 13F，2013 年起，季度）：`inst_own`（13F 申报持股除以流通股数）、`inst_holders`（持有该股的机构数，Chen-Hong-Stein 的"持有广度"）、`inst_top5`（前五大机构占机构持股的比例）。季度末后 45 天申报截止，截止日次一交易日起可用，最多延续 70 个交易日。文献上有信息的是变化量：`delta(inst_holders, 63)`、`delta(inst_own, 63)`，水平本身多为规模代理。
+- 注意力字段（Wikipedia 页面浏览量，2015 年 7 月起，日频）：`wiki_views`，公司词条在本交易日可用的日历日里的浏览量之和（当日数据次一交易日可用，周五到周日的浏览量落到周一）。重尾，先 `log`；文献上有信息的是异常注意力，例如 `log(wiki_views) - ts_mean(log(wiki_views), 60)`（Da-Engelberg-Gao；散户注意力冲击后短期收益为负）。缺失日为 NaN，`fillna` 只从词条第一天起填。
 - 宇宙：点时间的标普 500 成分股，含退市股，日线，2015 到 2026 年。这里诚实的单因子 rank IC 很小（0.01 到 0.03）；过筛需要声明方向上的 dev t 大于等于 2.0，覆盖率大于等于 0.90。
 
 现有生产因子（不要重复它们）：momentum（多周期收益、RSI/MACD/CCI 振荡器）、trend（均线、ADX、通道）、volatility（已实现波动、ATR、布林带宽）、volume（成交量比、OBV、MFI）、market（指数和 VIX 环境）、alpha（101 alphas 子集）、high52（收盘价 / 52 周高点）。

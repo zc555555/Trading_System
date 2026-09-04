@@ -34,7 +34,7 @@ and one JSON blob out. Rules: [`evaluation/RULEBOOK.md`](../evaluation/RULEBOOK.
   interest, GDELT current year, both screen caches; scheduled monthly by
   `scripts/run_refresh_sources_scheduled.bat`.
 
-## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest, XBRL fundamentals, Reg SHO, 13F; point-in-time)
+## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest, XBRL fundamentals, Reg SHO, 13F, Wikipedia; point-in-time)
 
 Fundamentals (`data/build_xbrl_fundamentals.py` -> `data/xbrl_fundamentals.parquet`,
 from the EDGAR companyfacts cache): twelve ratio fields formed daily by
@@ -57,6 +57,14 @@ holders). Only original 13F-HR filings made by the 45-day deadline count and
 a quarter is usable from the first session after that deadline (carried at
 most 70 sessions); late filers and amendments never update history. CUSIPs
 map to symbols through Sharadar's TICKERS table.
+
+Attention (`data/fetch_wikipedia_pageviews.py` -> `data/wikipedia_pageviews.parquet`,
+Wikimedia REST API from 2015-07): `wiki_views` = English-Wikipedia page
+views of the company article over the UTC days usable at the session (a day
+is usable from the next session, Friday-Sunday land on Monday); NaN before
+the article's first day, for symbols without an article (Wikidata
+NYSE/NASDAQ ticker -> enwiki sitelink, `data/wikipedia_articles.csv`, 754 of
+812 members) and after the source's last day.
 
 Daily short volume (`data/fetch_regsho_short_volume.py` ->
 `data/regsho_short_volume.parquet`, FINRA Reg SHO consolidated NMS files,
