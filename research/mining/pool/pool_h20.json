@@ -42,6 +42,62 @@
    "residual_vs_pool_t": 2.258,
    "pool_corr_max": 0.03,
    "pool_size_at_admission": 2
+  },
+  {
+   "candidate_id": "seasonality_1y_fix",
+   "expression": "delay(ts_sum(returns, 20), 228)",
+   "canonical": "delay(ts_sum(returns, 20), 228)",
+   "hash": "954ed2c00bd5",
+   "expected_direction": "positive",
+   "source": "run:cc_20260904_pool1",
+   "admitted": "2026-09-04",
+   "dev_ic": 0.05623755563480752,
+   "dev_t": 3.997172756821604,
+   "residual_vs_pool_t": 3.974,
+   "pool_corr_max": 0.035,
+   "pool_size_at_admission": 3
+  },
+  {
+   "candidate_id": "svr20_level",
+   "expression": "ts_mean(fillna(short_vol_ratio, 0), 20)",
+   "canonical": "ts_mean(fillna(short_vol_ratio, 0), 20)",
+   "hash": "60a8b760143f",
+   "expected_direction": "negative",
+   "source": "run:cc_20260904_pool1",
+   "admitted": "2026-09-04",
+   "dev_ic": -0.03861830799649507,
+   "dev_t": -3.9552104705490687,
+   "residual_vs_pool_t": 2.916,
+   "pool_corr_max": -0.443,
+   "pool_size_at_admission": 4
+  },
+  {
+   "candidate_id": "intermed_mom_12_7",
+   "expression": "delay(ts_sum(returns, 120), 125)",
+   "canonical": "delay(ts_sum(returns, 120), 125)",
+   "hash": "4d65cf2572ec",
+   "expected_direction": "positive",
+   "source": "run:cc_20260904_pool1",
+   "admitted": "2026-09-04",
+   "dev_ic": 0.051948670345323536,
+   "dev_t": 2.774415094732455,
+   "residual_vs_pool_t": 2.211,
+   "pool_corr_max": 0.314,
+   "pool_size_at_admission": 5
+  },
+  {
+   "candidate_id": "ey_change_63",
+   "expression": "delta(earnings_yield, 63)",
+   "canonical": "delta(earnings_yield, 63)",
+   "hash": "9bfed7f3ba8f",
+   "expected_direction": "positive",
+   "source": "run:cc_20260904_pool1",
+   "admitted": "2026-09-04",
+   "dev_ic": 0.027463734411074,
+   "dev_t": 2.267189086297937,
+   "residual_vs_pool_t": 1.631,
+   "pool_corr_max": 0.114,
+   "pool_size_at_admission": 6
   }
  ],
  "releases": []
