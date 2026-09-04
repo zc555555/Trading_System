@@ -112,6 +112,15 @@ counting. Coverage before 2017 is NaN, so virgin_early evidence for news
 factors is thinner than for OHLCV factors; the pooled/recent tests are
 unaffected because they use only the sessions where the factor exists.
 
+**Fields (recorded 2026-09-04, after round 6: the news representative failed
+the hidden tiers).** Five more fields: `insider_buys`, `insider_sells`,
+`insider_net_frac` (SEC Form 4 open-market trades, usable from the session
+after filing, NaN after the quarterly dataset's last covered day) and
+`short_ratio`, `days_to_cover` (FINRA consolidated short interest, usable ten
+sessions after settlement, from 2018). Again a search-space change only.
+Short-interest evidence before 2018 does not exist, so its virgin_early tier
+is the shortest of any field family (2018 to 2021-12-30).
+
 **Quarantine (process oracles, added 2026-09-03).** The harness runs
 runtime self-checks on every screened candidate (`mining/oracles.py`):
 future-perturbation, strength band (|dev t| > 6 or |dev IC| > 0.08),

@@ -38,7 +38,8 @@ import pandas as pd
 BASE_FIELDS = ("open", "high", "low", "close", "volume", "returns", "dollar_volume", "typical")
 # auxiliary fields: present only when the panel carries the column (see
 # mining/aux_fields.py); an expression using an absent one is refused
-AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles")
+AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles",
+              "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover")
 FIELDS = BASE_FIELDS + AUX_FIELDS
 FIELD_DOC = {
     "open": "session open", "high": "session high", "low": "session low",
@@ -51,6 +52,11 @@ FIELD_DOC = {
     "filing_days": "sessions since the last 10-Q/10-K filing usable today (filing session + 1); NaN before the first filing",
     "news_tone": "GDELT mean news tone (article-weighted, roughly -10..+10) of the calendar days usable at this session (a day's news is usable from the next session); NaN when no article",
     "news_articles": "GDELT article count over the same days; 0 = covered but no article, NaN = symbol not covered",
+    "insider_buys": "distinct insiders whose open-market PURCHASE Form 4s became usable at this session (filed day + 1 session); 0 = covered, none; NaN = no SEC mapping",
+    "insider_sells": "distinct insiders whose open-market SALE Form 4s became usable at this session; same conventions",
+    "insider_net_frac": "(insider shares bought - sold) usable at this session / shares outstanding; NaN when the share count is unknown",
+    "short_ratio": "latest PUBLIC FINRA short interest / shares outstanding (semi-monthly, public ~10 sessions after settlement, from 2018); NaN before",
+    "days_to_cover": "FINRA short interest / average daily volume for the same figure",
 }
 MAX_WINDOW = 250
 MAX_LOOKBACK = 250

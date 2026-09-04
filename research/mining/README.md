@@ -22,7 +22,25 @@ and one JSON blob out. Rules: [`evaluation/RULEBOOK.md`](../evaluation/RULEBOOK.
    `blend_dev_gain` (blended seen_dev IC with the candidate minus without).
    Nothing else.
 
-## Auxiliary fields (SEC EDGAR + GDELT news, point-in-time)
+## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest; point-in-time)
+
+Insider trades: `insider_buys` / `insider_sells` (distinct insiders whose
+open-market purchase / sale Form 4s became usable at this session, 0 when the
+symbol is covered and quiet, NaN when it has no SEC mapping or after the
+dataset's last covered day) and `insider_net_frac` (shares bought minus sold,
+over the EDGAR share count). Source: SEC Insider Transactions data sets
+(quarterly zips in `data/form345/`, `data/build_form4_fields.py` ->
+`data/form4_daily.parquet`; only original Form 4s, TRANS_CODE P and S). A
+filing on day D is usable from the first session strictly after D.
+
+Short interest: `short_ratio` (latest public FINRA consolidated short
+interest / EDGAR share count) and `days_to_cover` (FINRA's own). Source:
+`data/fetch_finra_short_interest.py` -> `data/finra_short_interest.parquet`
+(FINRA Query API, semi-monthly settlement dates from 2017-12-29). A figure
+settled on session s is usable from s + `SHORT_INTEREST_LAG` (10) sessions
+(FINRA publishes about seven business days after settlement) and expires
+after `SHORT_MAX_AGE` (40) sessions.
+
 
 News: `news_tone` (article-weighted mean GDELT tone of the calendar days that
 became usable at this session, NaN when no article) and `news_articles`
