@@ -39,7 +39,10 @@ BASE_FIELDS = ("open", "high", "low", "close", "volume", "returns", "dollar_volu
 # auxiliary fields: present only when the panel carries the column (see
 # mining/aux_fields.py); an expression using an absent one is refused
 AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles",
-              "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover")
+              "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover",
+              "book_to_market", "earnings_yield", "sales_to_price", "gross_profitability", "roe",
+              "asset_growth", "accruals", "leverage", "cash_to_assets", "rd_to_sales",
+              "capex_to_assets", "op_margin", "short_vol_ratio")
 FIELDS = BASE_FIELDS + AUX_FIELDS
 FIELD_DOC = {
     "open": "session open", "high": "session high", "low": "session low",
@@ -57,6 +60,19 @@ FIELD_DOC = {
     "insider_net_frac": "(insider shares bought - sold) usable at this session / shares outstanding; NaN when the share count is unknown",
     "short_ratio": "latest PUBLIC FINRA short interest / shares outstanding (semi-monthly, public ~10 sessions after settlement, from 2018); NaN before",
     "days_to_cover": "FINRA short interest / average daily volume for the same figure",
+    "book_to_market": "PIT book equity / market cap, from the latest 10-Q/10-K usable today (filing session + 1; XBRL, TTM flows)",
+    "earnings_yield": "net income TTM / market cap (PIT)",
+    "sales_to_price": "revenue TTM / market cap (PIT)",
+    "gross_profitability": "gross profit TTM / total assets (Novy-Marx; PIT)",
+    "roe": "net income TTM / book equity (PIT)",
+    "asset_growth": "total assets / assets one year earlier - 1 (Cooper-Gulen-Schill; PIT)",
+    "accruals": "(net income TTM - operating cash flow TTM) / assets (Sloan; PIT)",
+    "leverage": "long-term debt / assets (0 when no long-term debt is reported; PIT)",
+    "cash_to_assets": "cash and equivalents / assets (PIT)",
+    "rd_to_sales": "R&D TTM / revenue TTM (0 when no R&D is reported; PIT)",
+    "capex_to_assets": "capital expenditure TTM / assets (PIT)",
+    "op_margin": "operating income TTM / revenue TTM (PIT)",
+    "short_vol_ratio": "FINRA Reg SHO short sale volume / total reported volume of the previous session (daily, from 2018); NaN when absent",
 }
 MAX_WINDOW = 250
 MAX_LOOKBACK = 250

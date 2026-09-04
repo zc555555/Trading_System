@@ -35,8 +35,15 @@ EDGAR = DATA / "edgar_fields.parquet"
 GDELT = DATA / "gdelt_daily.parquet"
 FORM4 = DATA / "form4_daily.parquet"
 SHORT = DATA / "finra_short_interest.parquet"
+XBRL = DATA / "xbrl_fundamentals.parquet"
+REGSHO = DATA / "regsho_short_volume.parquet"
+FUNDAMENTAL_FIELDS = ("book_to_market", "earnings_yield", "sales_to_price", "gross_profitability", "roe",
+                      "asset_growth", "accruals", "leverage", "cash_to_assets", "rd_to_sales",
+                      "capex_to_assets", "op_margin")
 AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles",
-              "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover")
+              "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover") + FUNDAMENTAL_FIELDS \
+             + ("short_vol_ratio",)
+FUNDAMENTALS_MAX_AGE = 300    # sessions without any filing -> the fundamentals are unknown
 SHARES_MAX_AGE = 130          # ~two quarters of sessions
 SHORT_INTEREST_LAG = 10       # sessions after settlement before FINRA's figure is public (~7 business days)
 SHORT_MAX_AGE = 40            # a short-interest figure is carried at most this many sessions
@@ -207,10 +214,112 @@ def attach_short_interest(df: pd.DataFrame, si: pd.DataFrame) -> pd.DataFrame:
     return out.drop(columns=["_ord"])
 
 
+XBRL_COLS = ["revenue_ttm", "gp_ttm", "ni_ttm", "ocf_ttm", "capex_ttm", "rd_ttm", "opinc_ttm",
+             "assets", "equity", "liabilities", "ltdebt", "cash", "assets_1y"]
+
+
+def attach_fundamentals(df: pd.DataFrame, fundamentals: pd.DataFrame) -> pd.DataFrame:
+    """Point-in-time accounting ratios (data/build_xbrl_fundamentals.py).
+
+    A filing on session a is usable from a + 1 (same convention as the
+    share count); the latest filing is carried at most FUNDAMENTALS_MAX_AGE
+    sessions. Ratios (all NaN when a component is unknown or the
+    denominator is not positive):
+      book_to_market      equity / market cap
+      earnings_yield      net income (TTM) / market cap
+      sales_to_price      revenue (TTM) / market cap
+      gross_profitability gross profit (TTM) / assets        (Novy-Marx)
+      roe                 net income (TTM) / equity
+      asset_growth        assets / assets one year earlier - 1 (Cooper et al.)
+      accruals            (net income - operating cash flow) / assets (Sloan)
+      leverage            long-term debt / assets; 0 when the company reports
+                          no long-term debt tag but does report assets
+      cash_to_assets      cash / assets
+      rd_to_sales         R&D (TTM) / revenue; 0 when no R&D is reported
+      capex_to_assets     capex (TTM) / assets
+      op_margin           operating income (TTM) / revenue"""
+    out = df.copy()
+    naive = _naive_dates(out["date"])
+    sessions = np.sort(naive.unique())
+    ord_of = pd.Series(np.arange(len(sessions)), index=sessions)
+    out["_ord"] = ord_of.reindex(naive.to_numpy()).to_numpy()
+    f = fundamentals[["symbol", "filed"] + [c for c in XBRL_COLS if c in fundamentals.columns]].copy()
+    for c in XBRL_COLS:
+        if c not in f.columns:
+            f[c] = np.nan
+    f["filed"] = pd.to_datetime(f["filed"]).dt.normalize()
+    a = np.searchsorted(sessions, f["filed"].to_numpy(dtype="datetime64[ns]"), side="left")
+    keep = a < len(sessions)
+    f = f[keep].copy()
+    f["eff_ord"] = a[keep] + 1
+    f = f.sort_values("eff_ord").drop_duplicates(["symbol", "eff_ord"], keep="last")
+    left = out[["symbol", "_ord"]].reset_index().sort_values("_ord")
+    merged = pd.merge_asof(left, f[["symbol", "eff_ord"] + XBRL_COLS].sort_values("eff_ord"),
+                           left_on="_ord", right_on="eff_ord", by="symbol", direction="backward")
+    merged = merged.set_index("index").sort_index()
+    fresh = (merged["_ord"] - merged["eff_ord"]).astype(float) <= FUNDAMENTALS_MAX_AGE
+    v = {c: merged[c].astype(float).where(fresh).reindex(out.index).to_numpy() for c in XBRL_COLS}
+    mcap = (out["marketcap"].to_numpy(dtype=float) * 1e6) if "marketcap" in out.columns else np.full(len(out), np.nan)
+
+    def ratio(num, den):
+        with np.errstate(divide="ignore", invalid="ignore"):
+            r = num / den
+        return np.where(np.isfinite(r) & (den > 0), r, np.nan)
+
+    assets_known = np.isfinite(v["assets"]) & (v["assets"] > 0)
+    ltdebt = np.where(np.isnan(v["ltdebt"]) & assets_known, 0.0, v["ltdebt"])
+    rd = np.where(np.isnan(v["rd_ttm"]) & np.isfinite(v["revenue_ttm"]), 0.0, v["rd_ttm"])
+    out["book_to_market"] = ratio(v["equity"], mcap)
+    out["earnings_yield"] = ratio(v["ni_ttm"], mcap)
+    out["sales_to_price"] = ratio(v["revenue_ttm"], mcap)
+    out["gross_profitability"] = ratio(v["gp_ttm"], v["assets"])
+    out["roe"] = ratio(v["ni_ttm"], v["equity"])
+    out["asset_growth"] = ratio(v["assets"], v["assets_1y"]) - 1.0
+    out["accruals"] = ratio(v["ni_ttm"] - v["ocf_ttm"], v["assets"])
+    out["leverage"] = ratio(ltdebt, v["assets"])
+    out["cash_to_assets"] = ratio(v["cash"], v["assets"])
+    out["rd_to_sales"] = ratio(rd, v["revenue_ttm"])
+    out["capex_to_assets"] = ratio(v["capex_ttm"], v["assets"])
+    out["op_margin"] = ratio(v["opinc_ttm"], v["revenue_ttm"])
+    for c in FUNDAMENTAL_FIELDS:
+        out.loc[~np.isfinite(out[c]), c] = np.nan
+    return out.drop(columns=["_ord"])
+
+
+def attach_short_volume(df: pd.DataFrame, sv: pd.DataFrame, known_through=None) -> pd.DataFrame:
+    """FINRA Reg SHO daily short sale volume (data/fetch_regsho_short_volume.py).
+
+    short_vol_ratio  short volume / total FINRA-reported volume of the LAST
+                     session (a session's file is published that evening, so
+                     it is usable from the next session); NaN when the symbol
+                     has no row that day, is not in the source, or the date is
+                     after the source's last covered session."""
+    out = df.copy()
+    naive = _naive_dates(out["date"])
+    sessions = np.sort(naive.unique())
+    s = sv[["symbol", "date", "short_ratio_day"]].copy()
+    s["date"] = pd.to_datetime(s["date"]).dt.normalize()
+    pos = np.searchsorted(sessions, s["date"].to_numpy(dtype="datetime64[ns]"), side="right")
+    keep = pos < len(sessions)
+    s = s[keep].copy()
+    s["eff"] = sessions[pos[keep]]
+    s = s.sort_values(["symbol", "eff", "date"]).drop_duplicates(["symbol", "eff"], keep="last")
+    key = pd.DataFrame({"symbol": out["symbol"].to_numpy(), "eff": naive.to_numpy()}, index=out.index)
+    merged = key.merge(s[["symbol", "eff", "short_ratio_day"]], on=["symbol", "eff"], how="left")
+    last = pd.Timestamp(known_through) if known_through is not None else s["date"].max()
+    k = np.searchsorted(sessions, np.datetime64(last, "ns"), side="right")
+    known = (naive.to_numpy() <= sessions[k]) if k < len(sessions) else np.ones(len(out), bool)
+    v = merged["short_ratio_day"].to_numpy(dtype=float)
+    out["short_vol_ratio"] = np.where(known, v, np.nan)
+    return out
+
+
 def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None = None,
            news_source: Path = GDELT, news: pd.DataFrame | None = None,
            form4_source: Path = FORM4, form4: pd.DataFrame | None = None,
-           short_source: Path = SHORT, short: pd.DataFrame | None = None) -> pd.DataFrame:
+           short_source: Path = SHORT, short: pd.DataFrame | None = None,
+           xbrl_source: Path = XBRL, fundamentals: pd.DataFrame | None = None,
+           regsho_source: Path = REGSHO, short_volume: pd.DataFrame | None = None) -> pd.DataFrame:
     """Attach every auxiliary field whose source is available; a field whose
     source is missing is simply absent (the DSL then refuses it). Order
     matters: the EDGAR share count feeds insider_net_frac and short_ratio."""
@@ -231,6 +340,14 @@ def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None 
         short = pd.read_parquet(short_source)
     if short is not None:
         out = attach_short_interest(out, short)
+    if fundamentals is None and Path(xbrl_source).exists():
+        fundamentals = pd.read_parquet(xbrl_source)
+    if fundamentals is not None:
+        out = attach_fundamentals(out, fundamentals)
+    if short_volume is None and Path(regsho_source).exists():
+        short_volume = pd.read_parquet(regsho_source, columns=["symbol", "date", "short_ratio_day"])
+    if short_volume is not None:
+        out = attach_short_volume(out, short_volume)
     return out
 
 

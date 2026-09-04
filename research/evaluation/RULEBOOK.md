@@ -139,6 +139,17 @@ with `full --force` (its ledger row is then under the rotated segments) and
 predictions and is exact for the raw-feature tiers. External sources
 refresh monthly through `scripts/run_refresh_sources_scheduled.bat`.
 
+**Fields (recorded 2026-09-04, mining paused).** Thirteen more fields while
+rounds are paused: twelve point-in-time accounting ratios from the EDGAR
+XBRL cache (`book_to_market` ... `op_margin`, see mining/README) and the
+FINRA Reg SHO daily short-volume ratio `short_vol_ratio` (from 2018).
+Search-space change only; no full-stage candidate is added before the
+2026-11-15 review, so the BH families are unchanged. New sources are checked
+with screen-stage runs that are NOT recorded in the ledger (`screen
+--no-record`) so that a textbook expression tried by hand does not enter a
+family. Any mined candidate on these fields after the review joins the
+family of its horizon as usual.
+
 **Quarantine (process oracles, added 2026-09-03).** The harness runs
 runtime self-checks on every screened candidate (`mining/oracles.py`):
 future-perturbation, strength band (|dev t| > 6 or |dev IC| > 0.08),

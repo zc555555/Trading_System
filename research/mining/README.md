@@ -34,7 +34,28 @@ and one JSON blob out. Rules: [`evaluation/RULEBOOK.md`](../evaluation/RULEBOOK.
   interest, GDELT current year, both screen caches; scheduled monthly by
   `scripts/run_refresh_sources_scheduled.bat`.
 
-## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest; point-in-time)
+## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest, XBRL fundamentals, Reg SHO; point-in-time)
+
+Fundamentals (`data/build_xbrl_fundamentals.py` -> `data/xbrl_fundamentals.parquet`,
+from the EDGAR companyfacts cache): twelve ratio fields formed daily by
+`aux_fields.attach_fundamentals` from the latest 10-Q/10-K usable at the
+session (filing session + 1, carried at most 300 sessions): `book_to_market`,
+`earnings_yield`, `sales_to_price`, `gross_profitability`, `roe`,
+`asset_growth`, `accruals`, `leverage`, `cash_to_assets`, `rd_to_sales`,
+`capex_to_assets`, `op_margin`. Flows are trailing-twelve-month sums of
+quarterly facts (Q4 = fiscal year minus three quarters); when a period is
+reported again later the EARLIEST filing wins, so restatements never leak
+backwards; a metric whose latest period is older than 400 days is unknown.
+Issuers that changed CIK keep their history through
+`data/fix_edgar_cache_ciks.py` (Sharadar's CIK merged into the cache).
+
+Daily short volume (`data/fetch_regsho_short_volume.py` ->
+`data/regsho_short_volume.parquet`, FINRA Reg SHO consolidated NMS files,
+2017-12-29 onward, nothing earlier is hosted): `short_vol_ratio` = short
+volume / FINRA-reported volume of the previous session (a day's file is
+published that evening); NaN when the symbol has no row or the day is after
+the source's last file.
+
 
 Insider trades: `insider_buys` / `insider_sells` (distinct insiders whose
 open-market purchase / sale Form 4s became usable at this session, 0 when the
