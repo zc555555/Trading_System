@@ -59,8 +59,16 @@ def cusip_map() -> dict[str, str]:
     return m
 
 
+def _member(z: zipfile.ZipFile, name: str) -> str:
+    """Some quarters wrap the tables in a folder (01jun2025-31aug2025)."""
+    for n in z.namelist():
+        if n == name or n.endswith("/" + name):
+            return n
+    raise KeyError(f"{name} not in {z.filename}")
+
+
 def _read(z: zipfile.ZipFile, name: str, cols: list[str], chunksize: int | None = None):
-    return pd.read_csv(io.BytesIO(z.read(name)), sep="\t", usecols=cols, dtype=str, encoding="latin-1",
+    return pd.read_csv(io.BytesIO(z.read(_member(z, name))), sep="\t", usecols=cols, dtype=str, encoding="latin-1",
                        quoting=3, on_bad_lines="skip", chunksize=chunksize)
 
 
