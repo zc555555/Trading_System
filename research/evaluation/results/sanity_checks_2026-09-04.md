@@ -50,3 +50,24 @@ Breadth change has the literature sign but is weak; the ownership LEVEL is
 significantly negative on seen_dev (high institutional ownership, lower
 20-session returns), the opposite of the declared direction and most
 likely a crowding / size proxy. Not pursued while rounds are paused.
+
+## Wikipedia page views (attention), h = 5 (all FAIL the screen rule)
+
+| expression | dir | dev IC | dev t | coverage |
+|---|---|---|---|---|
+| log(views) - 60-day mean of log(views) (attention shock) | - | +0.0010 | +0.25 | 0.97 |
+| 5-day mean of log(views) - 60-day mean | - | -0.0030 | -0.61 | 0.97 |
+| rank(20-day mean of log(views)) (level) | - | +0.0080 | +1.16 | 0.97 |
+| attention shock x sign(5-day return) | - | +0.0097 | +2.52 | 0.97 |
+
+No attention-reversal effect on S&P 500 large caps at a 5-session horizon.
+The interaction is significant with the OPPOSITE sign to the declared one
+(attention shocks accompanying a move are followed by continuation, not
+reversal); it fails the screen because the direction was pre-declared, and
+it is not pursued while rounds are paused.
+
+## Coverage of the new fields on seen_dev (both caches, 36 columns)
+
+inst_own 0.94, inst_holders 0.96, inst_top5 0.96, wiki_views 0.96,
+short_vol_ratio 0.96; fundamentals 0.89-0.97 except gross_profitability
+0.48, op_margin 0.69, capex_to_assets 0.80.
