@@ -44,8 +44,10 @@ import pandas as pd
 from mining import dsl
 
 POOL_DIR = Path(__file__).resolve().parent / "pool"
-POOL_CORR_MAX = 0.7
-POOL_RESIDUAL_T = 1.5
+POOL_CORR_MAX = 0.6           # v3.2 (2026-09-04): 0.7 -> 0.6, members and incumbents alike
+POOL_RESIDUAL_T = 1.0         # v3.2: 1.5 -> 1.0
+POOL_SCREEN_T = 1.0           # v3.2: admission bar on the signed dev t (track B's screen keeps 2.0)
+POOL_COVERAGE = 0.90
 POOL_MIN_FRACTION = 0.3
 RELEASE_CHECKPOINTS = (25, 50, 100, 200, 400)
 
@@ -97,10 +99,16 @@ def member_features(panel: pd.DataFrame, members: list[dict], horizon: int,
         if key in have.columns:
             cols[key] = have[key].to_numpy(dtype=float)
             continue
-        feat = dsl.compile_expression(m["expression"], panel).to_numpy(dtype=float)
-        cols[key] = signed_rank(dates, feat, 1.0 if m["expected_direction"] == "positive" else -1.0)
+        try:
+            feat = dsl.compile_expression(m["expression"], panel).to_numpy(dtype=float)
+        except dsl.DSLError:                       # a panel without this member's source (tests, partial panels)
+            cols[key] = np.full(len(panel), np.nan)
+            continue
+        cols[key] = signed_rank(dates, feat, 1.0 if m["expression"] and m["expected_direction"] == "positive" else -1.0)
     out = pd.DataFrame(cols, index=panel.index)
-    if use_cache and len(members):
+    # write the cache only for the panel it was built on (never let a smaller
+    # test panel overwrite the screen panel's cache)
+    if use_cache and len(members) and (not cache.exists() or len(have) == len(panel)):
         POOL_DIR.mkdir(parents=True, exist_ok=True)
         out.to_parquet(cache, index=False)
     return out
@@ -129,14 +137,23 @@ def pool_signal(panel: pd.DataFrame, horizon: int, pool: dict | None = None) -> 
 # admission
 # ----------------------------------------------------------------------------
 def assess_against_pool(cand: np.ndarray, sign: float, dates: np.ndarray, label: np.ndarray,
-                        features: pd.DataFrame, comp: np.ndarray, nw_lags: int) -> dict:
+                        features: pd.DataFrame, comp: np.ndarray, nw_lags: int,
+                        incumbents: dict | None = None) -> dict:
     """Dev-segment statistics of one candidate (raw expression values on the
     dev rows) against the current pool: max |corr| with a member, residual
     t against the composite. Returns agent-visible numbers only."""
     from mining.redundancy import mean_rank_corr, residual_rank_ic
     from evaluation.metrics import summarize_ic
     out = {"pool_size": int(features.shape[1]), "pool_corr_max": 0.0, "pool_corr_with": "",
-           "residual_vs_pool_t": np.nan}
+           "residual_vs_pool_t": np.nan, "incumbent_corr_max": 0.0, "incumbent_corr_with": ""}
+    if incumbents:
+        ib, ik = 0.0, ""
+        for name, arr in incumbents.items():
+            c = mean_rank_corr(dates, cand, np.asarray(arr, dtype=float))
+            if abs(c) > abs(ib):
+                ib, ik = c, name
+        out["incumbent_corr_max"] = round(float(ib), 3)
+        out["incumbent_corr_with"] = ik
     if features.shape[1] == 0:
         return out
     best, best_key = 0.0, ""
@@ -152,17 +169,34 @@ def assess_against_pool(cand: np.ndarray, sign: float, dates: np.ndarray, label:
     return out
 
 
+def _signed_t(row: dict) -> float:
+    t = row.get("dev_t")
+    if t is None or (isinstance(t, float) and np.isnan(t)):
+        return -np.inf
+    return float(t) * (1.0 if row.get("expected_direction") == "positive" else -1.0)
+
+
 def admissible(row: dict) -> tuple[bool, str]:
-    """Admission rule on a screen row that already carries the pool fields."""
-    if not row.get("screen_pass"):
-        return False, "screen_fail"
+    """Admission rule (v3.2) on a screen row that carries the pool fields.
+    The track-B screen pass is NOT required: the pool's own bar is a signed
+    dev t of POOL_SCREEN_T with the usual coverage."""
+    if row.get("error"):
+        return False, "error"
     if row.get("quarantined"):
         return False, "quarantined"
     if row.get("duplicate_of"):
         return False, "duplicate"
+    if _signed_t(row) < POOL_SCREEN_T:
+        return False, f"signed dev t {_signed_t(row):+.2f} < {POOL_SCREEN_T}"
+    cov = row.get("coverage")
+    if cov is None or (isinstance(cov, float) and np.isnan(cov)) or float(cov) < POOL_COVERAGE:
+        return False, f"coverage {cov} < {POOL_COVERAGE}"
     rw = str(row.get("redundant_with") or "")
     if rw.startswith("incumbent:"):
         return False, f"redundant with {rw}"
+    ic = row.get("incumbent_corr_max")
+    if ic is not None and not (isinstance(ic, float) and np.isnan(ic)) and abs(float(ic)) >= POOL_CORR_MAX:
+        return False, f"corr {ic} with incumbent {row.get('incumbent_corr_with')}"
     if abs(float(row.get("pool_corr_max") or 0.0)) >= POOL_CORR_MAX:
         return False, f"corr {row.get('pool_corr_max')} with pool member {row.get('pool_corr_with')}"
     rt = row.get("residual_vs_pool_t")
@@ -191,7 +225,8 @@ def admit(horizon: int, rows: list[dict], source: str) -> list[dict]:
              "admitted": datetime.now().strftime("%Y-%m-%d"),
              "dev_ic": float(r.get("dev_ic") or 0.0), "dev_t": float(r.get("dev_t") or 0.0),
              "residual_vs_pool_t": r.get("residual_vs_pool_t"), "pool_corr_max": r.get("pool_corr_max"),
-             "pool_size_at_admission": int(r.get("pool_size") or 0)}
+             "incumbent_corr_max": r.get("incumbent_corr_max"), "coverage": r.get("coverage"),
+             "pool_size_at_admission": int(r.get("pool_size") or 0), "rule_version": "P-3.2"}
         pool["members"].append(m)
         have.add(h)
         new.append(m)

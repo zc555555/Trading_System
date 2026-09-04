@@ -28,6 +28,7 @@ def _panel(n_syms=4, n_days=300, seed=0, tz="America/New_York"):
             "date": dates, "symbol": f"S{i}", "open": close * (1 + rng.normal(0, 0.002, n_days)),
             "high": hi, "low": lo, "close": close,
             "volume": np.exp(rng.normal(14, 0.3, n_days)),
+            "sector": "A" if i % 2 == 0 else "B",          # for the sector-neutral operators
         }))
     return pd.concat(rows, ignore_index=True).sort_values(["date", "symbol"]).reset_index(drop=True)
 

@@ -89,7 +89,8 @@ AGENT_VISIBLE = ("candidate_id", "stage", "expression", "canonical", "proposal_h
                  "max_corr", "corr_with", "cluster_id", "cluster_rep", "redundant_with",
                  "cluster_size", "residual_dev_ic", "residual_dev_t", "residual_vs",
                  "oracle_flags", "quarantined",
-                 "pool_size", "pool_corr_max", "pool_corr_with", "residual_vs_pool_t")
+                 "pool_size", "pool_corr_max", "pool_corr_with", "residual_vs_pool_t",
+                 "incumbent_corr_max", "incumbent_corr_with")
 
 
 # --------------------------------------------------------------------------
@@ -242,8 +243,9 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
         row["quarantined"] = bool(flags)
         if flags:
             _oracle_log(p.candidate_id, flags)
-        if row["screen_pass"] and not flags:
-            row["_feature"] = feat.to_numpy()      # for the batch redundancy pass; never persisted
+        from mining.pool import POOL_SCREEN_T, POOL_COVERAGE
+        if not flags and (row["screen_pass"] or (signed_t >= POOL_SCREEN_T and coverage >= POOL_COVERAGE)):
+            row["_feature"] = feat.to_numpy()      # batch redundancy (passes) / pool fields; never persisted
     except Exception as e:  # the agent gets the message, the ledger keeps it too
         row["error"] = f"{type(e).__name__}: {e}"
         row["verdict"] = "error"
@@ -275,16 +277,18 @@ def pool_fields(rows: list[dict], panel: pd.DataFrame) -> None:
     """Track P: how much each pass adds to the current pool (dev segment)."""
     from mining import pool as pl
     pool = pl.load_pool(HORIZON)
-    passes = [r for r in rows if r.get("screen_pass") and "_feature" in r and not r.get("duplicate_of")]
-    if not passes:
+    cands = [r for r in rows if "_feature" in r and not r.get("duplicate_of")]     # v3.2: pool bar, not the screen bar
+    if not cands:
         return
     mask, dates, label = dev_rows(panel)
     feats = pl.member_features(panel, pool["members"], HORIZON)
     feats_dev = feats[mask].reset_index(drop=True)
     comp = pl.composite(feats_dev)
-    for r in passes:
+    refs = {k: v[mask] for k, v in _incumbent_refs_for(panel).items()}
+    for r in cands:
         sign = 1.0 if r.get("expected_direction") == "positive" else -1.0
-        r.update(pl.assess_against_pool(r["_feature"][mask], sign, dates, label, feats_dev, comp, NW_LAGS))
+        r.update(pl.assess_against_pool(r["_feature"][mask], sign, dates, label, feats_dev, comp, NW_LAGS,
+                                        incumbents=refs))
     for r in rows:
         r.setdefault("pool_size", len(pool["members"]))
 
@@ -549,6 +553,7 @@ def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list
     redundant_with). Returns the admitted members."""
     from mining import pool as pl
     mask, dates, label = dev_rows(panel)
+    refs = {k: v[mask] for k, v in _incumbent_refs_for(panel).items()}
     admitted = []
     for r in sorted(cands, key=lambda z: -abs(float(z.get("dev_t") or 0.0))):
         pool = pl.load_pool(HORIZON)
@@ -560,7 +565,7 @@ def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list
         feat = dsl.compile_expression(r["expression"], panel).to_numpy(dtype=float)
         sign = 1.0 if r.get("expected_direction") == "positive" else -1.0
         r = dict(r)
-        r.update(pl.assess_against_pool(feat[mask], sign, dates, label, feats_dev, comp, NW_LAGS))
+        r.update(pl.assess_against_pool(feat[mask], sign, dates, label, feats_dev, comp, NW_LAGS, incumbents=refs))
         ok, why = pl.admissible(r)
         print(f"  {r['candidate_id']:<28} dev_t {float(r.get('dev_t') or 0):+.2f} corr {r.get('pool_corr_max')} "
               f"resid {r.get('residual_vs_pool_t')} -> {why}")
@@ -579,7 +584,7 @@ def pool_candidates_from_run(run_dir: Path) -> list[dict]:
     for f in sorted(run_dir.glob("screen_*.json")):
         for r in json.load(open(f, encoding="utf-8")):
             pr = props.get(r.get("candidate_id"))
-            if pr and r.get("screen_pass") and not r.get("error"):
+            if pr and not r.get("error") and not r.get("duplicate_of"):
                 out.append({**r, "expected_direction": pr["expected_direction"], "expression": pr["expression"]})
     return out
 
@@ -588,7 +593,7 @@ def pool_candidates_from_ledger(ledger_path: Path = rb.MINED_LEDGER) -> list[dic
     """Every screen pass of this horizon recorded so far (seeding)."""
     led = rb.load_mined_ledger(ledger_path)
     scr = led[(led["stage"].astype(str) == "screen") & (rb.horizon_of(led) == HORIZON)]
-    scr = scr[scr["screen_pass"].map(rb.truthy) == True]        # noqa: E712
+    scr = scr[scr["verdict"].astype(str).isin(["screen_pass", "screen_fail"])]
     scr = scr.sort_values("date").drop_duplicates("candidate_id", keep="last")
     return [{k: (None if _isnan(v) else v) for k, v in r.items()} for _, r in scr.iterrows()]
 

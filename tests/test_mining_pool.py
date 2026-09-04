@@ -64,24 +64,30 @@ def _row(cid, **kw):
     base = {"candidate_id": cid, "expression": "rank(close)", "canonical": "rank(close)", "expected_direction": "positive",
             "screen_pass": True, "quarantined": False, "duplicate_of": "", "redundant_with": "",
             "pool_corr_max": 0.1, "pool_corr_with": "", "residual_vs_pool_t": 2.0, "pool_size": 3,
+            "incumbent_corr_max": 0.2, "incumbent_corr_with": "", "coverage": 0.97,
             "dev_ic": 0.01, "dev_t": 2.5}
     base.update(kw)
     return base
 
 
-def test_admission_rules():
+def test_admission_rules_v32():
     assert pl.admissible(_row("a"))[0]
-    assert not pl.admissible(_row("b", screen_pass=False))[0]
+    assert pl.admissible(_row("b", screen_pass=False, dev_t=1.2))[0]                    # v3.2: the pool bar is t >= 1
+    assert not pl.admissible(_row("b2", dev_t=0.8))[0]
+    assert not pl.admissible(_row("b3", dev_t=-2.5))[0]                                 # wrong sign for a positive claim
+    assert pl.admissible(_row("b4", dev_t=-1.4, expected_direction="negative"))[0]
+    assert not pl.admissible(_row("b5", coverage=0.85))[0]
     assert not pl.admissible(_row("c", quarantined=True))[0]
     assert not pl.admissible(_row("d", redundant_with="incumbent:returns_20d"))[0]
-    assert not pl.admissible(_row("e", pool_corr_max=0.75))[0]
-    assert not pl.admissible(_row("f", residual_vs_pool_t=1.2))[0]
+    assert not pl.admissible(_row("d2", incumbent_corr_max=-0.65))[0]
+    assert not pl.admissible(_row("e", pool_corr_max=0.62))[0]
+    assert not pl.admissible(_row("f", residual_vs_pool_t=0.8))[0]
     assert pl.admissible(_row("g", pool_size=0, residual_vs_pool_t=float("nan")))[0]   # first member: no composite yet
     assert pl.admissible(_row("h", redundant_with="some_prior"))[0]                    # prior-redundant is fine for the pool
 
 
 def test_admit_is_idempotent_and_status_reports_checkpoints():
-    rows = [_row("a"), _row("b", expression="rank(volume)", canonical="rank(volume)", expected_direction="negative"),
+    rows = [_row("a"), _row("b", expression="rank(volume)", canonical="rank(volume)", expected_direction="negative", dev_t=-2.5),
             _row("c", expression="rank(close)", canonical="rank(close)")]                # same expression as a
     new = pl.admit(20, rows, source="run1")
     assert [m["candidate_id"] for m in new] == ["a", "b"]
@@ -104,3 +110,6 @@ def test_assess_against_pool_signed_residual():
     assert abs(out["residual_vs_pool_t"]) < 1e-9                    # rank-identical: nothing left
     empty = pl.assess_against_pool(cand, 1.0, dates, label, pd.DataFrame(index=df.index), comp, nw_lags=19)
     assert empty["pool_size"] == 0 and np.isnan(empty["residual_vs_pool_t"])
+    inc = pl.assess_against_pool(cand, 1.0, dates, label, feats, comp, nw_lags=19,
+                                 incumbents={"vol": df["volume"].to_numpy(dtype=float), "px": cand})
+    assert inc["incumbent_corr_with"] == "px" and inc["incumbent_corr_max"] > 0.99

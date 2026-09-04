@@ -42,7 +42,7 @@ WIKI = DATA / "wikipedia_pageviews.parquet"
 INST_MAX_AGE = 70             # sessions a 13F quarter is carried (one quarter plus slack)
 # every path keyword attach() accepts; tests pass a nonexistent path for each to get a bare panel
 SOURCE_KWARGS = ("source", "news_source", "form4_source", "short_source", "xbrl_source", "regsho_source", "form13f_source",
-                 "wiki_source")
+                 "wiki_source", "sector_source")
 FUNDAMENTAL_FIELDS = ("book_to_market", "earnings_yield", "sales_to_price", "gross_profitability", "roe",
                       "asset_growth", "accruals", "leverage", "cash_to_assets", "rd_to_sales",
                       "capex_to_assets", "op_margin")
@@ -388,6 +388,37 @@ def attach_wikipedia(df: pd.DataFrame, pv: pd.DataFrame, known_through=None) -> 
     return out
 
 
+TICKERS = DATA / "sharadar_tickers.parquet"
+PRICES = DATA / "sharadar_prices.parquet"
+SECTOR_MAP = DATA / "sector_map.csv"
+
+
+def sector_table(tickers: Path = TICKERS, prices: Path = PRICES, fallback: Path = SECTOR_MAP) -> dict[str, str]:
+    """symbol -> sector (Sharadar's classification for every member incl.
+    delisted, Yahoo's sector_map.csv as fallback, 'Unknown' otherwise)."""
+    out: dict[str, str] = {}
+    if Path(fallback).exists():
+        m = pd.read_csv(fallback)
+        out.update({s: str(v) for s, v in zip(m["symbol"], m["sector"]) if isinstance(v, str) and v != "ETF"})
+    if Path(tickers).exists() and Path(prices).exists():
+        pairs = pd.read_parquet(prices, columns=["symbol", "ticker"]).drop_duplicates()
+        t2s = dict(zip(pairs["ticker"], pairs["symbol"]))
+        tk = pd.read_parquet(tickers, columns=["ticker", "sector"])
+        for t, sec in zip(tk["ticker"], tk["sector"]):
+            if t in t2s and isinstance(sec, str) and sec:
+                out[t2s[t]] = sec                      # Sharadar wins where both exist
+    return out
+
+
+def attach_sector(df: pd.DataFrame, table: dict[str, str] | None = None) -> pd.DataFrame:
+    """Static sector label per symbol (categorical, not a DSL field; used by
+    the sector-neutral operators). Missing -> 'Unknown', never guessed."""
+    table = sector_table() if table is None else table
+    out = df.copy()
+    out["sector"] = out["symbol"].map(table).fillna("Unknown").astype(str)
+    return out
+
+
 def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None = None,
            news_source: Path = GDELT, news: pd.DataFrame | None = None,
            form4_source: Path = FORM4, form4: pd.DataFrame | None = None,
@@ -395,7 +426,8 @@ def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None 
            xbrl_source: Path = XBRL, fundamentals: pd.DataFrame | None = None,
            regsho_source: Path = REGSHO, short_volume: pd.DataFrame | None = None,
            form13f_source: Path = FORM13F, form13f: pd.DataFrame | None = None,
-           wiki_source: Path = WIKI, wiki: pd.DataFrame | None = None) -> pd.DataFrame:
+           wiki_source: Path = WIKI, wiki: pd.DataFrame | None = None,
+           sector_source: Path | None = None) -> pd.DataFrame:
     """Attach every auxiliary field whose source is available; a field whose
     source is missing is simply absent (the DSL then refuses it). Order
     matters: the EDGAR share count feeds insider_net_frac and short_ratio."""
@@ -432,6 +464,9 @@ def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None 
         wiki = pd.read_parquet(wiki_source)
     if wiki is not None:
         out = attach_wikipedia(out, wiki)
+    sector_source = TICKERS if sector_source is None else sector_source
+    if "sector" not in out.columns and Path(sector_source).exists():
+        out = attach_sector(out, sector_table(tickers=Path(sector_source)))
     return out
 
 

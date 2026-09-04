@@ -175,6 +175,23 @@ A release that fails does not remove members; the pool keeps growing and
 the next checkpoint is the next test. The segment-rotation review
 re-adjudicates release rows like any full-stage row.
 
+**v3.2 admission (pre-registered 2026-09-04, user decision after two pool
+rounds admitted 4 of 80 candidates).** The pool's own bar replaces the
+track-B screen pass: signed dev t >= 1.0 in the declared direction,
+coverage >= 0.90, no oracle flag, |rho| < 0.6 with every incumbent feature
+and every member, residual dev t against the composite >= 1.0. Rationale:
+the tested object is the composite, whose noise shrinks with the square
+root of the number of uncorrelated members; a member is an input, not a
+claim. The release test is unchanged, and the development-segment IC of
+the pool is explicitly not evidence. Revert to the v3.1 bar if the first
+releases fail (the user's stated condition). Members record
+`rule_version` P-3.2.
+
+**Operators (2026-09-04).** `sector_rank(x)` and `sector_demean(x)`:
+cross-sectional operators within (date, sector); the sector label comes
+from Sharadar's classification (Yahoo's map as fallback, 'Unknown' never
+guessed). Search-space change only.
+
 **Fields (recorded 2026-09-04, mining paused).** Thirteen more fields while
 rounds are paused: twelve point-in-time accounting ratios from the EDGAR
 XBRL cache (`book_to_market` ... `op_margin`, see mining/README) and the

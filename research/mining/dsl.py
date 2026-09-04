@@ -107,6 +107,8 @@ OPS: dict[str, tuple[str, tuple[str, ...], str]] = {
     # cross-sectional (per date, across symbols)
     "rank":         ("cs", ("x",), "percentile rank across symbols on the same date"),
     "zscore":       ("cs", ("x",), "z-score across symbols on the same date"),
+    "sector_rank":  ("cs", ("x",), "percentile rank across symbols of the SAME SECTOR on the same date (sector-neutral)"),
+    "sector_demean": ("cs", ("x",), "x minus the same-date mean of its sector (sector-neutral level)"),
     "demean":       ("cs", ("x",), "x minus the same-date cross-sectional mean"),
     # element-wise
     "add":   ("ew", ("x", "x"), "a + b"),
@@ -320,6 +322,7 @@ class _Ctx:
         self.f = frame
         self.sym = sym
         self.dt = dt
+        self.sector = frame["sector"] if "sector" in frame.columns else None
         self._fields: dict[str, pd.Series] = {}
 
     def field(self, name: str) -> pd.Series:
@@ -415,6 +418,11 @@ def _eval(node, ctx: _Ctx):
 
     if kind == "cs":
         x = _series(ctx, _eval(node.args[0], ctx))
+        if op in ("sector_rank", "sector_demean"):
+            if ctx.sector is None:
+                raise DSLError("sector-neutral operators need a `sector` column on the panel (aux_fields.attach_sector)")
+            gs = x.groupby([ctx.dt, ctx.sector], sort=False)
+            return gs.rank(pct=True) if op == "sector_rank" else x - gs.transform("mean")
         g = x.groupby(ctx.dt, sort=False)
         if op == "rank":
             return g.rank(pct=True)
@@ -489,6 +497,8 @@ def compile_expression(expr: str, df: pd.DataFrame,
     missing = [c for c in need if c not in df.columns]
     if missing:
         raise DSLError(f"panel is missing columns {missing}")
+    if "sector" in df.columns:                        # categorical label for the sector-neutral operators
+        need.append("sector")
 
     sym_codes, _ = pd.factorize(df[symbol_col], sort=True)
     dt_key = pd.to_datetime(df[date_col]).astype("int64").to_numpy()
