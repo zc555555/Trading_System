@@ -32,7 +32,7 @@ import pandas as pd
 
 RESEARCH = Path(__file__).resolve().parent.parent
 RUNS = RESEARCH / "mining" / "runs"
-MAX_CHARS = 16000
+MAX_CHARS = 60000        # 2026-09-04: 16000 truncated the expression index after twelve runs
 NOTES_PER_RUN = 5000
 RECENT_RUNS = 2
 STATUSES = ("dead", "weak", "promising", "untested")
