@@ -7,12 +7,16 @@
        no incremental filter worth the complexity).
     3. GDELT: rescan the current year (and the previous one in January) with
        the full name table; earlier years are kept.
-    4. Rebuild both mining screen caches so the next run sees the new data.
+    4. FINRA Reg SHO daily short volume (missing sessions only), SEC Form 13F
+       (new quarters only), Wikipedia page views (incremental per article),
+       the EDGAR companyfacts cache + CIK repair + share-count and
+       fundamentals tables (~1 h).
+    5. Rebuild both mining screen caches so the next run sees the new data.
 
 Nothing here touches production: the nightly pipeline does not read these
 files (see PRODUCTION.md). Exit code 0 unless a step raised.
 
-Usage:  python data/refresh_mining_sources.py [--skip sec,finra,gdelt,caches]
+Usage:  python data/refresh_mining_sources.py [--skip sec,finra,gdelt,regsho,form13f,wiki,edgar,caches]
 """
 
 from __future__ import annotations
@@ -80,6 +84,50 @@ def refresh_gdelt() -> None:
                     "--years", *[str(y) for y in years]], check=True)
 
 
+def refresh_regsho() -> None:
+    subprocess.run([PY, str(DATA / "fetch_regsho_short_volume.py"), "--sleep", "0.12"], check=True)
+
+
+FORM13F = DATA / "form13f"
+SEC_13F_PAGE = "https://www.sec.gov/data-research/sec-markets-data/form-13f-data-sets"
+
+
+def refresh_form13f() -> None:
+    """Download 13F quarterly zips not yet on disk, then rebuild the table."""
+    FORM13F.mkdir(exist_ok=True)
+    html = requests.get(SEC_13F_PAGE, headers=UA, timeout=60).text
+    links = sorted(set(re.findall(r'href="([^"]*?form13f[^"]*?\.zip)"', html)))
+    new = False
+    for href in links:
+        target = FORM13F / href.rsplit("/", 1)[-1]
+        if target.exists() and target.stat().st_size > 0:
+            continue
+        url = href if href.startswith("http") else "https://www.sec.gov" + href
+        r = requests.get(url, headers=UA, timeout=600)
+        if r.status_code != 200 or len(r.content) < 1000:
+            log(f"  13F {target.name}: HTTP {r.status_code}, skipped")
+            continue
+        target.write_bytes(r.content)
+        log(f"  13F {target.name}: downloaded {len(r.content) / 1e6:.0f} MB")
+        new = True
+        time.sleep(0.5)
+    if new or not (DATA / "form13f_quarterly.parquet").exists():
+        subprocess.run([PY, str(DATA / "build_form13f_fields.py")], check=True)
+    else:
+        log("  13F: no new quarter")
+
+
+def refresh_wikipedia() -> None:
+    subprocess.run([PY, str(DATA / "fetch_wikipedia_pageviews.py"), "--sleep", "0.15"], check=True)
+
+
+def refresh_edgar() -> None:
+    """Companyfacts cache for every member (~20 min), the CIK repair (a refetch
+    overwrites merged caches), then the share-count and fundamentals tables."""
+    for script in ("fetch_fundamentals.py", "fix_edgar_cache_ciks.py", "build_edgar_fields.py", "build_xbrl_fundamentals.py"):
+        subprocess.run([PY, str(DATA / script)], check=True)
+
+
 def rebuild_caches() -> None:
     code = ("import sys; sys.path.insert(0, r'%s'); from mining import harness\n"
             "for h in (20, 5):\n"
@@ -90,10 +138,11 @@ def rebuild_caches() -> None:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--skip", default="", help="comma-separated: sec,finra,gdelt,caches")
+    ap.add_argument("--skip", default="", help="comma-separated: sec,finra,gdelt,regsho,form13f,wiki,edgar,caches")
     args = ap.parse_args()
     skip = {s.strip() for s in args.skip.split(",") if s.strip()}
-    steps = [("sec", refresh_sec), ("finra", refresh_finra), ("gdelt", refresh_gdelt), ("caches", rebuild_caches)]
+    steps = [("sec", refresh_sec), ("finra", refresh_finra), ("gdelt", refresh_gdelt), ("regsho", refresh_regsho),
+             ("form13f", refresh_form13f), ("wiki", refresh_wikipedia), ("edgar", refresh_edgar), ("caches", rebuild_caches)]
     failed = []
     for name, fn in steps:
         if name in skip:
