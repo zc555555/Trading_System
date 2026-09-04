@@ -34,7 +34,7 @@ and one JSON blob out. Rules: [`evaluation/RULEBOOK.md`](../evaluation/RULEBOOK.
   interest, GDELT current year, both screen caches; scheduled monthly by
   `scripts/run_refresh_sources_scheduled.bat`.
 
-## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest, XBRL fundamentals, Reg SHO; point-in-time)
+## Auxiliary fields (SEC EDGAR, GDELT news, Form 4, FINRA short interest, XBRL fundamentals, Reg SHO, 13F; point-in-time)
 
 Fundamentals (`data/build_xbrl_fundamentals.py` -> `data/xbrl_fundamentals.parquet`,
 from the EDGAR companyfacts cache): twelve ratio fields formed daily by
@@ -48,6 +48,15 @@ reported again later the EARLIEST filing wins, so restatements never leak
 backwards; a metric whose latest period is older than 400 days is unknown.
 Issuers that changed CIK keep their history through
 `data/fix_edgar_cache_ciks.py` (Sharadar's CIK merged into the cache).
+
+Institutional ownership (`data/build_form13f_fields.py` ->
+`data/form13f_quarterly.parquet`, SEC Form 13F data sets, quarters from 2013):
+`inst_own` (13F-reported shares / EDGAR share count), `inst_holders` (number
+of managers, Chen-Hong-Stein breadth), `inst_top5` (share of the five largest
+holders). Only original 13F-HR filings made by the 45-day deadline count and
+a quarter is usable from the first session after that deadline (carried at
+most 70 sessions); late filers and amendments never update history. CUSIPs
+map to symbols through Sharadar's TICKERS table.
 
 Daily short volume (`data/fetch_regsho_short_volume.py` ->
 `data/regsho_short_volume.parquet`, FINRA Reg SHO consolidated NMS files,

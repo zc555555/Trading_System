@@ -91,4 +91,4 @@ def test_dsl_refuses_an_unavailable_field_and_uses_an_available_one():
     assert dsl.compile_expression("ts_max(filing_days, 3) + log(marketcap) + rank(turnover)", out).notna().sum() > 0
     assert set(dsl.AUX_FIELDS) <= set(dsl.FIELDS) and "filing_days" in dsl.describe_ops()
     assert dsl.lookback(dsl.parse("filing_days")) == 0
-    assert ax.attach(df, source=NONE, news_source=NONE, form4_source=NONE, short_source=NONE) is df   # no source at all
+    assert ax.attach(df, **{k: NONE for k in ax.SOURCE_KWARGS}) is df   # no source at all: unchanged, fields absent

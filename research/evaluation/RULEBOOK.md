@@ -145,6 +145,8 @@ XBRL cache (`book_to_market` ... `op_margin`, see mining/README) and the
 FINRA Reg SHO daily short-volume ratio `short_vol_ratio` (from 2018), plus
 one elementwise operator `fillna(x, c)` (where() keeps NaN conditions NaN,
 so sparse daily fields could not be windowed before).
+Later the same day: `inst_own`, `inst_holders`, `inst_top5` from the SEC
+Form 13F data sets (usable from the session after the 45-day deadline).
 Search-space change only; no full-stage candidate is added before the
 2026-11-15 review, so the BH families are unchanged. New sources are checked
 with screen-stage runs that are NOT recorded in the ledger (`screen

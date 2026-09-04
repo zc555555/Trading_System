@@ -37,12 +37,16 @@ FORM4 = DATA / "form4_daily.parquet"
 SHORT = DATA / "finra_short_interest.parquet"
 XBRL = DATA / "xbrl_fundamentals.parquet"
 REGSHO = DATA / "regsho_short_volume.parquet"
+FORM13F = DATA / "form13f_quarterly.parquet"
+INST_MAX_AGE = 70             # sessions a 13F quarter is carried (one quarter plus slack)
+# every path keyword attach() accepts; tests pass a nonexistent path for each to get a bare panel
+SOURCE_KWARGS = ("source", "news_source", "form4_source", "short_source", "xbrl_source", "regsho_source", "form13f_source")
 FUNDAMENTAL_FIELDS = ("book_to_market", "earnings_yield", "sales_to_price", "gross_profitability", "roe",
                       "asset_growth", "accruals", "leverage", "cash_to_assets", "rd_to_sales",
                       "capex_to_assets", "op_margin")
 AUX_FIELDS = ("marketcap", "turnover", "filing_days", "news_tone", "news_articles",
               "insider_buys", "insider_sells", "insider_net_frac", "short_ratio", "days_to_cover") + FUNDAMENTAL_FIELDS \
-             + ("short_vol_ratio",)
+             + ("short_vol_ratio", "inst_own", "inst_holders", "inst_top5")
 FUNDAMENTALS_MAX_AGE = 300    # sessions without any filing -> the fundamentals are unknown
 SHARES_MAX_AGE = 130          # ~two quarters of sessions
 SHORT_INTEREST_LAG = 10       # sessions after settlement before FINRA's figure is public (~7 business days)
@@ -314,12 +318,49 @@ def attach_short_volume(df: pd.DataFrame, sv: pd.DataFrame, known_through=None) 
     return out
 
 
+def attach_form13f(df: pd.DataFrame, q: pd.DataFrame) -> pd.DataFrame:
+    """Institutional ownership from Form 13F (data/build_form13f_fields.py).
+
+    inst_own      13F-reported shares / shares outstanding (EDGAR)
+    inst_holders  number of 13F managers holding the stock
+    inst_top5     share of institutional holdings held by the five largest
+
+    A quarter P is usable from the first session strictly after its
+    `usable_from` date (P + 45 days, the filing deadline) and is carried at
+    most INST_MAX_AGE sessions; NaN before a symbol's first quarter."""
+    out = df.copy()
+    naive = _naive_dates(out["date"])
+    sessions = np.sort(naive.unique())
+    ord_of = pd.Series(np.arange(len(sessions)), index=sessions)
+    out["_ord"] = ord_of.reindex(naive.to_numpy()).to_numpy()
+    f = q[["symbol", "usable_from", "inst_shares", "inst_holders", "top5_share"]].copy()
+    f["usable_from"] = pd.to_datetime(f["usable_from"]).dt.normalize()
+    a = np.searchsorted(sessions, f["usable_from"].to_numpy(dtype="datetime64[ns]"), side="right")
+    keep = a < len(sessions)
+    f = f[keep].copy()
+    f["eff_ord"] = a[keep]
+    f = f.sort_values("eff_ord").drop_duplicates(["symbol", "eff_ord"], keep="last")
+    left = out[["symbol", "_ord"]].reset_index().sort_values("_ord")
+    merged = pd.merge_asof(left, f[["symbol", "eff_ord", "inst_shares", "inst_holders", "top5_share"]].sort_values("eff_ord"),
+                           left_on="_ord", right_on="eff_ord", by="symbol", direction="backward")
+    merged = merged.set_index("index").sort_index()
+    fresh = (merged["_ord"] - merged["eff_ord"]).astype(float) <= INST_MAX_AGE
+    shares = merged["inst_shares"].astype(float).where(fresh).reindex(out.index).to_numpy()
+    out["inst_own"] = shares / _shares(out)
+    out["inst_holders"] = merged["inst_holders"].astype(float).where(fresh).reindex(out.index).to_numpy()
+    out["inst_top5"] = merged["top5_share"].astype(float).where(fresh).reindex(out.index).to_numpy()
+    for c in ("inst_own", "inst_holders", "inst_top5"):
+        out.loc[~np.isfinite(out[c]), c] = np.nan
+    return out.drop(columns=["_ord"])
+
+
 def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None = None,
            news_source: Path = GDELT, news: pd.DataFrame | None = None,
            form4_source: Path = FORM4, form4: pd.DataFrame | None = None,
            short_source: Path = SHORT, short: pd.DataFrame | None = None,
            xbrl_source: Path = XBRL, fundamentals: pd.DataFrame | None = None,
-           regsho_source: Path = REGSHO, short_volume: pd.DataFrame | None = None) -> pd.DataFrame:
+           regsho_source: Path = REGSHO, short_volume: pd.DataFrame | None = None,
+           form13f_source: Path = FORM13F, form13f: pd.DataFrame | None = None) -> pd.DataFrame:
     """Attach every auxiliary field whose source is available; a field whose
     source is missing is simply absent (the DSL then refuses it). Order
     matters: the EDGAR share count feeds insider_net_frac and short_ratio."""
@@ -348,6 +389,10 @@ def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None 
         short_volume = pd.read_parquet(regsho_source, columns=["symbol", "date", "short_ratio_day"])
     if short_volume is not None:
         out = attach_short_volume(out, short_volume)
+    if form13f is None and Path(form13f_source).exists():
+        form13f = pd.read_parquet(form13f_source)
+    if form13f is not None:
+        out = attach_form13f(out, form13f)
     return out
 
 
