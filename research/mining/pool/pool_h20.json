@@ -1,0 +1,48 @@
+{
+ "horizon": 20,
+ "members": [
+  {
+   "candidate_id": "si_ranksum20",
+   "expression": "rank(days_to_cover) + rank(short_ratio)",
+   "canonical": "add(rank(days_to_cover), rank(short_ratio))",
+   "hash": "7a554c1125e5",
+   "expected_direction": "negative",
+   "source": "seed:ledger",
+   "admitted": "2026-09-04",
+   "dev_ic": -0.0446847063615695,
+   "dev_t": -3.869440024238057,
+   "residual_vs_pool_t": NaN,
+   "pool_corr_max": 0.0,
+   "pool_size_at_admission": 0
+  },
+  {
+   "candidate_id": "volvol_maxratio_20_60_blend",
+   "expression": "add(rank(div(ts_max(dollar_volume, 20), ts_mean(dollar_volume, 20))), rank(div(ts_max(dollar_volume, 60), ts_mean(dollar_volume, 60))))",
+   "canonical": "add(rank(div(ts_max(dollar_volume, 20), ts_mean(dollar_volume, 20))), rank(div(ts_max(dollar_volume, 60), ts_mean(dollar_volume, 60))))",
+   "hash": "f2bbeb67638b",
+   "expected_direction": "negative",
+   "source": "seed:ledger",
+   "admitted": "2026-09-04",
+   "dev_ic": -0.0242294446039931,
+   "dev_t": -3.059655006518076,
+   "residual_vs_pool_t": 2.35,
+   "pool_corr_max": -0.101,
+   "pool_size_at_admission": 1
+  },
+  {
+   "candidate_id": "tone_shock_20_120",
+   "expression": "ts_sum(where(news_articles > 0, news_tone * news_articles, 0), 20) / (ts_sum(news_articles, 20) + 1) - ts_sum(where(news_articles > 0, news_tone * news_articles, 0), 120) / (ts_sum(news_articles, 120) + 1)",
+   "canonical": "sub(div(ts_sum(where(gt(news_articles, 0), mul(news_tone, news_articles), 0), 20), add(ts_sum(news_articles, 20), 1)), div(ts_sum(where(gt(news_articles, 0), mul(news_tone, news_articles), 0), 120), add(ts_sum(news_articles, 120), 1)))",
+   "hash": "d2c9e36f6076",
+   "expected_direction": "positive",
+   "source": "seed:ledger",
+   "admitted": "2026-09-04",
+   "dev_ic": 0.0194377965833649,
+   "dev_t": 2.3880610339829342,
+   "residual_vs_pool_t": 2.258,
+   "pool_corr_max": 0.03,
+   "pool_size_at_admission": 2
+  }
+ ],
+ "releases": []
+}

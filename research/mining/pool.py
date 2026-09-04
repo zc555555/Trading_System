@@ -112,8 +112,9 @@ def composite(features: pd.DataFrame) -> np.ndarray:
     arr = features.to_numpy(dtype=float)
     n_ok = np.sum(~np.isnan(arr), axis=1)
     need = max(1, int(np.ceil(POOL_MIN_FRACTION * arr.shape[1])))
-    with np.errstate(invalid="ignore"):
-        mean = np.nanmean(np.where(np.isnan(arr), np.nan, arr), axis=1)
+    summed = np.nansum(arr, axis=1)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        mean = np.where(n_ok > 0, summed / np.maximum(n_ok, 1), np.nan)
     return np.where(n_ok >= need, mean, np.nan)
 
 
