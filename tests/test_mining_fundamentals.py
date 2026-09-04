@@ -87,3 +87,16 @@ def test_ratio_fields_timing_zero_rules_and_expiry():
     s = dsl.compile_expression("rank(gross_profitability) - rank(asset_growth)", out)
     assert s.notna().sum() == 0 or True                                                 # single covered symbol: rank may be NaN
     assert all(f in dsl.describe_ops() for f in ax.FUNDAMENTAL_FIELDS)
+
+
+def test_year_to_date_cash_flow_facts_are_differenced_into_quarters():
+    # operating cash flow reported only cumulatively from the fiscal-year start (3, 6, 9, 12 months)
+    ocf = [_fact("2023-01-01", "2023-03-31", 30, "2023-05-01"), _fact("2023-01-01", "2023-06-30", 70, "2023-08-01"),
+           _fact("2023-01-01", "2023-09-30", 120, "2023-11-01"), _fact("2023-01-01", "2023-12-31", 180, "2024-02-15", "10-K"),
+           _fact("2024-01-01", "2024-03-31", 40, "2024-05-01")]
+    gaap = {"NetCashProvidedByUsedInOperatingActivities": {"units": {"USD": ocf}}}
+    q = bx.quarterly_series(bx._facts(gaap, bx.FLOW_TAGS["ocf"]))
+    assert q["val"].tolist() == [30, 40, 50, 60, 40]                     # Q1, Q2 = 70-30, Q3 = 120-70, Q4 = 180-120, Q1'24
+    df = bx.build_symbol("AAA", gaap).set_index("filed")
+    assert abs(df.loc["2024-02-15", "ocf_ttm"] - 180) < 1e-9
+    assert abs(df.loc["2024-05-01", "ocf_ttm"] - (40 + 50 + 60 + 40)) < 1e-9

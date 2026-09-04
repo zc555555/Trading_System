@@ -94,21 +94,43 @@ def _facts(gaap: dict, tags: list[str]) -> pd.DataFrame:
 
 def quarterly_series(fl: pd.DataFrame) -> pd.DataFrame:
     """3-month values per fiscal quarter end with the filing date they became
-    known; Q4 derived from the fiscal-year fact minus its three quarters."""
+    known.
+
+    Income-statement items usually come as 3-month facts plus the fiscal
+    year (Q4 = year minus the three quarters); cash-flow items come only as
+    year-to-date facts (3, 6, 9, 12 months from the fiscal year start), so
+    every fact is treated as cumulative from its `start`: within one start
+    date, consecutive period ends about a quarter apart are differenced.
+    A 3-month fact is its own quarter. The filing date of a differenced
+    quarter is the later of the two filings it needs."""
     fl = fl[fl["start"].notna()].copy()
     fl["dur"] = (fl["end"] - fl["start"]).dt.days
-    q = fl[fl["dur"].between(*QUARTER)][["start", "end", "val", "filed"]].copy()
-    y = fl[fl["dur"].between(*YEAR)][["start", "end", "val", "filed"]].copy()
-    derived = []
+    rows = []
+    for _, r in fl[fl["dur"].between(*QUARTER)].iterrows():
+        rows.append({"end": r["end"], "val": r["val"], "filed": r["filed"]})
+    cum = fl[fl["dur"] > QUARTER[1]].sort_values(["start", "end"])
+    for start, g in cum.groupby("start"):
+        # everything cumulative from this start: 3-month facts with the same start first
+        prev = fl[(fl["start"] == start) & fl["dur"].between(*QUARTER)]
+        chain = pd.concat([prev, g]).sort_values("end").drop_duplicates("end", keep="first")
+        for i in range(1, len(chain)):
+            gap = (chain["end"].iloc[i] - chain["end"].iloc[i - 1]).days
+            if QUARTER[0] <= gap <= QUARTER[1]:
+                rows.append({"end": chain["end"].iloc[i],
+                             "val": chain["val"].iloc[i] - chain["val"].iloc[i - 1],
+                             "filed": max(chain["filed"].iloc[i], chain["filed"].iloc[i - 1])})
+    # fiscal year minus three direct quarters (income statement without a YTD chain)
+    y = fl[fl["dur"].between(*YEAR)]
+    q3 = pd.DataFrame(rows) if rows else pd.DataFrame(columns=["end", "val", "filed"])
     for _, yr in y.iterrows():
-        inside = q[(q["start"] >= yr["start"] - pd.Timedelta(days=10)) & (q["end"] <= yr["end"] - pd.Timedelta(days=60))]
-        if len(inside) == 3:
-            derived.append({"start": inside["end"].max(), "end": yr["end"],
-                            "val": yr["val"] - inside["val"].sum(),
-                            "filed": max(yr["filed"], inside["filed"].max())})
-    if derived:
-        q = pd.concat([q, pd.DataFrame(derived)], ignore_index=True)
-    q = q.sort_values(["end", "filed"]).drop_duplicates("end", keep="first")
+        inside = q3[(q3["end"] > yr["start"]) & (q3["end"] <= yr["end"] - pd.Timedelta(days=60))]
+        inside = inside.sort_values(["end", "filed"]).drop_duplicates("end", keep="first")
+        if len(inside) == 3 and not ((q3["end"] - yr["end"]).abs() <= pd.Timedelta(days=10)).any():
+            rows.append({"end": yr["end"], "val": yr["val"] - inside["val"].sum(),
+                         "filed": max(yr["filed"], inside["filed"].max())})
+    if not rows:
+        return pd.DataFrame(columns=["end", "val", "filed"])
+    q = pd.DataFrame(rows).sort_values(["end", "filed"]).drop_duplicates("end", keep="first")
     return q[["end", "val", "filed"]].reset_index(drop=True)
 
 
