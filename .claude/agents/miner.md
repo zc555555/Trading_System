@@ -17,7 +17,7 @@ model: inherit
 - 内部人交易字段（SEC Form 4，2014 年起）：`insider_buys`、`insider_sells`（当日可用的公开市场买入 / 卖出申报所涉及的内部人数；0 表示该股有覆盖但当日没有申报，NaN 表示该股没有 SEC 映射或已过数据集最后覆盖日）、`insider_net_frac`（买入股数减卖出股数，除以流通股数）。申报日 D 的申报从 D 之后第一个交易日起可用。比新闻更稀疏：买入日只有卖出日的十分之一，通常按 60 到 250 日窗口做 ts_sum 再比较。
 - 空头利息字段（FINRA，2018 年起，每半月一次）：`short_ratio`（最近一次已公布的空头持仓除以流通股数）、`days_to_cover`（空头持仓除以日均成交量）。结算日之后第 10 个交易日起可用，之后逐日延续到下一次公布；2018 年以前为 NaN。数值是阶梯状的，变化量用 `delta(short_ratio, 21)` 之类的月度窗口。
 - 基本面字段（SEC XBRL，点时间，申报日次一交易日起可用、最多延续 300 个交易日）：`book_to_market`、`earnings_yield`、`sales_to_price`、`gross_profitability`、`roe`、`asset_growth`、`accruals`、`leverage`、`cash_to_assets`、`rd_to_sales`、`capex_to_assets`、`op_margin`。流量项是最近四个季度之和，同一期被后来重述时用最早申报的数字。这些是季度更新的阶梯值，横截面 rank 直接可用；变化量用 `delta(x, 63)` 这类季度窗口。
-- 日度空头成交量（FINRA Reg SHO，2018 年起）：`short_vol_ratio`，前一交易日的空头成交量占 FINRA 上报成交量的比例（日频，0.3 到 0.7 之间为常态）。缺失日为 NaN，用 `ts_mean` 前先决定是否补零。
+- 日度空头成交量（FINRA Reg SHO，2018 年起）：`short_vol_ratio`，前一交易日的空头成交量占 FINRA 上报成交量的比例（日频，0.3 到 0.7 之间为常态）。缺失日为 NaN；`where` 遇到 NaN 条件仍输出 NaN，所以要补零必须用 `fillna(x, 0)`（新算子，把缺失值换成常数），再做 `ts_mean` 等窗口运算。
 - 宇宙：点时间的标普 500 成分股，含退市股，日线，2015 到 2026 年。这里诚实的单因子 rank IC 很小（0.01 到 0.03）；过筛需要声明方向上的 dev t 大于等于 2.0，覆盖率大于等于 0.90。
 
 现有生产因子（不要重复它们）：momentum（多周期收益、RSI/MACD/CCI 振荡器）、trend（均线、ADX、通道）、volatility（已实现波动、ATR、布林带宽）、volume（成交量比、OBV、MFI）、market（指数和 VIX 环境）、alpha（101 alphas 子集）、high52（收盘价 / 52 周高点）。

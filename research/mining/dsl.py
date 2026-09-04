@@ -120,6 +120,7 @@ OPS: dict[str, tuple[str, tuple[str, ...], str]] = {
     "sqrt":  ("ew", ("x",), "sign(x) * sqrt(|x|)"),
     "pow":   ("ew", ("x", "c"), "sign(x) * |x| ** c"),
     "clip":  ("ew", ("x", "c", "c"), "clip x to [lo, hi]"),
+    "fillna": ("ew", ("x", "c"), "x with missing values replaced by the constant c (where() keeps NaN conditions NaN)"),
 }
 _BINOPS: dict[type, str] = {ast.Add: "add", ast.Sub: "sub", ast.Mult: "mul", ast.Div: "div", ast.Pow: "pow"}
 _CMPOPS: dict[type, str] = {ast.Gt: "gt", ast.Lt: "lt"}
@@ -457,6 +458,9 @@ def _eval(node, ctx: _Ctx):
         return np.sign(x) * np.sqrt(np.abs(x))
     if op == "pow":
         return np.sign(x) * np.abs(x) ** float(vals[1])
+    if op == "fillna":
+        return pd.Series(np.where(np.isnan(x.to_numpy(dtype=float)), float(vals[1]), x.to_numpy(dtype=float)),
+                         index=x.index)
     if op == "clip":
         return np.clip(x, float(vals[1]), float(vals[2]))
     raise DSLError(f"unhandled op {op}")  # pragma: no cover

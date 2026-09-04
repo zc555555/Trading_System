@@ -142,7 +142,9 @@ refresh monthly through `scripts/run_refresh_sources_scheduled.bat`.
 **Fields (recorded 2026-09-04, mining paused).** Thirteen more fields while
 rounds are paused: twelve point-in-time accounting ratios from the EDGAR
 XBRL cache (`book_to_market` ... `op_margin`, see mining/README) and the
-FINRA Reg SHO daily short-volume ratio `short_vol_ratio` (from 2018).
+FINRA Reg SHO daily short-volume ratio `short_vol_ratio` (from 2018), plus
+one elementwise operator `fillna(x, c)` (where() keeps NaN conditions NaN,
+so sparse daily fields could not be windowed before).
 Search-space change only; no full-stage candidate is added before the
 2026-11-15 review, so the BH families are unchanged. New sources are checked
 with screen-stage runs that are NOT recorded in the ledger (`screen

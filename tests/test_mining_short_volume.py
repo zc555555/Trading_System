@@ -55,5 +55,17 @@ def test_future_rows_never_move_the_past_and_dsl_sees_it():
     out = ax.attach(df, source=NONE, news_source=NONE, form4_source=NONE, short_source=NONE, xbrl_source=NONE,
                     regsho_source=NONE, short_volume=base)
     assert "short_vol_ratio" in out.columns and "short_vol_ratio" in dsl.describe_ops()
-    s = dsl.compile_expression("ts_mean(where(short_vol_ratio > 0, short_vol_ratio, 0), 3)", out)
-    assert s.notna().sum() > 0
+    s = dsl.compile_expression("short_vol_ratio * 2", out)
+    assert s.notna().sum() == 1                                          # one usable session in `base`
+
+
+def test_fillna_operator_makes_sparse_daily_fields_windowable():
+    df = _panel()
+    sv = pd.DataFrame({"symbol": ["AAA", "AAA"], "date": ["2024-01-02", "2024-01-05"], "short_ratio_day": [0.4, 0.6]})
+    out = ax.attach_short_volume(df, sv, known_through="2024-12-31")
+    raw = dsl.compile_expression("ts_mean(short_vol_ratio, 3)", out)
+    filled = dsl.compile_expression("ts_mean(fillna(short_vol_ratio, 0), 3)", out)
+    assert raw.notna().sum() == 0 and filled.notna().sum() > 0
+    a = filled[out.symbol == "AAA"].to_numpy()
+    assert abs(a[4] - (0.4 + 0 + 0) / 3) < 1e-12                      # sessions 01-03..01-05 -> 0.4, 0, 0
+    assert "fillna" in dsl.describe_ops()
