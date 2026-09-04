@@ -69,3 +69,14 @@ def test_fillna_operator_makes_sparse_daily_fields_windowable():
     a = filled[out.symbol == "AAA"].to_numpy()
     assert abs(a[4] - (0.4 + 0 + 0) / 3) < 1e-12                      # sessions 01-03..01-05 -> 0.4, 0, 0
     assert "fillna" in dsl.describe_ops()
+
+
+def test_fillna_keeps_leading_nans_before_coverage_starts():
+    df = _panel()
+    sv = pd.DataFrame({"symbol": ["AAA", "AAA"], "date": ["2024-01-10", "2024-01-12"], "short_ratio_day": [0.4, 0.6]})
+    out = ax.attach_short_volume(df, sv, known_through="2024-12-31")
+    f = dsl.compile_expression("fillna(short_vol_ratio, 0)", out)
+    a = f[out.symbol == "AAA"].to_numpy()
+    assert np.isnan(a[:8]).all()                                         # sessions before 2024-01-11 (index 8): not covered yet
+    assert a[8] == 0.4 and a[9] == 0.0 and a[10] == 0.6 and (a[11:] == 0.0).all()   # Wed file -> Thu; Fri file -> Mon
+    assert np.isnan(f[out.symbol == "BBB"].to_numpy()).all()             # never covered: stays NaN

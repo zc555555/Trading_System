@@ -120,7 +120,7 @@ OPS: dict[str, tuple[str, tuple[str, ...], str]] = {
     "sqrt":  ("ew", ("x",), "sign(x) * sqrt(|x|)"),
     "pow":   ("ew", ("x", "c"), "sign(x) * |x| ** c"),
     "clip":  ("ew", ("x", "c", "c"), "clip x to [lo, hi]"),
-    "fillna": ("ew", ("x", "c"), "x with missing values replaced by the constant c (where() keeps NaN conditions NaN)"),
+    "fillna": ("ew", ("x", "c"), "x with missing values replaced by c, but only from the symbol's first observation on (a source that starts in 2018 stays NaN before 2018)"),
 }
 _BINOPS: dict[type, str] = {ast.Add: "add", ast.Sub: "sub", ast.Mult: "mul", ast.Div: "div", ast.Pow: "pow"}
 _CMPOPS: dict[type, str] = {ast.Gt: "gt", ast.Lt: "lt"}
@@ -459,8 +459,11 @@ def _eval(node, ctx: _Ctx):
     if op == "pow":
         return np.sign(x) * np.abs(x) ** float(vals[1])
     if op == "fillna":
-        return pd.Series(np.where(np.isnan(x.to_numpy(dtype=float)), float(vals[1]), x.to_numpy(dtype=float)),
-                         index=x.index)
+        xv = x.to_numpy(dtype=float)
+        # leading NaNs (before the symbol's first valid observation) are "not covered yet", not "missing":
+        # filling them would fabricate a constant history before the source starts
+        seen = pd.Series(~np.isnan(xv), index=x.index).groupby(ctx.f["symbol"].to_numpy()).cummax().to_numpy()
+        return pd.Series(np.where(np.isnan(xv) & seen, float(vals[1]), xv), index=x.index)
     if op == "clip":
         return np.clip(x, float(vals[1]), float(vals[2]))
     raise DSLError(f"unhandled op {op}")  # pragma: no cover
