@@ -78,3 +78,19 @@ def test_guard_accepts_universe_flag():
     assert g.BASH_OPS.match(f"{py} research/mining/harness.py --horizon 5 --universe midcap ops")
     assert g.BASH_OPS.match(f"{py} research/mining/harness.py --universe midcap memory --part 2")
     assert not g.BASH_OPS.match(f"{py} research/mining/harness.py --universe nasdaq ops")
+
+
+def test_proposal_carries_and_validates_universe():
+    p = Proposal(candidate_id="u_mid", expression="rank(close)", expected_direction="positive",
+                 hypothesis="a sentence long enough to pass validation here", mechanism="another sentence long enough to pass",
+                 refutation_conditions=["x"], horizon=20, universe="midcap")
+    assert p.validate()["canonical"] == "rank(close)"
+    bad = Proposal(candidate_id="u_bad", expression="rank(close)", expected_direction="positive",
+                   hypothesis="a sentence long enough to pass validation here", mechanism="another sentence long enough to pass",
+                   refutation_conditions=["x"], horizon=20, universe="nasdaq")
+    try:
+        bad.validate()
+    except Exception as e:
+        assert "universe" in str(e)
+    else:
+        raise AssertionError("unknown universe must fail validation")

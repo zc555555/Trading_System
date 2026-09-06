@@ -35,6 +35,7 @@ class Proposal:
     mechanism_tag: str = ""          # short, stable mechanism name; matches beliefs.json entries
     source: str = ""                 # e.g. model name / run id
     horizon: int = 20
+    universe: str = "sp500"          # research universe (RULEBOOK "Universes"); midcap never reaches production
 
     def validate(self) -> dict:
         errs = []
@@ -53,6 +54,8 @@ class Proposal:
             errs.append("at least one non-empty refutation condition is required")
         if int(self.horizon) not in (5, 20):
             errs.append("track B evaluates horizons 5 and 20 only")
+        if str(self.universe) not in ("sp500", "midcap"):
+            errs.append("universe must be sp500 or midcap")
         stats = {}
         try:
             stats = dsl.validate(dsl.parse(self.expression))

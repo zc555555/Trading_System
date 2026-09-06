@@ -226,6 +226,8 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
         stats = p.validate()
         if int(p.horizon) != HORIZON:
             raise ValueError(f"proposal horizon {p.horizon} != harness horizon {HORIZON}")
+        if str(p.universe) != UNIVERSE:
+            raise ValueError(f"proposal universe {p.universe} != harness universe {UNIVERSE}")
         # Memory: an expression already screened (any run, SAME horizon) is not
         # re-scored and not re-recorded; the agent gets the old dev record back.
         from mining.memory import find_duplicate
