@@ -30,7 +30,7 @@ model: inherit
 
 ## 你仅有的工具
 
-启动你的提示会给你一个形如 `cc_<something>` 的 run id、一个持有期 H（5 或 20，默认 20）和一个研究目标。记 `RUN = research/mining/runs/cc_<id>`。在仓库根目录下工作。启动提示还可能给一个宇宙（sp500 或 midcap，默认 sp500）；宇宙是 midcap 时每条命令在 `--horizon` 之后、子命令之前加 `--universe midcap`，提案和 beliefs.json 加 `"universe": "midcap"`。中盘股宇宙只有价量、`marketcap`/`turnover`/`filing_days`、`short_vol_ratio` 和行业算子可用，新闻/内部人/13F/基本面字段不存在（会被拒绝）。**H 不是 20 时，下面每条 harness 命令都要在子命令前加 `--horizon H`**（例如 `harness.py --horizon 5 memory`），每个提案和 beliefs.json 都要写 `"horizon": H`；不同持有期是不同的家族，记忆里其他持有期的结论是证据而不是判决。
+启动你的提示会给你一个形如 `cc_<something>` 的 run id、一个持有期 H（5 或 20，默认 20）和一个研究目标。记 `RUN = research/mining/runs/cc_<id>`。在仓库根目录下工作。启动提示还可能给一个宇宙（sp500 或 midcap，默认 sp500）；宇宙是 midcap 时每条命令在 `--horizon` 之后、子命令之前加 `--universe midcap`，提案和 beliefs.json 加 `"universe": "midcap"`。中盘股宇宙只有价量、`marketcap`/`turnover`/`filing_days`、`short_vol_ratio` 和行业算子可用，新闻/内部人/13F/基本面字段不存在（会被拒绝）。中盘股面板有 560 万行，一批 8 个候选的筛选会超过工具的 600 秒上限而被挪到后台；**中盘股宇宙每批最多 4 个候选**（proposals_N.json 可以有 10 个以上批次），筛选命令一律前台运行。**H 不是 20 时，下面每条 harness 命令都要在子命令前加 `--horizon H`**（例如 `harness.py --horizon 5 memory`），每个提案和 beliefs.json 都要写 `"horizon": H`；不同持有期是不同的家族，记忆里其他持有期的结论是证据而不是判决。
 
 0. 先读研究记忆：`research/venv/Scripts/python.exe research/mining/harness.py memory --part 1`，然后 `--part 2`、`--part 3`……直到页眉写着「最后一页」（文档几万字，工具输出会被截断，所以必须分页读；不带 `--part` 的整篇输出只在文档很短时可用）。它包含历轮 beliefs 合并出的机制状态表、所有已筛选过的表达式及其 dev 统计、最近两轮的笔记原文，以及每个进过完整阶段的候选"是否被采纳"这一个比特（没有任何数字）。"未采纳"意味着该机制在你看不到的证据段上没过门槛：把它当作 dead，不要再写同一机制的变体，除非机制本身有实质不同。已判 dead 的机制不要重挖；索引里已有的表达式不要重提（harness 会直接返回旧结果，不重算，但仍占预算）；weak 或 promising 的机制按其"下一步"继续。
 0.5 读完记忆后、写任何提案前，先写 `RUN/reflection.md`（中文），这是你的自我反省，会被审计：
