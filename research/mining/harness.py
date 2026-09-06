@@ -62,6 +62,7 @@ NW_LAGS = HORIZON - 1
 MIN_NAMES = 40
 LABEL = f"future_return_{HORIZON}d"
 SCREEN_T = 2.0
+MEMORY_PAGE = 8000           # chars per `memory --part N` page (subagent tool output is truncated well above this)
 SCREEN_COVERAGE = 0.90
 
 
@@ -799,7 +800,8 @@ def main(argv=None):
                     help="label horizon in sessions (one track-B family per horizon)")
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("ops")
-    sp.add_parser("memory")
+    mem = sp.add_parser("memory")
+    mem.add_argument("--part", type=int, default=0, help="page N of the memory document (MEMORY_PAGE chars per page); 0 = whole")
     sp.add_parser("baseline", help="HUMAN: incumbent walk-forward at --horizon on the surv PIT panel")
     au = sp.add_parser("audit-run"); au.add_argument("run_id")
     s = sp.add_parser("screen"); s.add_argument("proposals"); s.add_argument("--out")
@@ -832,7 +834,24 @@ def main(argv=None):
         return
     if args.cmd == "memory":
         from mining.memory import build_memory
-        print(build_memory(rb.MINED_LEDGER, horizon=HORIZON))
+        doc = build_memory(rb.MINED_LEDGER, horizon=HORIZON)
+        if args.part <= 0:
+            print(doc)
+            return
+        pages, buf = [], ""
+        for line in doc.splitlines(keepends=True):
+            if len(buf) + len(line) > MEMORY_PAGE and buf:
+                pages.append(buf); buf = ""
+            buf += line
+        if buf:
+            pages.append(buf)
+        n = len(pages)
+        if args.part > n:
+            print(f"[记忆 第{args.part}页不存在，共{n}页]")
+            return
+        tail = "，最后一页" if args.part == n else "，继续 --part " + str(args.part + 1)
+        print(f"[记忆 第{args.part}/{n}页{tail}]")
+        print(pages[args.part - 1])
         return
     if args.cmd == "audit-run":
         from mining.memory import audit_run, RUNS
