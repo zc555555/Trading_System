@@ -71,3 +71,20 @@ it is not pursued while rounds are paused.
 inst_own 0.94, inst_holders 0.96, inst_top5 0.96, wiki_views 0.96,
 short_vol_ratio 0.96; fundamentals 0.89-0.97 except gross_profitability
 0.48, op_margin 0.69, capex_to_assets 0.80.
+
+## Mid-cap universe (2026-09-06), h = 20, textbook factors (not recorded)
+
+| expression | dir | dev IC | dev t | coverage | note |
+|---|---|---|---|---|---|
+| delay(ts_sum(returns, 229), 20) (12-1 momentum) | + | +0.039 | +2.15 | 0.98 | PASS; rho 0.73 with production pct_52w_high (rewrite), residual t 3.0 |
+| ts_sum(returns, 20) (short-term reversal) | - | +0.005 | +0.40 | 1.00 | flat |
+| log(marketcap) (size within mid caps) | - | +0.008 | +0.78 | 0.97 | flat |
+| ts_std(returns, 60) (low vol) | - | -0.039 | -1.79 | 1.00 | identical to production volatility_60d |
+| ts_mean(turnover, 60) | - | -0.006 | -0.46 | 0.96 | flat |
+| ts_mean(fillna(short_vol_ratio, 0), 20) | - | -0.011 | -1.52 | 0.97 | weaker than on the S&P (t -3.4) |
+| delay(ts_sum(returns, 20), 228) (seasonality) | + | +0.035 | +3.27 | 0.98 | PASS, representative |
+| sector_rank(12-1 momentum) | + | +0.030 | +1.94 | 0.98 | just below the bar |
+
+Same development segment (2021-12-30 .. 2025-07-01), ~920 point-in-time
+names per date. Momentum-type signals carry IC 0.03-0.04 here versus 0.01-0.02
+on the S&P 500; reversal, size and turnover are flat in this period.
