@@ -61,7 +61,7 @@ def test_membership_oracle_fires_when_the_official_mask_is_wrong(tmp_path, monke
     df = _panel(30)
     monkeypatch.setattr(oracles, "PIT_INDEPENDENT", tmp_path / "pit.parquet")
     truth = df["symbol"] != "S000"          # S000 is never a member
-    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None: truth.to_numpy())
+    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None, **kw: truth.to_numpy())
     feat = dsl.compile_expression("rank(ts_mean(returns, 5))", df).to_numpy()
     dev = lambda d: harness.segment(d, "seen_dev")                                        # noqa: E731
     sub = pd.DataFrame({"date": df["date"], harness.LABEL: df[harness.LABEL], "_f": feat})[truth]
@@ -88,7 +88,7 @@ def test_controls_fire_on_a_misaligned_label():
 def test_harness_quarantines_and_refuses_a_leaky_candidate(tmp_path, monkeypatch):
     df = _panel(40)
     ledger = tmp_path / "mined.csv"
-    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None: panel["pit"].to_numpy(dtype=bool))
+    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None, **kw: panel["pit"].to_numpy(dtype=bool))
     monkeypatch.setattr(harness, "_incumbent_refs_for", lambda p: {})
     orig = dsl.compile_expression
     monkeypatch.setattr(dsl, "compile_expression", lambda e, d, **k: orig(e, d, **k).groupby(d["symbol"]).shift(-5))
@@ -108,7 +108,7 @@ def test_harness_quarantines_and_refuses_a_leaky_candidate(tmp_path, monkeypatch
 def test_harness_refuses_to_emit_hidden_information(tmp_path, monkeypatch):
     df = _panel(30)
     ledger = tmp_path / "mined.csv"
-    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None: panel["pit"].to_numpy(dtype=bool))
+    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None, **kw: panel["pit"].to_numpy(dtype=bool))
     monkeypatch.setattr(harness, "_incumbent_refs_for", lambda p: {})
     monkeypatch.setattr(harness, "AGENT_VISIBLE", harness.AGENT_VISIBLE + ("holdout_t",))
     orig = harness.screen_one

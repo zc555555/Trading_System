@@ -96,15 +96,18 @@ def strength(dev_ic: float, dev_t: float) -> dict:
             "bands": {"t": STRENGTH_T, "ic": STRENGTH_IC}}
 
 
-def independent_pit_mask(panel: pd.DataFrame, cache: Path = PIT_INDEPENDENT) -> np.ndarray:
+def independent_pit_mask(panel: pd.DataFrame, cache: Path = PIT_INDEPENDENT,
+                         membership_path: Path | None = None) -> np.ndarray:
     """Point-in-time membership recomputed from the membership file by code
-    that does not share the harness's `pit` column; cached per panel shape."""
+    that does not share the harness's `pit` column; cached per panel shape.
+    `membership_path` selects the universe's membership table (S&P 500 by
+    default); pass a universe-specific `cache` with it."""
     if cache.exists():
         c = pd.read_parquet(cache)
         if len(c) == len(panel) and (c["symbol"].to_numpy()[:5] == panel["symbol"].to_numpy()[:5]).all():
             return c["pit"].to_numpy(dtype=bool)
     from evaluation.experiments.pit_universe_test import membership_mask
-    m = membership_mask(panel[["date", "symbol"]]).to_numpy(dtype=bool)
+    m = membership_mask(panel[["date", "symbol"]], membership_path=membership_path).to_numpy(dtype=bool)
     try:
         pd.DataFrame({"symbol": panel["symbol"].to_numpy(), "pit": m}).to_parquet(cache, index=False)
     except Exception:
@@ -113,9 +116,10 @@ def independent_pit_mask(panel: pd.DataFrame, cache: Path = PIT_INDEPENDENT) -> 
 
 
 def membership(panel: pd.DataFrame, feat: np.ndarray, label_col: str, dev_selector,
-               official_ic: float, ic_fn, min_names: int) -> dict:
+               official_ic: float, ic_fn, min_names: int,
+               membership_path: Path | None = None, cache: Path | None = None) -> dict:
     """Recompute the dev IC on the independently derived PIT mask."""
-    pit = independent_pit_mask(panel)
+    pit = independent_pit_mask(panel, cache=cache or PIT_INDEPENDENT, membership_path=membership_path)
     sub = pd.DataFrame({"date": panel["date"].to_numpy(), label_col: panel[label_col].to_numpy(),
                         "_f": np.asarray(feat, dtype=float)})[pit]
     sub["date"] = pd.to_datetime(sub["date"])

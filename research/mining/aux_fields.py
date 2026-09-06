@@ -393,19 +393,29 @@ PRICES = DATA / "sharadar_prices.parquet"
 SECTOR_MAP = DATA / "sector_map.csv"
 
 
-def sector_table(tickers: Path = TICKERS, prices: Path = PRICES, fallback: Path = SECTOR_MAP) -> dict[str, str]:
+def sector_table(tickers: Path = TICKERS, prices: Path | None = PRICES, fallback: Path = SECTOR_MAP) -> dict[str, str]:
     """symbol -> sector (Sharadar's classification for every member incl.
-    delisted, Yahoo's sector_map.csv as fallback, 'Unknown' otherwise)."""
+    delisted, Yahoo's sector_map.csv as fallback, 'Unknown' otherwise).
+    `prices` supplies the symbol <-> Sharadar-ticker pairs of the S&P panel;
+    a universe whose symbols ARE Sharadar tickers (mid caps) passes
+    prices=None, and the full ticker table then maps by identity."""
     out: dict[str, str] = {}
     if Path(fallback).exists():
         m = pd.read_csv(fallback)
         out.update({s: str(v) for s, v in zip(m["symbol"], m["sector"]) if isinstance(v, str) and v != "ETF"})
-    if Path(tickers).exists() and Path(prices).exists():
-        pairs = pd.read_parquet(prices, columns=["symbol", "ticker"]).drop_duplicates()
-        t2s = dict(zip(pairs["ticker"], pairs["symbol"]))
+    if Path(tickers).exists():
         tk = pd.read_parquet(tickers, columns=["ticker", "sector"])
+        if prices is not None and Path(prices).exists():
+            pairs = pd.read_parquet(prices, columns=["symbol", "ticker"]).drop_duplicates()
+            t2s = dict(zip(pairs["ticker"], pairs["symbol"]))
+        else:
+            t2s = None
         for t, sec in zip(tk["ticker"], tk["sector"]):
-            if t in t2s and isinstance(sec, str) and sec:
+            if not (isinstance(sec, str) and sec):
+                continue
+            if t2s is None:
+                out[t] = sec
+            elif t in t2s:
                 out[t2s[t]] = sec                      # Sharadar wins where both exist
     return out
 
@@ -466,7 +476,9 @@ def attach(df: pd.DataFrame, source: Path = EDGAR, filings: pd.DataFrame | None 
         out = attach_wikipedia(out, wiki)
     sector_source = TICKERS if sector_source is None else sector_source
     if "sector" not in out.columns and Path(sector_source).exists():
-        out = attach_sector(out, sector_table(tickers=Path(sector_source)))
+        # the S&P ticker table needs the symbol <-> ticker pairs; any other table maps by identity
+        pairs = PRICES if Path(sector_source) == TICKERS else None
+        out = attach_sector(out, sector_table(tickers=Path(sector_source), prices=pairs))
     return out
 
 

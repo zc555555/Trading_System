@@ -277,7 +277,8 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
         if st["fired"]:
             flags["implausible_strength"] = {"dev_ic": st["dev_ic"], "dev_t": st["dev_t"]}
         mb = oracles.membership(panel, feat.to_numpy(), LABEL, lambda d: segment(d, "seen_dev"),
-                                s["ic_mean"], daily_rank_ic, MIN_NAMES)
+                                s["ic_mean"], daily_rank_ic, MIN_NAMES, membership_path=MEMBERSHIP,
+                                cache=oracles.PIT_INDEPENDENT.with_name(oracles.PIT_INDEPENDENT.stem + universe_suffix() + ".parquet"))
         if mb["fired"]:
             flags["membership_mask"] = {"official": mb["official_ic"], "independent": mb["independent_ic"]}
         row["oracle_flags"] = json.dumps(flags, default=float) if flags else ""
