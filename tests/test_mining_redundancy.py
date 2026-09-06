@@ -95,7 +95,7 @@ def test_harness_screen_marks_clusters_and_full_refuses_non_representative(tmp_p
     monkeypatch.setattr(rd, "PASS_CACHE_META", tmp_path / "pass.json")
     monkeypatch.setattr(harness, "_incumbent_refs_for", lambda p: {})   # synthetic panel has no incumbents
     from mining import oracles
-    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None: panel["pit"].to_numpy(dtype=bool))
+    monkeypatch.setattr(oracles, "independent_pit_mask", lambda panel, cache=None, **kw: panel["pit"].to_numpy(dtype=bool))
     # the planted signal is deliberately far stronger than any honest factor: silence the strength band here
     monkeypatch.setattr(oracles, "STRENGTH_IC", 10.0)
     monkeypatch.setattr(oracles, "STRENGTH_T", 1e9)

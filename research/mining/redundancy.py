@@ -116,9 +116,12 @@ def load_incumbent_refs(panel: pd.DataFrame, source: Path = SURV_PANEL,
     return ref.drop(columns=["date", "symbol"])
 
 
-def prior_representatives(ledger_path: Path, panel: pd.DataFrame, horizon: int | None = None) -> dict[str, np.ndarray]:
+def prior_representatives(ledger_path: Path, panel: pd.DataFrame, horizon: int | None = None,
+                          universe: str | None = None, cache_suffix: str = "") -> dict[str, np.ndarray]:
     """Compiled features of every earlier screen pass that is a cluster
-    representative (or predates clustering), keyed by candidate id."""
+    representative (or predates clustering), keyed by candidate id. Priors
+    of another universe are not comparable (different panel, possibly
+    different fields) and are excluded; the feature cache is per universe."""
     from mining import dsl
     from evaluation import rulebook as rb
     if not Path(ledger_path).exists():
@@ -129,14 +132,18 @@ def prior_representatives(ledger_path: Path, panel: pd.DataFrame, horizon: int |
     scr = led[(led["stage"].astype(str) == "screen") & (led["screen_pass"].map(lambda v: v is True))]
     if horizon is not None:
         scr = scr[rb.horizon_of(scr) == int(horizon)]
+    if universe is not None:
+        scr = scr[rb.universe_of(scr) == universe]
     if "cluster_rep" in scr.columns:
         scr = scr[scr["cluster_rep"].isna() | scr["cluster_rep"].map(lambda v: v is True)]
     scr = scr.drop_duplicates("canonical", keep="last")
     if scr.empty:
         return {}
 
-    cache = pd.read_parquet(PASS_CACHE) if PASS_CACHE.exists() else pd.DataFrame()
-    meta = json.loads(PASS_CACHE_META.read_text(encoding="utf-8")) if PASS_CACHE_META.exists() else {}
+    pass_cache = PASS_CACHE.with_name(PASS_CACHE.stem + cache_suffix + PASS_CACHE.suffix)
+    pass_meta = PASS_CACHE_META.with_name(PASS_CACHE_META.stem + cache_suffix + PASS_CACHE_META.suffix)
+    cache = pd.read_parquet(pass_cache) if pass_cache.exists() else pd.DataFrame()
+    meta = json.loads(pass_meta.read_text(encoding="utf-8")) if pass_meta.exists() else {}
     if len(cache) and len(cache) != len(panel):
         cache, meta = pd.DataFrame(), {}
     out, dirty = {}, False
@@ -144,13 +151,16 @@ def prior_representatives(ledger_path: Path, panel: pd.DataFrame, horizon: int |
         canon = str(r["canonical"])
         h = dsl.expression_hash(canon)
         if h not in cache.columns:
-            cache[h] = dsl.compile_expression(canon, panel).to_numpy()
+            try:
+                cache[h] = dsl.compile_expression(canon, panel).to_numpy()
+            except dsl.DSLError:                     # a prior whose source this panel lacks
+                continue
             meta[h] = {"candidate_id": str(r["candidate_id"]), "canonical": canon}
             dirty = True
         out[str(r["candidate_id"])] = cache[h].to_numpy()
     if dirty:
-        cache.to_parquet(PASS_CACHE, index=False)
-        PASS_CACHE_META.write_text(json.dumps(meta, indent=1), encoding="utf-8")
+        cache.to_parquet(pass_cache, index=False)
+        pass_meta.write_text(json.dumps(meta, indent=1), encoding="utf-8")
     return out
 
 

@@ -300,7 +300,7 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
 
 def _incumbent_refs_for(panel: pd.DataFrame) -> dict[str, np.ndarray]:
     from mining import redundancy as rd
-    ref = rd.load_incumbent_refs(panel)
+    ref = rd.load_incumbent_refs(panel, cache=rd.REF_CACHE.with_name(rd.REF_CACHE.stem + universe_suffix() + rd.REF_CACHE.suffix))
     return {c: ref[c].to_numpy(dtype=float) for c in ref.columns}
 
 
@@ -357,7 +357,8 @@ def cluster_passes(rows: list[dict], panel: pd.DataFrame, ledger_path: Path = rb
     batch_ids = {r["candidate_id"] for r in passes}
     # earlier representatives only: this batch's own rows are already in the
     # ledger (screen_one appended them) and must not count as their own priors
-    priors = {k: v[dev_mask] for k, v in rd.prior_representatives(ledger_path, panel, horizon=HORIZON).items()
+    priors = {k: v[dev_mask] for k, v in rd.prior_representatives(ledger_path, panel, horizon=HORIZON, universe=UNIVERSE,
+                                                                  cache_suffix=universe_suffix()).items()
               if k not in batch_ids}
     batch = [{"candidate_id": r["candidate_id"], "dev_t": r["dev_t"], "x": r["_feature"][dev_mask]}
              for r in passes]
