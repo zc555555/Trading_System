@@ -353,6 +353,23 @@
    "coverage": 0.9791094444223877,
    "pool_size_at_admission": 21,
    "rule_version": "P-3.2"
+  },
+  {
+   "candidate_id": "sr_cash_level",
+   "expression": "sector_rank(cash_to_assets)",
+   "canonical": "sector_rank(cash_to_assets)",
+   "hash": "6f1cbbadc2b3",
+   "expected_direction": "positive",
+   "source": "run:cc_20260906_pool5",
+   "admitted": "2026-09-06",
+   "dev_ic": 0.015680327432972083,
+   "dev_t": 1.7130834205718752,
+   "residual_vs_pool_t": 1.304,
+   "pool_corr_max": 0.16,
+   "incumbent_corr_max": 0.09,
+   "coverage": 0.9850611593753046,
+   "pool_size_at_admission": 22,
+   "rule_version": "P-3.2"
   }
  ],
  "releases": [
