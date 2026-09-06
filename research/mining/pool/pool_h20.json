@@ -370,6 +370,40 @@
    "coverage": 0.9850611593753046,
    "pool_size_at_admission": 22,
    "rule_version": "P-3.2"
+  },
+  {
+   "candidate_id": "top5_change_sn",
+   "expression": "sector_rank(delta(inst_top5, 63))",
+   "canonical": "sector_rank(delta(inst_top5, 63))",
+   "hash": "fa63c48a7ede",
+   "expected_direction": "positive",
+   "source": "run:cc_20260906_pool6",
+   "admitted": "2026-09-06",
+   "dev_ic": 0.011226809340539715,
+   "dev_t": 1.4537143942558264,
+   "residual_vs_pool_t": 1.424,
+   "pool_corr_max": 0.027,
+   "incumbent_corr_max": -0.03,
+   "coverage": 0.9791094444223877,
+   "pool_size_at_admission": 23,
+   "rule_version": "P-3.2"
+  },
+  {
+   "candidate_id": "ind_inst_own",
+   "expression": "sub(rank(inst_own), sector_demean(rank(inst_own)))",
+   "canonical": "sub(rank(inst_own), sector_demean(rank(inst_own)))",
+   "hash": "741d15fe386c",
+   "expected_direction": "negative",
+   "source": "run:cc_20260906_pool6",
+   "admitted": "2026-09-06",
+   "dev_ic": -0.01744570323432676,
+   "dev_t": -1.3903158678686325,
+   "residual_vs_pool_t": 1.313,
+   "pool_corr_max": -0.146,
+   "incumbent_corr_max": 0.118,
+   "coverage": 0.9600596254281517,
+   "pool_size_at_admission": 24,
+   "rule_version": "P-3.2"
   }
  ],
  "releases": [
