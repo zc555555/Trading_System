@@ -51,18 +51,18 @@ def membership_mask(df: pd.DataFrame, membership_path=None) -> pd.Series:
     """True where the row's symbol was a universe member on the row's date
     (S&P 500 membership by default; any table with symbol/start/end)."""
     iv = pd.read_parquet(MEMBERSHIP if membership_path is None else membership_path)
-    naive = df['date'].dt.tz_localize(None)
-    mask = pd.Series(False, index=df.index)
-    for sym, g in iv.groupby('symbol'):
-        sel = df['symbol'] == sym
-        if not sel.any():
-            continue
-        d = naive[sel]
-        m = pd.Series(False, index=d.index)
-        for _, r in g.iterrows():
-            hi = r['end'] if pd.notna(r['end']) else pd.Timestamp('2100-01-01')
-            m |= (d >= r['start']) & (d < hi)
-        mask.loc[d.index] = m
+    naive = df['date'].dt.tz_localize(None) if getattr(df['date'].dt, 'tz', None) is not None else pd.to_datetime(df['date'])
+    # vectorised interval join (the per-symbol loop took minutes on a
+    # 5-million-row panel with thousands of intervals)
+    iv = iv[['symbol', 'start', 'end']].copy()
+    iv['start'] = pd.to_datetime(iv['start'])
+    iv['end'] = pd.to_datetime(iv['end']).fillna(pd.Timestamp('2100-01-01'))
+    key = pd.DataFrame({'_i': np.arange(len(df)), 'symbol': df['symbol'].to_numpy(), '_d': naive.to_numpy()})
+    joined = key.merge(iv, on='symbol', how='inner')
+    hit = joined[(joined['_d'] >= joined['start']) & (joined['_d'] < joined['end'])]['_i'].unique()
+    arr = np.zeros(len(df), dtype=bool)
+    arr[hit] = True
+    mask = pd.Series(arr, index=df.index)
     return mask
 
 
