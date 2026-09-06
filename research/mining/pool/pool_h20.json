@@ -421,6 +421,39 @@
     "4d65cf2572ec",
     "9bfed7f3ba8f"
    ]
+  },
+  {
+   "release_id": "pool_h20_r2",
+   "n_members": 25,
+   "date": "2026-09-06",
+   "verdict": "FAIL",
+   "members": [
+    "7a554c1125e5",
+    "f2bbeb67638b",
+    "d2c9e36f6076",
+    "954ed2c00bd5",
+    "60a8b760143f",
+    "4d65cf2572ec",
+    "9bfed7f3ba8f",
+    "bdd20a6092c9",
+    "d64359064f23",
+    "a327fd011ea2",
+    "b6819397625e",
+    "fd728e78b836",
+    "cbad152d7cd9",
+    "d543129fc636",
+    "c2f57ddfe591",
+    "f01fa2bf042b",
+    "fbc5e491149c",
+    "a346a814fc19",
+    "8fd44f0cc425",
+    "4054eb8aaa59",
+    "85ca610bcaed",
+    "9bd8adb6a94c",
+    "6f1cbbadc2b3",
+    "fa63c48a7ede",
+    "741d15fe386c"
+   ]
   }
  ]
 }
