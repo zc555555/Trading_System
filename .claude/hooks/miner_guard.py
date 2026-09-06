@@ -4,7 +4,7 @@ Claude Code runs this before EVERY tool call. For any caller that is not the
 `miner` subagent it prints nothing and exits 0 (no effect). For the miner it
 is a default-deny allowlist:
 
-  Bash   only  <venv python> research/mining/harness.py [--horizon 5|20] ops | memory [--part N]
+  Bash   only  <venv python> research/mining/harness.py [--horizon 5|20] [--universe sp500|midcap] ops | memory [--part N]
          and   <venv python> research/mining/harness.py screen
                research/mining/runs/cc_<run>/proposals[_N].json
                [--out research/mining/runs/cc_<run>/screen[_N].json]
@@ -35,7 +35,7 @@ PY = r'(?:"?(?:C:/|/c/)Trading_System/research/venv/Scripts/python\.exe"?|\./?re
 ROOTP = r"(?:(?:C:/|/c/)Trading_System/)?"          # optional absolute prefix, either spelling
 HARNESS = rf"{ROOTP}research/mining/harness\.py"
 RUN = rf"{ROOTP}research/mining/runs/cc_[A-Za-z0-9_]{{1,40}}"
-HZ = r"(?:--horizon (?:5|20) )?"
+HZ = r"(?:--horizon (?:5|20) )?(?:--universe (?:sp500|midcap) )?"
 BASH_OPS = re.compile(rf"^{PY} {HARNESS} {HZ}(ops|memory(?: --part [0-9]{{1,2}})?)$")
 BASH_SCREEN = re.compile(
     rf"^{PY} {HARNESS} {HZ}screen ({RUN})/proposals(?:_\d{{1,3}})?\.json"

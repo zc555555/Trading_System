@@ -38,7 +38,7 @@ RECENT_RUNS = 2
 STATUSES = ("dead", "weak", "promising", "untested")
 DEV_COLUMNS = ["date", "candidate_id", "source", "expected_direction", "canonical",
                "expression", "dev_ic", "dev_t", "coverage", "screen_pass", "stage", "mechanism_tag",
-               "cluster_rep", "redundant_with", "residual_dev_t", "horizon"]
+               "cluster_rep", "redundant_with", "residual_dev_t", "horizon", "universe"]
 
 
 # --------------------------------------------------------------------------
@@ -97,13 +97,16 @@ def expression_index(ledger_path: Path) -> pd.DataFrame:
     return scr.reset_index(drop=True)
 
 
-def find_duplicate(ledger_path: Path, canonical: str, horizon: int | None = None) -> dict | None:
-    """The same expression at a DIFFERENT horizon is a different test."""
+def find_duplicate(ledger_path: Path, canonical: str, horizon: int | None = None,
+                   universe: str | None = None) -> dict | None:
+    """The same expression at a DIFFERENT horizon or universe is a different test."""
     idx = expression_index(ledger_path)
     hit = idx[idx["canonical"] == canonical]
+    from evaluation import rulebook as rb
     if horizon is not None and len(hit) and "horizon" in hit.columns:
-        from evaluation import rulebook as rb
         hit = hit[rb.horizon_of(hit) == int(horizon)]
+    if universe is not None and len(hit):
+        hit = hit[rb.universe_of(hit) == universe]
     if hit.empty:
         return None
     r = hit.iloc[-1]

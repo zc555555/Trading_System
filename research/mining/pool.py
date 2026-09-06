@@ -52,24 +52,29 @@ POOL_MIN_FRACTION = 0.3
 RELEASE_CHECKPOINTS = (25, 50, 100, 200, 400)
 
 
-def pool_path(horizon: int) -> Path:
-    return POOL_DIR / f"pool_h{horizon}.json"
+def _sfx(universe: str) -> str:
+    return "" if universe in (None, "", "sp500") else f"_{universe}"
 
 
-def features_path(horizon: int) -> Path:
-    return POOL_DIR / f"pool_features_h{horizon}.parquet"
+def pool_path(horizon: int, universe: str = "sp500") -> Path:
+    return POOL_DIR / f"pool_h{horizon}{_sfx(universe)}.json"
 
 
-def load_pool(horizon: int) -> dict:
-    p = pool_path(horizon)
+def features_path(horizon: int, universe: str = "sp500") -> Path:
+    return POOL_DIR / f"pool_features_h{horizon}{_sfx(universe)}.parquet"
+
+
+def load_pool(horizon: int, universe: str = "sp500") -> dict:
+    p = pool_path(horizon, universe)
     if p.exists():
         return json.loads(p.read_text(encoding="utf-8"))
-    return {"horizon": horizon, "members": [], "releases": []}
+    return {"horizon": horizon, "universe": universe, "members": [], "releases": []}
 
 
 def save_pool(pool: dict) -> None:
     POOL_DIR.mkdir(parents=True, exist_ok=True)
-    pool_path(pool["horizon"]).write_text(json.dumps(pool, ensure_ascii=False, indent=1), encoding="utf-8")
+    pool_path(pool["horizon"], pool.get("universe", "sp500")).write_text(
+        json.dumps(pool, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 # ----------------------------------------------------------------------------
@@ -83,11 +88,11 @@ def signed_rank(dates: np.ndarray, x: np.ndarray, sign: float) -> np.ndarray:
 
 
 def member_features(panel: pd.DataFrame, members: list[dict], horizon: int,
-                    use_cache: bool = True) -> pd.DataFrame:
+                    use_cache: bool = True, universe: str = "sp500") -> pd.DataFrame:
     """Signed ranks of every member on the panel rows (columns = canonical
     hash), computed once and cached; new members are appended."""
     dates = pd.to_datetime(panel["date"]).to_numpy()
-    cache = features_path(horizon)
+    cache = features_path(horizon, universe)
     have = pd.DataFrame(index=panel.index)
     if use_cache and cache.exists():
         old = pd.read_parquet(cache)
@@ -126,11 +131,11 @@ def composite(features: pd.DataFrame) -> np.ndarray:
     return np.where(n_ok >= need, mean, np.nan)
 
 
-def pool_signal(panel: pd.DataFrame, horizon: int, pool: dict | None = None) -> np.ndarray:
-    pool = pool or load_pool(horizon)
+def pool_signal(panel: pd.DataFrame, horizon: int, pool: dict | None = None, universe: str = "sp500") -> np.ndarray:
+    pool = pool or load_pool(horizon, universe)
     if not pool["members"]:
         return np.full(len(panel), np.nan)
-    return composite(member_features(panel, pool["members"], horizon))
+    return composite(member_features(panel, pool["members"], horizon, universe=pool.get("universe", universe)))
 
 
 # ----------------------------------------------------------------------------
@@ -206,11 +211,11 @@ def admissible(row: dict) -> tuple[bool, str]:
     return True, "admitted"
 
 
-def admit(horizon: int, rows: list[dict], source: str) -> list[dict]:
+def admit(horizon: int, rows: list[dict], source: str, universe: str = "sp500") -> list[dict]:
     """Add every admissible screen row to the pool (idempotent on hash).
     `rows` must carry expression / expected_direction / canonical and the
     pool fields; returns the newly admitted members."""
-    pool = load_pool(horizon)
+    pool = load_pool(horizon, universe)
     have = {m["hash"] for m in pool["members"]}
     new = []
     for r in rows:
@@ -235,10 +240,10 @@ def admit(horizon: int, rows: list[dict], source: str) -> list[dict]:
     return new
 
 
-def status(horizon: int) -> dict:
-    pool = load_pool(horizon)
+def status(horizon: int, universe: str = "sp500") -> dict:
+    pool = load_pool(horizon, universe)
     n = len(pool["members"])
     nxt = next((c for c in RELEASE_CHECKPOINTS if c > max([r["n_members"] for r in pool["releases"]] or [0])), None)
-    return {"horizon": horizon, "n_members": n, "releases": pool["releases"],
+    return {"horizon": horizon, "universe": universe, "n_members": n, "releases": pool["releases"],
             "next_checkpoint": nxt, "due": bool(nxt and n >= nxt),
             "by_source": pd.Series([m["source"] for m in pool["members"]]).value_counts().to_dict() if n else {}}

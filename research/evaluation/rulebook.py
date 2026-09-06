@@ -110,7 +110,7 @@ MINED_COLUMNS = [
     "max_corr", "corr_with", "cluster_id", "cluster_rep", "redundant_with",
     "residual_dev_ic", "residual_dev_t", "residual_vs",
     "model_dev_t", "model_holdout_t",
-    "oracle_flags", "quarantined", "horizon",
+    "oracle_flags", "quarantined", "horizon", "universe",
     "pooled_ic", "pooled_t", "pooled_n", "pooled_p_onesided",
     "recent_ic", "recent_t", "recent_n", "recent_p_onesided",
     "adoption_tier", "rule_version",
@@ -244,6 +244,19 @@ def update_mined(candidate_id: str, fields: dict, path: Path = MINED_LEDGER,
             led.loc[i, k] = v
     led.to_csv(path, index=False)
     return True
+
+
+UNIVERSES = ("sp500", "midcap")
+DEFAULT_UNIVERSE = "sp500"
+
+
+def universe_of(led: pd.DataFrame) -> pd.Series:
+    """Per-row research universe; rows written before the column existed
+    are S&P 500 rows. Families are per (horizon, universe)."""
+    if "universe" not in led.columns:
+        return pd.Series(DEFAULT_UNIVERSE, index=led.index)
+    u = led["universe"].astype(str).str.strip().str.lower()
+    return u.where(u.isin(UNIVERSES), DEFAULT_UNIVERSE)
 
 
 def horizon_of(led: pd.DataFrame) -> pd.Series:

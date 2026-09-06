@@ -139,6 +139,29 @@ with `full --force` (its ledger row is then under the rotated segments) and
 predictions and is exact for the raw-feature tiers. External sources
 refresh monthly through `scripts/run_refresh_sources_scheduled.bat`.
 
+## Universes (pre-registered 2026-09-06)
+
+Two research universes, each with its own track-B family per horizon, its
+own screen caches, pool and memory; the ledger records `universe`.
+
+* `sp500`: the survivorship-complete point-in-time S&P 500 panel. The only
+  universe whose adoptions can reach the live book.
+* `midcap`: US domestic common stocks ranked 501-1400 by market cap at a
+  month end enter, and leave below 450 or above 1650 or on delisting
+  (`data/build_midcap_universe.py`). Market cap = Sharadar month-end close
+  x the latest SEC frames share count whose quarter end is at least 45 days
+  old (the frames API carries no filing date; the statutory deadline stands
+  in). Delisted names are ranked while they trade, so the universe contains
+  the dead. Research only: nothing mined here is adopted into production;
+  a factor that passes on mid caps is evidence for a later S&P test, not a
+  substitute for it. Its auxiliary fields are the subset with a mid-cap
+  source (share count from frames, daily short volume, sectors); absent
+  sources are absent fields, never zero.
+
+Rationale: on S&P 500 large caps every honest signal has |IC| 0.01-0.02
+and the pool saturated at ~25 members after ~280 candidates; the anomaly
+literature's base rates are higher outside the largest 500 names.
+
 ## Track P: the factor pool (v3.1, pre-registered 2026-09-04)
 
 Motivation. Nine rounds of single-candidate adjudication produced zero

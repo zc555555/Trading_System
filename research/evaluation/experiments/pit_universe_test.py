@@ -47,9 +47,10 @@ SEGMENTS = [
 ]
 
 
-def membership_mask(df: pd.DataFrame) -> pd.Series:
-    """True where the row's symbol was an index member on the row's date."""
-    iv = pd.read_parquet(MEMBERSHIP)
+def membership_mask(df: pd.DataFrame, membership_path=None) -> pd.Series:
+    """True where the row's symbol was a universe member on the row's date
+    (S&P 500 membership by default; any table with symbol/start/end)."""
+    iv = pd.read_parquet(MEMBERSHIP if membership_path is None else membership_path)
     naive = df['date'].dt.tz_localize(None)
     mask = pd.Series(False, index=df.index)
     for sym, g in iv.groupby('symbol'):

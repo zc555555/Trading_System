@@ -54,6 +54,17 @@ RESULTS = RESEARCH / "evaluation" / "results"
 SURV_PANEL = DATA / "stocks_with_time_windows_surv.parquet"
 MEMBERSHIP = DATA / "sp500_membership.parquet"
 BASELINE_TAG = "surv"
+UNIVERSE = rb.DEFAULT_UNIVERSE
+# research universes (RULEBOOK "Universes"): the S&P 500 point-in-time panel
+# feeds the live book; the mid-cap panel (market-cap ranks 501-1400/1650,
+# data/build_midcap_universe.py) is research only -- separate families,
+# caches, pools and memory, and adoptions from it never reach production
+UNIVERSE_CFG = {
+    "sp500": {"membership": DATA / "sp500_membership.parquet", "panel": DATA / "stocks_with_time_windows_surv.parquet",
+              "baseline_tag": "surv", "suffix": ""},
+    "midcap": {"membership": DATA / "midcap_membership.parquet", "panel": DATA / "stocks_with_time_windows_midcap.parquet",
+               "baseline_tag": "surv_midcap", "suffix": "_midcap"},
+}
 PRODUCTION_HORIZON = 20
 HORIZONS = (5, 20)
 
@@ -66,22 +77,49 @@ MEMORY_PAGE = 8000           # chars per `memory --part N` page (subagent tool o
 SCREEN_COVERAGE = 0.90
 
 
-def configure(horizon: int) -> None:
-    """Select the label horizon for this process (RULEBOOK: track B runs
-    one family per horizon; only the production horizon can reach the
-    live book). Everything downstream reads these module globals."""
-    global HORIZON, NW_LAGS, LABEL
+def configure(horizon: int, universe: str | None = None) -> None:
+    """Select the label horizon and the research universe for this process
+    (RULEBOOK: one track-B family per (horizon, universe); only the
+    production horizon on the S&P 500 universe can reach the live book).
+    Everything downstream reads these module globals."""
+    global HORIZON, NW_LAGS, LABEL, UNIVERSE, MEMBERSHIP, SURV_PANEL, BASELINE_TAG
     if int(horizon) not in HORIZONS:
         raise ValueError(f"horizon must be one of {HORIZONS}")
     HORIZON = int(horizon)
     NW_LAGS = HORIZON - 1
     LABEL = f"future_return_{HORIZON}d"
+    if universe is not None:
+        if universe not in UNIVERSE_CFG:
+            raise ValueError(f"universe must be one of {tuple(UNIVERSE_CFG)}")
+        UNIVERSE = universe
+        MEMBERSHIP = UNIVERSE_CFG[universe]["membership"]
+        SURV_PANEL = UNIVERSE_CFG[universe]["panel"]
+        BASELINE_TAG = UNIVERSE_CFG[universe]["baseline_tag"]
+
+
+def universe_suffix() -> str:
+    return UNIVERSE_CFG[UNIVERSE]["suffix"]
 
 
 def screen_cache_path() -> Path:
     # v2: carries the auxiliary fields; the production horizon keeps the original name
-    return RESULTS / ("_mining_screen_panel_v2.parquet" if HORIZON == PRODUCTION_HORIZON
-                      else f"_mining_screen_panel_v2_h{HORIZON}.parquet")
+    base = ("_mining_screen_panel_v2" if HORIZON == PRODUCTION_HORIZON else f"_mining_screen_panel_v2_h{HORIZON}")
+    return RESULTS / f"{base}{universe_suffix()}.parquet"
+
+
+def aux_sources() -> dict:
+    """Which auxiliary sources apply to the current universe. The S&P panel
+    uses every source (defaults); the mid-cap panel has its own EDGAR share
+    table (SEC frames, data/build_midcap_panel.py) and Sharadar's full
+    ticker table for sectors, and no news / insider / 13F / short-interest /
+    fundamentals tables yet -- those fields are absent, not zero."""
+    if UNIVERSE == "sp500":
+        return {}
+    none = Path("nonexistent")
+    return {"source": DATA / "edgar_fields_midcap.parquet", "news_source": none, "form4_source": none,
+            "short_source": none, "xbrl_source": none, "form13f_source": none, "wiki_source": none,
+            "regsho_source": DATA / "regsho_short_volume_midcap.parquet",
+            "sector_source": DATA / "sharadar_tickers_all.parquet"}
 
 AGENT_VISIBLE = ("candidate_id", "stage", "expression", "canonical", "proposal_hash",
                  "lookback", "n_nodes", "dev_ic", "dev_t", "dev_n", "coverage",
@@ -124,7 +162,7 @@ def _members() -> set:
 
 def _pit_mask(df: pd.DataFrame) -> pd.Series:
     from evaluation.experiments.pit_universe_test import membership_mask
-    return membership_mask(df)
+    return membership_mask(df, membership_path=MEMBERSHIP)
 
 
 def load_screen_panel(rebuild: bool = False) -> pd.DataFrame:
@@ -141,7 +179,7 @@ def load_screen_panel(rebuild: bool = False) -> pd.DataFrame:
     df = add_label(df)
     df["pit"] = _pit_mask(df).to_numpy()
     from mining import aux_fields
-    df = aux_fields.attach(df)                 # EDGAR + GDELT news fields when their sources exist
+    df = aux_fields.attach(df, **aux_sources())   # every source of this universe that exists
     df.to_parquet(cache, index=False)
     return df
 
@@ -155,7 +193,7 @@ def base_row(p: Proposal, stage: str) -> dict:
                 "proposal_hash": p.proposal_hash, "source": p.source,
                 "expected_direction": p.expected_direction, "stage": stage,
                 "expression": p.expression, "reasons": "",
-                "mechanism_tag": p.mechanism_tag, "horizon": HORIZON})
+                "mechanism_tag": p.mechanism_tag, "horizon": HORIZON, "universe": UNIVERSE})
     return row
 
 
@@ -191,7 +229,7 @@ def screen_one(p: Proposal, panel: pd.DataFrame, ledger_path: Path = rb.MINED_LE
         # Memory: an expression already screened (any run, SAME horizon) is not
         # re-scored and not re-recorded; the agent gets the old dev record back.
         from mining.memory import find_duplicate
-        prior = find_duplicate(ledger_path, stats["canonical"], horizon=HORIZON)
+        prior = find_duplicate(ledger_path, stats["canonical"], horizon=HORIZON, universe=UNIVERSE)
         if prior is not None and prior.get("candidate_id") != p.candidate_id:
             # the old dev statistics are reused; the pass rule is re-applied in
             # THIS proposal's declared direction (a sign flip is not a free pass)
@@ -277,12 +315,12 @@ def dev_rows(panel: pd.DataFrame):
 def pool_fields(rows: list[dict], panel: pd.DataFrame) -> None:
     """Track P: how much each pass adds to the current pool (dev segment)."""
     from mining import pool as pl
-    pool = pl.load_pool(HORIZON)
+    pool = pl.load_pool(HORIZON, UNIVERSE)
     cands = [r for r in rows if "_feature" in r and not r.get("duplicate_of")]     # v3.2: pool bar, not the screen bar
     if not cands:
         return
     mask, dates, label = dev_rows(panel)
-    feats = pl.member_features(panel, pool["members"], HORIZON)
+    feats = pl.member_features(panel, pool["members"], HORIZON, universe=UNIVERSE)
     feats_dev = feats[mask].reset_index(drop=True)
     comp = pl.composite(feats_dev)
     refs = {k: v[mask] for k, v in _incumbent_refs_for(panel).items()}
@@ -395,7 +433,7 @@ def prior_family(candidate_id: str, ledger_path: Path = rb.MINED_LEDGER) -> list
     if led.empty:
         return []
     full = led[(led["stage"].astype(str) == "full") & (led["candidate_id"] != candidate_id)
-              & (rb.horizon_of(led) == HORIZON)]
+              & (rb.horizon_of(led) == HORIZON) & (rb.universe_of(led) == UNIVERSE)]
     return rb.family_pvalues_of(full)
 
 
@@ -506,7 +544,7 @@ def walk_forward_for(p: Proposal, max_folds: int | None = None,
     df = pd.read_parquet(SURV_PANEL)
     sub = df[df["symbol"].isin(_members())].copy()
     from mining import aux_fields
-    sub = aux_fields.attach(sub)
+    sub = aux_fields.attach(sub, **aux_sources())
     col = f"mined_{p.candidate_id}"
     if feature_frame is not None:                             # Track P composite, precomputed on the screen panel
         key = pd.DataFrame({"date": pd.to_datetime(sub["date"]).dt.tz_localize(None).to_numpy(),
@@ -555,8 +593,8 @@ def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list
     from mining import pool as pl
     mask, dates, label = dev_rows(panel)
     refs = {k: v[mask] for k, v in _incumbent_refs_for(panel).items()}
-    pool = pl.load_pool(HORIZON)
-    feats = pl.member_features(panel, pool["members"], HORIZON)          # full-panel signed ranks (cached)
+    pool = pl.load_pool(HORIZON, UNIVERSE)
+    feats = pl.member_features(panel, pool["members"], HORIZON, universe=UNIVERSE)          # full-panel signed ranks (cached)
     feats_dev = feats[mask].reset_index(drop=True)
     comp = pl.composite(feats_dev)
     have = {m["hash"] for m in pool["members"]}
@@ -578,7 +616,7 @@ def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list
         print(f"  {r['candidate_id']:<28} dev_t {float(r.get('dev_t') or 0):+.2f} corr {r.get('pool_corr_max')} "
               f"resid {r.get('residual_vs_pool_t')} -> {why}", flush=True)
         if ok:
-            new = pl.admit(HORIZON, [r], source)
+            new = pl.admit(HORIZON, [r], source, universe=UNIVERSE)
             if new:                                    # extend the in-memory pool; the cache is written once at the end
                 admitted += new
                 have.add(h)
@@ -589,7 +627,7 @@ def pool_admit_rows(cands: list[dict], panel: pd.DataFrame, source: str) -> list
                 comp = pl.composite(feats_dev)
     if new_cols:
         pl.POOL_DIR.mkdir(parents=True, exist_ok=True)
-        feats.to_parquet(pl.features_path(HORIZON), index=False)
+        feats.to_parquet(pl.features_path(HORIZON, UNIVERSE), index=False)
     return admitted
 
 
@@ -611,7 +649,7 @@ def pool_candidates_from_run(run_dir: Path) -> list[dict]:
 def pool_candidates_from_ledger(ledger_path: Path = rb.MINED_LEDGER) -> list[dict]:
     """Every screen pass of this horizon recorded so far (seeding)."""
     led = rb.load_mined_ledger(ledger_path)
-    scr = led[(led["stage"].astype(str) == "screen") & (rb.horizon_of(led) == HORIZON)]
+    scr = led[(led["stage"].astype(str) == "screen") & (rb.horizon_of(led) == HORIZON) & (rb.universe_of(led) == UNIVERSE)]
     scr = scr[scr["verdict"].astype(str).isin(["screen_pass", "screen_fail"])]
     scr = scr.sort_values("date").drop_duplicates("candidate_id", keep="last")
     return [{k: (None if _isnan(v) else v) for k, v in r.items()} for _, r in scr.iterrows()]
@@ -620,14 +658,14 @@ def pool_candidates_from_ledger(ledger_path: Path = rb.MINED_LEDGER) -> list[dic
 def pool_release(max_folds: int | None = None, ledger_path: Path = rb.MINED_LEDGER) -> dict:
     """Score the composite as one full-stage candidate (pool_h<H>_r<k>)."""
     from mining import pool as pl
-    pool = pl.load_pool(HORIZON)
+    pool = pl.load_pool(HORIZON, UNIVERSE)
     n = len(pool["members"])
     if n == 0:
         raise SystemExit("empty pool")
     k = len(pool["releases"]) + 1
-    cid = f"pool_h{HORIZON}_r{k}"
+    cid = f"pool_h{HORIZON}{universe_suffix()}_r{k}"
     panel = load_screen_panel()
-    comp = pl.pool_signal(panel, HORIZON, pool)
+    comp = pl.pool_signal(panel, HORIZON, pool, universe=UNIVERSE)
     ff = pd.DataFrame({"date": pd.to_datetime(panel["date"]).dt.tz_localize(None).to_numpy(),
                        "symbol": panel["symbol"].to_numpy(), "value": comp})
     p = Proposal(candidate_id=cid, expression=f"pool:h{HORIZON}:{n} members",
@@ -798,6 +836,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--horizon", type=int, default=PRODUCTION_HORIZON, choices=HORIZONS,
                     help="label horizon in sessions (one track-B family per horizon)")
+    ap.add_argument("--universe", default=rb.DEFAULT_UNIVERSE, choices=list(UNIVERSE_CFG),
+                    help="research universe (sp500 = live-book panel; midcap = research only)")
     sp = ap.add_subparsers(dest="cmd", required=True)
     sp.add_parser("ops")
     mem = sp.add_parser("memory")
@@ -819,7 +859,7 @@ def main(argv=None):
     rv.add_argument("--date", required=True, help="review date, e.g. 2026-11-15 (rulebook.REVIEW_SCHEDULE)")
     rv.add_argument("--rerun", action="store_true", help="recompute each candidate's walk-forward first")
     args = ap.parse_args(argv)
-    configure(args.horizon)
+    configure(args.horizon, args.universe)
 
     if args.cmd == "baseline":
         from evaluation.purged_walk_forward import WalkForwardConfig, run_walk_forward
@@ -890,18 +930,18 @@ def main(argv=None):
     if args.cmd == "pool":
         from mining import pool as pl
         if args.action == "status":
-            print(json.dumps(pl.status(HORIZON), ensure_ascii=False, indent=1, default=str))
+            print(json.dumps(pl.status(HORIZON, UNIVERSE), ensure_ascii=False, indent=1, default=str))
             return
         if args.action == "seed":
             panel = load_screen_panel()
             new = pool_admit_rows(pool_candidates_from_ledger(), panel, source="seed:ledger")
-            print(f"admitted {len(new)}; pool now {len(pl.load_pool(HORIZON)['members'])} members")
+            print(f"admitted {len(new)}; pool now {len(pl.load_pool(HORIZON, UNIVERSE)['members'])} members")
             return
         if args.action == "admit":
             from mining.memory import RUNS
             panel = load_screen_panel()
             new = pool_admit_rows(pool_candidates_from_run(RUNS / args.run), panel, source=f"run:{args.run}")
-            print(f"admitted {len(new)}; pool now {len(pl.load_pool(HORIZON)['members'])} members")
+            print(f"admitted {len(new)}; pool now {len(pl.load_pool(HORIZON, UNIVERSE)['members'])} members")
             return
         if args.action == "release":
             t0 = datetime.now()
