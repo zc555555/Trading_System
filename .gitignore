@@ -110,3 +110,4 @@ research/data/finra_short_interest/
 research/data/regsho/
 research/data/form13f/
 research/mining/pool/*.parquet
+research/data/_backup_survivorship/
