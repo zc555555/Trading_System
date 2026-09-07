@@ -192,6 +192,10 @@ class DynamicTradingMonitor:
             from alpaca_trader import AlpacaAutoTrader
             trader = AlpacaAutoTrader()
 
+            from trading import halt as _halt
+            if _halt.is_halted():
+                print("  [A/B] 账户处于 HALT 状态, 不把限价单转市价 (不新增风险)")
+                return
             for o in stale:
                 symbol = o.symbol
                 side = str(o.side).split('.')[-1].lower()
@@ -214,8 +218,31 @@ class DynamicTradingMonitor:
                 except Exception as e:
                     print(f"  [A/B] 撤单失败 {symbol}: {e}")
                     continue
+                # 等撤单到终态, 只对未成交的余量补市价单 (2026-09 评审 P0-2:
+                # 原来撤单后立即按原始总数量补单, 部分成交会被重复买入)
+                remaining = qty
+                import time as _t
+                for _ in range(15):
+                    try:
+                        fresh = self.client.get_order_by_id(o.id)
+                    except Exception as e:
+                        print(f"  [A/B] 查询撤单状态失败 {symbol}: {e}")
+                        fresh = None
+                        break
+                    st = str(getattr(fresh, 'status', '')).lower().split('.')[-1]
+                    filled = int(float(getattr(fresh, 'filled_qty', 0) or 0))
+                    remaining = max(0, qty - filled)
+                    if st in ('canceled', 'cancelled', 'filled', 'expired', 'rejected', 'replaced', 'done_for_day'):
+                        break
+                    _t.sleep(1)
+                else:
+                    print(f"  [A/B] {symbol}: 撤单 15 秒未到终态, 本轮不补单")
+                    continue
+                if fresh is None or remaining <= 0:
+                    print(f"  [A/B] {symbol}: 无剩余数量需要补单 (已成交 {qty - remaining}/{qty})")
+                    continue
                 trader.place_bracket_order(
-                    symbol, qty, side, stop_price=stop_price,
+                    symbol, remaining, side, stop_price=stop_price,
                     take_price=take_price,
                     client_order_id=(o.client_order_id or '') + '_mkt')
         except Exception as e:
@@ -270,15 +297,22 @@ class DynamicTradingMonitor:
             print(f"[INFO] 到达 {EOD_CLOSE_TIME} ET 但 EOD_FLATTEN=False -- "
                   f"保留持仓（staggered 多日策略）。")
 
-        # 检查2: 是否触发最大日内亏损
+        # 检查2: 是否触发最大日内亏损 -> 持久化 HALT (trading/halt.py), 先撤掉
+        # 所有挂单 (含尚未成交的进场单), 再全部平仓; HALT 直到人工解除
         if daily_pl_pct <= -MAX_DAILY_LOSS_PCT * 100:
             print(f"🚫 触发最大日内亏损限制！({daily_pl_pct:.2f}% <= -{MAX_DAILY_LOSS_PCT*100}%)")
-
-            # Send critical alert
+            from trading import halt as _halt
+            _halt.set_halt(f"daily loss {daily_pl_pct:.2f}% breached {MAX_DAILY_LOSS_PCT*100:.1f}% (monitor)",
+                           equity=total_equity, extra={"last_equity": initial_equity})
+            try:
+                cancelled = self.client.cancel_orders()
+                print(f"  [halt] 已撤销全部挂单: {len(cancelled) if cancelled is not None else 0}")
+            except Exception as e:
+                print(f"  [halt] 撤销全部挂单失败: {e}")
             if self.alert:
                 self.alert.alert_max_loss_triggered(daily_pl_pct, len(positions))
-
             self.close_all_positions("MAX_DAILY_LOSS", f"日内亏损{daily_pl_pct:.2f}%，触发最大亏损保护")
+            self._verify_flat()
             return
 
         # W2-C: load per-position stop/take from tranche registry (one read per cycle)
@@ -413,6 +447,30 @@ class DynamicTradingMonitor:
             print("✅ 所有持仓正常，继续持有")
 
         print()
+
+    def _verify_flat(self, timeout_s: float = 60.0) -> bool:
+        """After a breaker flatten: poll until the broker reports no positions;
+        anything still open is logged as a FAILURE for a human."""
+        import time as _t
+        deadline = _t.time() + timeout_s
+        while _t.time() < deadline:
+            try:
+                left = self.client.get_all_positions()
+            except Exception as e:
+                print(f"  [halt] 无法核对持仓: {e}")
+                return False
+            if not left:
+                print("  [halt] 核对: 持仓已全部平掉")
+                return True
+            _t.sleep(2)
+        try:
+            with open(self.logs_dir / "FAILURES.log", "a", encoding="utf-8") as f:
+                f.write(f"{datetime.now().isoformat(timespec='seconds')} HALT flatten incomplete: "
+                        f"{[p.symbol for p in left]} still open\n")
+        except Exception:
+            pass
+        print(f"  [halt] 警告: {len(left)} 个持仓未能在 {timeout_s:.0f} 秒内平掉, 已写 FAILURES.log")
+        return False
 
     def close_all_positions(self, reason_code: str, reason_desc: str):
         """平掉所有持仓"""
