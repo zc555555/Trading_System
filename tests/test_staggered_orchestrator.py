@@ -9,6 +9,8 @@ driven by FakeBroker (no SDK, no keys):
 """
 
 import sys
+import types
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -17,6 +19,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from trading.broker import FakeBroker  # noqa: E402
 from trading import halt  # noqa: E402
+from trading import trading_calendar as cal  # noqa: E402
 from trading.tranche_registry import TrancheRegistry, TranchePosition  # noqa: E402
 
 rst = pytest.importorskip("run_staggered_trading")
@@ -61,8 +64,10 @@ def test_partial_close_keeps_remainder_and_tranche_open(tmp_path):
     assert reg.get("t1").status == "closed" and b.pos == {}
 
 
-def _signals():
-    return {"should_trade": True, "n_stocks": 2,
+def _signals(data_date=None, generated_at=None):
+    dd = data_date or cal.last_completed_session(cal.eastern_now()).isoformat()
+    return {"should_trade": True, "n_stocks": 2, "data_date": f"{dd} 00:00:00-04:00",
+            "generated_at": generated_at or datetime.now().isoformat(), "_file": f"signals_{dd}.json",
             "stocks": [{"symbol": "AAA", "prediction": 0.01, "position_pct": 50.0},
                        {"symbol": "SSS", "prediction": -0.01, "position_pct": 50.0}]}
 
@@ -116,3 +121,94 @@ def test_broker_outage_at_reconcile_aborts_with_exit_code(tmp_path, monkeypatch)
     b.fail_next["positions"] = 1
     assert rst.main([]) == rst.EXIT_BROKER_UNAVAILABLE
     assert "BROKER UNAVAILABLE" in (tmp_path / "FAILURES.log").read_text(encoding="utf-8")
+
+
+# phase 1b ------------------------------------------------------------------
+def test_stale_or_duplicate_signals_open_nothing(tmp_path):
+    reg = TrancheRegistry(tmp_path / "reg.json")
+    b = FakeBroker(equity=100_000, last_equity=100_000, prices={"AAA": 100, "SSS": 50})
+    fri_evening = datetime(2026, 9, 4, 17, 0, tzinfo=cal.EASTERN)
+    # Thursday's data on Friday evening: stale
+    out = rst.open_new_tranche(b, reg, _signals("2026-09-03"), dry_run=False, sleep=NOSLEEP, now_et=fri_evening)
+    assert out is None and not [c for c in b.calls if c[0] == "submit"]
+    assert "NOT FRESH" in (tmp_path / "FAILURES.log").read_text(encoding="utf-8")
+    # Friday's data on Friday evening: fresh -> opens
+    out = rst.open_new_tranche(b, reg, _signals("2026-09-04"), dry_run=False, sleep=NOSLEEP, now_et=fri_evening)
+    assert out is not None and reg.get(out).notes == "data_date=2026-09-04"
+    # Labor Day evening: Friday's data is still the last completed session, but
+    # a tranche already used it -> duplicate, nothing opened
+    labor_day = datetime(2026, 9, 7, 17, 0, tzinfo=cal.EASTERN)
+    reg2 = TrancheRegistry(tmp_path / "reg.json")
+    n_before = len([c for c in b.calls if c[0] == "submit"])
+    out = rst.open_new_tranche(b, reg2, _signals("2026-09-04"), dry_run=False, sleep=NOSLEEP, now_et=labor_day)
+    assert out is None and len([c for c in b.calls if c[0] == "submit"]) == n_before
+    # a file generated two days ago is stale even with the right data_date
+    old = (datetime.now() - timedelta(hours=50)).isoformat()
+    ok, why = rst.signals_fresh(_signals("2026-09-04", generated_at=old), TrancheRegistry(tmp_path / "r2.json"), fri_evening)
+    assert not ok and "generated" in why
+
+
+def test_legacy_registry_data_dates_are_recognised(tmp_path):
+    reg = TrancheRegistry(tmp_path / "reg.json")
+    reg.add_tranche("t_legacy", "2026-09-04", 20, signal_file="2026-09-04 00:00:00-04:00")
+    assert rst._tranche_data_dates(reg) == {"2026-09-04"}
+
+
+def test_calendar_gate_uses_broker_and_logs_mismatch(tmp_path):
+    b = FakeBroker()
+    assert rst.calendar_gate(b, datetime(2026, 9, 8, 16, 30, tzinfo=cal.EASTERN))
+    assert not rst.calendar_gate(b, datetime(2026, 9, 7, 16, 30, tzinfo=cal.EASTERN))     # Labor Day
+    assert not (tmp_path / "FAILURES.log").exists()
+    b2 = FakeBroker(holidays={date(2026, 9, 8)})                                            # unscheduled closure
+    assert not rst.calendar_gate(b2, datetime(2026, 9, 8, 16, 30, tzinfo=cal.EASTERN))
+    assert "CALENDAR MISMATCH" in (tmp_path / "FAILURES.log").read_text(encoding="utf-8")
+    b3 = FakeBroker(); b3.fail_next["calendar"] = 1
+    assert rst.calendar_gate(b3, datetime(2026, 9, 8, 16, 30, tzinfo=cal.EASTERN))         # built-in fallback
+
+
+def test_market_closed_day_reconciles_only(tmp_path, monkeypatch):
+    reg = _due_registry(tmp_path)
+    b = FakeBroker(prices={"AAA": 100, "SSS": 50})
+    b.pos = {"AAA": 10.0, "SSS": -4.0}
+    monkeypatch.setattr(rst.config_trading, "STRATEGY", "staggered")
+    import trading.broker as tb
+    monkeypatch.setattr(tb, "AlpacaBroker", lambda: b)
+    monkeypatch.setattr(rst, "TrancheRegistry", lambda p: reg)
+    mod = types.ModuleType("alpaca_trader")
+    mod.AlpacaAutoTrader = lambda: types.SimpleNamespace(get_current_price=lambda s: 100.0)
+    monkeypatch.setitem(sys.modules, "alpaca_trader", mod)
+    monkeypatch.setattr(rst, "_now_et", lambda: datetime(2026, 9, 7, 16, 30, tzinfo=cal.EASTERN))
+
+    def boom(*a, **k):
+        raise AssertionError("must not run on a closed day")
+    monkeypatch.setattr(rst, "close_due_tranches", boom)
+    monkeypatch.setattr(rst, "load_today_signals", boom)
+    monkeypatch.setattr(rst.time, "sleep", NOSLEEP)
+    assert rst.main([]) == 0
+    assert reg.get("t1").status == "open" and not [c for c in b.calls if c[0] == "submit"]
+
+
+def test_daily_loss_breach_notifies(tmp_path):
+    reg = TrancheRegistry(tmp_path / "reg.json")
+    b = FakeBroker(equity=96_000, last_equity=100_000, prices={"AAA": 100, "SSS": 50})
+    assert rst.open_new_tranche(b, reg, _signals(), dry_run=False, sleep=NOSLEEP) is None
+    assert halt._TEST_SENT and "daily loss" in halt._TEST_SENT[-1][1]
+
+
+def test_shared_symbol_close_keeps_other_tranche_protected(tmp_path):
+    from trading.broker import LIVE
+    reg = TrancheRegistry(tmp_path / "reg.json")
+    reg.add_tranche("t_old", "2026-01-05", 20)
+    reg.add_tranche("t_new", (date.today() - timedelta(days=1)).isoformat(), 20)
+    b = FakeBroker(prices={"AAA": 100})
+    old = b.submit("AAA", 10, "buy", bracket=(90.0, 120.0), client_order_id="open_t_old_AAA", tif="gtc")
+    new = b.submit("AAA", 6, "buy", bracket=(95.0, 125.0), client_order_id="open_t_new_AAA", tif="gtc")
+    for _ in range(3):
+        b.open_orders()
+    reg.add_position("t_old", TranchePosition("AAA", "long", 10, 100.0, 1000.0, "open_t_old_AAA"))
+    reg.add_position("t_new", TranchePosition("AAA", "long", 6, 100.0, 600.0, "open_t_new_AAA"))
+    reg.save()
+    n = rst.close_due_tranches(b, reg, dry_run=False, sleep=NOSLEEP, timeout_s=0.5)
+    assert n == 1 and reg.get("t_old").status == "closed" and reg.get("t_new").longs[0].qty == 6
+    assert b.pos == {"AAA": 6.0}
+    assert all(b.orders[l].status in LIVE for l in new.legs) and all(b.orders[l].status == "canceled" for l in old.legs)

@@ -32,14 +32,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, time as dtime, timedelta
 from pathlib import Path
 
 import config_trading
 from trading import execution as ex
 from trading import halt
+from trading import trading_calendar as cal
 from trading.broker import BrokerError, TERMINAL
 from trading.tranche_registry import TrancheRegistry, TranchePosition
 from trading.risk_levels import compute_risk_levels
@@ -51,12 +53,19 @@ EXEC_ARM_LOG = ROOT / "trading_logs" / "exec_arms.csv"
 EXIT_BROKER_UNAVAILABLE = 2
 
 
+def _now_et() -> datetime:
+    """Exchange-local clock: tranche dates and 'today' follow New York, not
+    the machine's zone (they agree at the scheduled 21:00 UK run, not
+    necessarily when run by hand)."""
+    return cal.eastern_now()
+
+
 def _today_str() -> str:
-    return datetime.now().strftime("%Y-%m-%d")
+    return _now_et().strftime("%Y-%m-%d")
 
 
 def _today_id_stamp() -> str:
-    return datetime.now().strftime("%Y%m%d")
+    return _now_et().strftime("%Y%m%d")
 
 
 def _failure(msg: str) -> None:
@@ -111,8 +120,29 @@ def reconcile_registry_with_broker(broker, registry: TrancheRegistry, dry_run: b
     for sym, side, bq, rq in rep.orphans:
         print(f"  [reconcile] ORPHAN {sym} {side}: broker {bq:.0f} vs registry {rq} -- not traded, check manually")
         _failure(f"ORPHAN position {sym} {side}: broker {bq:.0f} vs registry {rq}")
-    if not rep.changed and not rep.orphans:
+    for tid, sym, side, rem, otype, status in rep.pending:
+        print(f"  [reconcile] {sym} {side}: {tid} entry still in flight ({otype} {status}, {rem:.0f} to fill) -- leg kept")
+    if not rep.changed and not rep.orphans and not rep.pending:
         print("  [reconcile] registry matches broker")
+    return rep
+
+
+def expire_stale_entries(broker, registry: TrancheRegistry, now_et: datetime, dry_run: bool) -> ex.ExpireReport:
+    """Limit entries resting since before the last completed session's open
+    are cancelled and their registry legs dropped (see trading/execution)."""
+    stale_before = datetime.combine(cal.last_completed_session(now_et), dtime(9, 30), tzinfo=cal.EASTERN)
+    rep = ex.expire_stale_entries(broker, registry, stale_before, dry_run=dry_run)
+    if rep.aborted:
+        print(f"  [expire] ABORT: {rep.reason}")
+        return rep
+    for tid, sym, side, qty, filled in rep.expired:
+        what = "would cancel" if dry_run else "cancelled"
+        print(f"  [expire] {sym} {side}: {tid} limit entry unfilled since before {stale_before:%Y-%m-%d %H:%M} ET "
+              f"-- {what}, leg {qty} -> {filled}")
+        if not dry_run:
+            _failure(f"ENTRY EXPIRED {sym} {side} {tid}: limit entry never filled ({filled}/{qty}); leg dropped")
+    if rep.reason and not rep.aborted:
+        print(f"  [expire] warning: {rep.reason}")
     return rep
 
 
@@ -130,6 +160,10 @@ def close_due_tranches(broker, registry: TrancheRegistry, dry_run: bool,
 
     print(f"\n{'=' * 70}\nCLOSING {len(due)} DUE TRANCHE(S)\n{'=' * 70}")
     n_filled_legs = 0
+    holders: dict[str, int] = {}                     # symbols held by more than one open tranche
+    for t in registry.open_tranches():
+        for p in t.longs + t.shorts:
+            holders[p.symbol] = holders.get(p.symbol, 0) + 1
     for tranche in due:
         n_pos = len(tranche.longs) + len(tranche.shorts)
         print(f"\n[close] {tranche.id}  open={tranche.open_date}  "
@@ -144,7 +178,8 @@ def close_due_tranches(broker, registry: TrancheRegistry, dry_run: bool,
                 print(f"  [DRY-RUN] would close: {order_side.upper()} {pos.qty} {pos.symbol}")
                 continue
             res = ex.close_leg(broker, pos.symbol, int(pos.qty), order_side, client_order_id=cid,
-                               timeout_s=timeout_s, sleep=sleep)
+                               timeout_s=timeout_s, sleep=sleep, entry_client_id=pos.client_order_id,
+                               symbol_shared=holders.get(pos.symbol, 0) > 1)
             if res.filled <= 0:
                 n_open += 1
                 print(f"  [OPEN] {order_side.upper()} {pos.qty} {pos.symbol}: nothing filled "
@@ -188,14 +223,87 @@ def load_today_signals() -> dict | None:
     yesterday's so a missed overnight signal-gen doesn't kill the day)."""
     artifacts = ROOT / "research" / "artifacts"
     for offset in (0, -1):
-        target = datetime.now().date() + timedelta(days=offset)
+        target = _now_et().date() + timedelta(days=offset)
         path = artifacts / f"signals_multi_factor_{target.strftime('%Y%m%d')}.json"
         if path.exists():
             print(f"[signals] Using {path.name}")
             with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
+                signals = json.load(f)
+                signals["_file"] = path.name
+                return signals
     print("[signals] No signal file found for today or yesterday -- skipping new tranche.")
     return None
+
+
+# ---------------------------------------------------------------------------
+# DATA FRESHNESS + CALENDAR GATES (2026-09 review)
+# ---------------------------------------------------------------------------
+FRESH_MAX_AGE_H = 36
+_DATE_RE = re.compile(r"^([0-9]{4}-[0-9]{2}-[0-9]{2})")
+
+
+def _signal_data_date(signals: dict):
+    m = _DATE_RE.match(str(signals.get("data_date") or ""))
+    return cal._to_date(m.group(1)) if m else None
+
+
+def _tranche_data_dates(registry: TrancheRegistry) -> set:
+    """data_date of every tranche ever opened (notes 'data_date=YYYY-MM-DD';
+    pre-2026-09 tranches stored the raw data_date string as signal_file)."""
+    out = set()
+    for t in registry.tranches:
+        for text in (t.notes or "", t.signal_file or ""):
+            m = _DATE_RE.search(text.replace("data_date=", ""))
+            if m:
+                out.add(m.group(1))
+    return out
+
+
+def signals_fresh(signals: dict, registry: TrancheRegistry, now_et: datetime) -> tuple[bool, str]:
+    """A tranche may only be opened on signals computed from the LAST
+    COMPLETED session, generated recently, and not already traded. Catches
+    the holiday case (Friday's data re-run on Monday), a dead data feed
+    (data_date stuck), and a stale file picked up by the yesterday fallback."""
+    dd = _signal_data_date(signals)
+    if dd is None:
+        return False, "signal file carries no data_date"
+    expected = cal.last_completed_session(now_et)
+    if dd != expected:
+        return False, f"signal data_date {dd} != last completed session {expected} (stale or premature data)"
+    gen = signals.get("generated_at")
+    if gen:
+        try:
+            age_h = (datetime.now() - datetime.fromisoformat(str(gen)).replace(tzinfo=None)).total_seconds() / 3600
+        except ValueError:
+            age_h = None
+        if age_h is not None and (age_h > FRESH_MAX_AGE_H or age_h < -6):
+            return False, f"signal file generated {age_h:.0f}h ago (> {FRESH_MAX_AGE_H}h)"
+    if dd.isoformat() in _tranche_data_dates(registry):
+        return False, f"a tranche was already opened on data_date {dd}"
+    return True, ""
+
+
+def calendar_gate(broker, now_et: datetime) -> bool:
+    """True when today (exchange time) is a trading session. The broker's
+    calendar decides when it can be asked (it knows unscheduled closures);
+    the built-in NYSE calendar is the fallback, and any disagreement between
+    the two over the next two weeks is logged for a human."""
+    d = now_et.date()
+    theirs = None
+    try:
+        theirs = set(broker.calendar(d, d + timedelta(days=14)))
+        ours = {d + timedelta(days=i) for i in range(15) if cal.is_trading_day(d + timedelta(days=i))}
+        if theirs != ours:
+            msg = (f"CALENDAR MISMATCH built-in vs broker: only built-in={sorted(ours - theirs)} "
+                   f"only broker={sorted(theirs - ours)}")
+            print(f"  [calendar] {msg}")
+            _failure(msg)
+    except BrokerError as e:
+        print(f"  [calendar] broker calendar unavailable ({e}); using the built-in NYSE calendar")
+    open_today = (d in theirs) if theirs is not None else cal.is_trading_day(d)
+    print(f"[calendar] {d} {now_et.strftime('%H:%M')} ET: "
+          f"{'trading session' if open_today else 'MARKET CLOSED (weekend/holiday)'}")
+    return open_today
 
 
 def _submit_entry(broker, symbol: str, qty: int, order_side: str, arm: str, cur_price: float,
@@ -226,10 +334,16 @@ def _submit_entry(broker, symbol: str, qty: int, order_side: str, arm: str, cur_
 
 
 def open_new_tranche(broker, registry: TrancheRegistry, signals: dict, dry_run: bool,
-                     price_of=None, sleep=time.sleep) -> str | None:
+                     price_of=None, sleep=time.sleep, now_et: datetime | None = None) -> str | None:
     """Build today's tranche from signals; place orders; register."""
     if not signals.get("should_trade"):
         print(f"[open] should_trade=False (n_stocks={signals.get('n_stocks', 0)}) -- no tranche opened today.")
+        return None
+    now_et = now_et or _now_et()
+    fresh, why = signals_fresh(signals, registry, now_et)
+    if not fresh:
+        print(f"[open] data freshness gate: {why} -- no tranche opened.")
+        _failure(f"SIGNALS NOT FRESH: {why}")
         return None
     if halt.is_halted():
         st = halt.read()
@@ -330,8 +444,10 @@ def open_new_tranche(broker, registry: TrancheRegistry, signals: dict, dry_run: 
         if not dry_run:
             _log_exec_arm(tranche_id, symbol, side, client_id, arm, float(cur_price))
             if not tranche_created:
+                dd = _signal_data_date(signals)
                 registry.add_tranche(tranche_id=tranche_id, open_date=_today_str(), hold_days=config_trading.HOLD_DAYS,
-                                     signal_file=Path(signals.get("data_date", "")).name if signals.get("data_date") else None)
+                                     signal_file=signals.get("_file"),
+                                     notes=f"data_date={dd.isoformat()}" if dd else None)
                 tranche_created = True
             registry.add_position(tranche_id, pos)
             registry.save()
@@ -382,22 +498,36 @@ def main(argv=None) -> int:
     summary_pre = registry.summary()
     print(f"\nRegistry pre: {summary_pre}")
 
+    now_et = _now_et()
+    session_today = calendar_gate(broker, now_et)
+
+    print("\n[expire] checking for limit entries that never filled...")
+    exp = expire_stale_entries(broker, registry, now_et, dry_run=args.dry_run)
+    if exp.aborted:
+        _failure(f"BROKER UNAVAILABLE at expire: {exp.reason} -- cycle aborted")
+        return EXIT_BROKER_UNAVAILABLE
+
     print("\n[reconcile] checking registry vs broker positions...")
     rep = reconcile_registry_with_broker(broker, registry, dry_run=args.dry_run)
     if rep.aborted:
         _failure(f"BROKER UNAVAILABLE at reconcile: {rep.reason} -- cycle aborted")
         return EXIT_BROKER_UNAVAILABLE
-
     n_closed = 0
     if not args.open_only:
-        n_closed = close_due_tranches(broker, registry, dry_run=args.dry_run)
-        time.sleep(2)
+        if session_today:
+            n_closed = close_due_tranches(broker, registry, dry_run=args.dry_run)
+            time.sleep(2)
+        else:
+            print("[close] market closed today -- due tranches are closed at the next session")
     new_tranche_id = None
     if not args.close_only:
-        signals = load_today_signals()
-        if signals:
-            new_tranche_id = open_new_tranche(broker, registry, signals, dry_run=args.dry_run,
-                                              price_of=trader.get_current_price)
+        if not session_today:
+            print("[open] market closed today -- no signal can be fresh; nothing opened")
+        else:
+            signals = load_today_signals()
+            if signals:
+                new_tranche_id = open_new_tranche(broker, registry, signals, dry_run=args.dry_run,
+                                                  price_of=trader.get_current_price, now_et=now_et)
     if not args.dry_run:
         registry.save()
     summary_post = registry.summary()
