@@ -105,16 +105,21 @@ class AlpacaAutoTrader:
                 })
             return result
         except Exception as e:
-            print(f"[ERROR] Failed to get positions: {e}")
-            return []
+            # UNKNOWN is not "flat" (2026-09 review): callers must not treat a
+            # failed query as an empty book
+            raise RuntimeError(f"positions unavailable: {e}") from e
 
     def close_all_positions(self):
         """Close all open positions (for 1-day holding strategy)"""
-        positions = self.get_positions()
+        try:
+            positions = self.get_positions()
+        except RuntimeError as e:
+            print(f"[ABORT] {e} -- not closing, not treating the account as flat")
+            return False
 
         if len(positions) == 0:
             print("[INFO] No positions to close")
-            return
+            return True
 
         print(f"\n[INFO] Closing {len(positions)} positions...")
         print("-" * 80)
@@ -386,7 +391,9 @@ class AlpacaAutoTrader:
         print()
 
         # 1. Close all existing positions (1-day holding strategy)
-        self.close_all_positions()
+        if self.close_all_positions() is False:
+            print("[ABORT] positions unknown -- no new orders")
+            return
 
         # Wait a moment for positions to close
         time.sleep(2)
@@ -472,7 +479,11 @@ class AlpacaAutoTrader:
     def print_portfolio_status(self):
         """Print current portfolio status"""
         account = self.get_account_info()
-        positions = self.get_positions()
+        try:
+            positions = self.get_positions()
+        except RuntimeError as e:
+            print(f"[ERROR] {e}")
+            return
 
         if not account:
             print("[ERROR] Cannot get account info")
@@ -514,7 +525,11 @@ class AlpacaAutoTrader:
         report_file = self.logs_dir / f"daily_report_{datetime.now().strftime('%Y%m%d')}.txt"
 
         account = self.get_account_info()
-        positions = self.get_positions()
+        try:
+            positions = self.get_positions()
+            positions_note = ""
+        except RuntimeError as e:
+            positions, positions_note = [], f" (UNAVAILABLE: {e})"
 
         with open(report_file, 'w') as f:
             f.write("="*80 + "\n")
@@ -530,7 +545,7 @@ class AlpacaAutoTrader:
                 daily_pl_pct = (daily_pl / account['initial_equity']) * 100
                 f.write(f"Daily P&L: ${daily_pl:,.2f} ({daily_pl_pct:.2f}%)\n\n")
 
-            f.write(f"Open Positions: {len(positions)}\n")
+            f.write(f"Open Positions: {len(positions)}{positions_note}\n")
             if len(positions) > 0:
                 f.write("\nPosition Details:\n")
                 f.write("-" * 80 + "\n")
