@@ -7,7 +7,9 @@ Two implementations share one contract:
                 "I could not ask" (the old get_positions() did, and the
                 reconciler read that as "the broker holds nothing").
   FakeBroker    in-memory broker for tests with fault injection: failed
-                calls, delayed/partial fills, slow cancels, rejects.
+                calls, delayed/partial fills, slow cancels, rejects; models
+                bracket children (OCO legs that HOLD the position's shares
+                exactly like Alpaca) and the exchange calendar.
 
 Order states are lowercase strings as Alpaca reports them. Only the
 TERMINAL set means the order is over; "accepted"/"new"/"pending_new"/
@@ -18,7 +20,10 @@ from __future__ import annotations
 
 import itertools
 from dataclasses import dataclass, field
+from datetime import date, datetime, timedelta, timezone
 from typing import Callable, Optional
+
+from .trading_calendar import is_trading_day, _to_date
 
 TERMINAL = frozenset({"filled", "canceled", "cancelled", "expired", "rejected", "suspended", "done_for_day", "replaced"})
 LIVE = frozenset({"accepted", "new", "pending_new", "held", "partially_filled", "accepted_for_bidding",
@@ -43,6 +48,9 @@ class OrderState:
     order_type: str = "market"
     order_class: str = "simple"
     limit_price: Optional[float] = None
+    legs: list[str] = field(default_factory=list)      # child order ids of a bracket/OCO parent
+    parent_id: Optional[str] = None                    # set on a child
+    submitted_at: Optional[datetime] = None            # aware (UTC at Alpaca)
 
     @property
     def terminal(self) -> bool:
@@ -113,13 +121,17 @@ class AlpacaBroker:
             raise BrokerError(f"get_all_positions failed: {e}") from e
 
     def _to_state(self, o) -> OrderState:
+        legs = getattr(o, "legs", None) or []
         return OrderState(id=str(o.id), client_order_id=str(o.client_order_id or ""), symbol=str(o.symbol),
                           side=norm_status(o.side), qty=float(o.qty or 0), filled_qty=float(o.filled_qty or 0),
                           status=norm_status(o.status),
                           filled_avg_price=float(o.filled_avg_price) if getattr(o, "filled_avg_price", None) else None,
                           order_type=norm_status(getattr(o, "type", "market")),
                           order_class=norm_status(getattr(o, "order_class", "simple")),
-                          limit_price=float(o.limit_price) if getattr(o, "limit_price", None) else None)
+                          limit_price=float(o.limit_price) if getattr(o, "limit_price", None) else None,
+                          legs=[str(l.id) for l in legs],
+                          parent_id=str(getattr(o, "parent_id", None) or "") or None,
+                          submitted_at=getattr(o, "submitted_at", None) or getattr(o, "created_at", None))
 
     def open_orders(self, symbol: Optional[str] = None) -> list[OrderState]:
         try:
@@ -131,8 +143,10 @@ class AlpacaBroker:
             raise BrokerError(f"get_orders failed: {e}") from e
 
     def get_order(self, order_id: str) -> OrderState:
+        """Nested: a bracket parent comes back with its child ids in .legs."""
         try:
-            return self._to_state(self.client.get_order_by_id(order_id))
+            from alpaca.trading.requests import GetOrderByIdRequest
+            return self._to_state(self.client.get_order_by_id(order_id, filter=GetOrderByIdRequest(nested=True)))
         except Exception as e:                       # noqa: BLE001
             raise BrokerError(f"get_order_by_id failed: {e}") from e
 
@@ -153,6 +167,15 @@ class AlpacaBroker:
             return px if px > 0 else None
         except Exception:                            # noqa: BLE001
             return None
+
+    def calendar(self, start: date, end: date) -> list[date]:
+        """Trading sessions in [start, end] according to the exchange."""
+        try:
+            from alpaca.trading.requests import GetCalendarRequest
+            days = self.client.get_calendar(GetCalendarRequest(start=start, end=end))
+            return [_to_date(c.date) for c in days]
+        except Exception as e:                       # noqa: BLE001
+            raise BrokerError(f"get_calendar failed: {e}") from e
 
     # -- mutations ----------------------------------------------------------
     def submit(self, symbol: str, qty: int, side: str, kind: str = "market", limit_price: Optional[float] = None,
@@ -199,10 +222,16 @@ class FakeBroker:
     partial_fill[symbol] = f   a market order in symbol fills only fraction f (rest stays live)
     cancel_delay_polls         a cancel takes this many polls to become terminal
     reject[symbol] = reason    submissions in symbol are rejected
+    holidays                   extra non-trading dates for calendar()
+
+    Bracket entries create two child orders (stop + take-profit, OCO) that
+    stay live and HOLD the entry's shares: a closing order for more shares
+    than are free is rejected ("insufficient qty available"), which is what
+    Alpaca does and why the close path must cancel the right children.
     """
 
     def __init__(self, equity: float = 100_000.0, last_equity: Optional[float] = None, cash: Optional[float] = None,
-                 prices: Optional[dict] = None):
+                 prices: Optional[dict] = None, holidays: Optional[set] = None):
         self.equity = float(equity)
         self.last_equity = float(last_equity if last_equity is not None else equity)
         self.cash = float(cash if cash is not None else equity)
@@ -218,6 +247,8 @@ class FakeBroker:
         self.partial_fill: dict[str, float] = {}
         self.cancel_delay_polls = 0
         self.reject: dict[str, str] = {}
+        self.holidays: set = set(holidays or ())
+        self.clock: Optional[datetime] = None        # submitted_at for new orders (None = now)
         self.calls: list[tuple] = []
 
     # -- fault helpers ------------------------------------------------------
@@ -234,7 +265,7 @@ class FakeBroker:
                 self._cancel_polls[oid] -= 1
                 if self._cancel_polls[oid] <= 0:
                     del self._cancel_polls[oid]
-                    o.status = "canceled" if o.filled_qty == 0 else "canceled"
+                    o.status = "canceled"
                 continue
             if o.status in TERMINAL or o.order_type != "market":
                 continue
@@ -265,6 +296,25 @@ class FakeBroker:
         o.filled_qty = target
         o.filled_avg_price = px
         o.status = "filled" if o.filled_qty >= o.qty else "partially_filled"
+        if o.status == "filled" and o.legs:
+            for lid in o.legs:                       # children become working orders once the parent fills
+                child = self.orders.get(lid)
+                if child is not None and child.status == "held":
+                    child.status = "new"
+
+    def held_qty(self, symbol: str, side: str) -> float:
+        """Shares of `symbol` tied up by live non-market orders on `side`
+        (bracket children, resting stops/limits)."""
+        held, parents_seen = 0.0, set()
+        for o in self.orders.values():
+            if o.symbol != symbol or o.side != side or o.status not in LIVE or o.order_type == "market":
+                continue
+            if o.parent_id:                          # an OCO pair holds its qty once, not twice
+                if o.parent_id in parents_seen:
+                    continue
+                parents_seen.add(o.parent_id)
+            held += o.remaining
+        return held
 
     # -- queries ------------------------------------------------------------
     def account(self) -> dict:
@@ -305,6 +355,15 @@ class FakeBroker:
     def latest_price(self, symbol: str) -> Optional[float]:
         return self.prices.get(symbol)
 
+    def calendar(self, start: date, end: date) -> list[date]:
+        self._maybe_fail("calendar")
+        out, cur = [], _to_date(start)
+        while cur <= _to_date(end):
+            if is_trading_day(cur) and cur not in self.holidays:
+                out.append(cur)
+            cur += timedelta(days=1)
+        return out
+
     # -- mutations ----------------------------------------------------------
     def submit(self, symbol: str, qty: int, side: str, kind: str = "market", limit_price: Optional[float] = None,
                bracket: Optional[tuple[float, float]] = None, client_order_id: Optional[str] = None,
@@ -316,13 +375,41 @@ class FakeBroker:
         oid = f"fake-{next(self._ids)}"
         o = OrderState(id=oid, client_order_id=client_order_id or oid, symbol=symbol, side=side, qty=float(qty),
                        filled_qty=0.0, status="accepted", order_type=kind,
-                       order_class="bracket" if bracket else "simple", limit_price=limit_price)
+                       order_class="bracket" if bracket else "simple", limit_price=limit_price,
+                       submitted_at=self.clock or datetime.now(timezone.utc))
         if symbol in self.reject:
             o.status = "rejected"
+        else:
+            pos = self.pos.get(symbol, 0.0)
+            reduces = (pos > 0 and side == "sell") or (pos < 0 and side == "buy")
+            if reduces and bracket is None:
+                free = abs(pos) - self.held_qty(symbol, side)
+                if float(qty) > free + 1e-9:
+                    o.status = "rejected"
+                    self.calls.append(("reject", symbol, f"insufficient qty available for order (requested: {qty}, available: {free:.0f})"))
         self.orders[oid] = o
-        if self.fill_delay_polls:
+        if o.status != "rejected" and bracket is not None:
+            stop, take = bracket
+            exit_side = "sell" if side == "buy" else "buy"
+            for kind_, px in (("stop", stop), ("limit", take)):
+                cid = f"fake-{next(self._ids)}"
+                child = OrderState(id=cid, client_order_id=cid, symbol=symbol, side=exit_side, qty=float(qty),
+                                   filled_qty=0.0, status="held", order_type=kind_, order_class="bracket",
+                                   limit_price=px, parent_id=oid)
+                self.orders[cid] = child
+                o.legs.append(cid)
+        if self.fill_delay_polls and o.status != "rejected":
             self._pending_polls[oid] = self.fill_delay_polls
         return o
+
+    def _cancel_one(self, o: OrderState) -> None:
+        if o.status in TERMINAL:
+            return
+        if self.cancel_delay_polls:
+            self._cancel_polls[o.id] = self.cancel_delay_polls
+            o.status = "pending_cancel"
+        else:
+            o.status = "canceled"
 
     def cancel(self, order_id: str) -> None:
         self._maybe_fail("cancel")
@@ -332,16 +419,21 @@ class FakeBroker:
             raise BrokerError(f"order {order_id} not found")
         if o.status in TERMINAL:
             return
-        if self.cancel_delay_polls:
-            self._cancel_polls[order_id] = self.cancel_delay_polls
-            o.status = "pending_cancel"
-        else:
-            o.status = "canceled"
+        self._cancel_one(o)
+        # OCO: cancelling one bracket child cancels its sibling; cancelling a
+        # live parent cancels its children
+        siblings = []
+        if o.parent_id and o.parent_id in self.orders:
+            siblings = [self.orders[l] for l in self.orders[o.parent_id].legs if l != o.id and l in self.orders]
+        elif o.legs:
+            siblings = [self.orders[l] for l in o.legs if l in self.orders]
+        for s in siblings:
+            self._cancel_one(s)
 
     def cancel_all(self) -> int:
         self._maybe_fail("cancel_all")
         n = 0
-        for oid, o in self.orders.items():
+        for oid, o in list(self.orders.items()):
             if o.status in LIVE:
                 self.cancel(oid); n += 1
         return n

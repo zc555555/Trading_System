@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from typing import Callable, Optional
 
 from .broker import BrokerError, OrderState, LIVE, TERMINAL
@@ -62,6 +63,58 @@ def cancel_symbol_orders(broker, symbol: str, timeout_s: float = 15.0, poll_s: f
     return False
 
 
+def cancel_orders_and_wait(broker, order_ids, symbol: str, timeout_s: float = 15.0, poll_s: float = 1.0,
+                           sleep: Callable[[float], None] = time.sleep) -> bool:
+    """Cancel exactly these order ids and wait until none of them is live."""
+    ids = set(order_ids)
+    if not ids:
+        return True
+    for oid in ids:
+        try:
+            broker.cancel(oid)
+        except BrokerError:
+            pass                                     # already terminal / unknown: the wait below decides
+    deadline = time.monotonic() + timeout_s
+    while True:
+        live = {o.id for o in broker.open_orders(symbol)} & ids
+        if not live:
+            return True
+        if time.monotonic() >= deadline:
+            return False
+        sleep(poll_s)
+
+
+def release_shares(broker, symbol: str, entry_client_id: Optional[str], symbol_shared: bool,
+                   timeout_s: float = 15.0, poll_s: float = 1.0,
+                   sleep: Callable[[float], None] = time.sleep) -> tuple[bool, str]:
+    """Free the shares a leg's close needs. Returns (ok, note).
+
+    With the leg's entry order known, only ITS bracket children are
+    cancelled, so other tranches' stops in the same symbol stay in place
+    (2026-09 review item 8: the symbol-wide cancel stripped their
+    protection). With the entry unknown (legacy legs) the symbol-wide cancel
+    is used only when no other tranche holds the symbol; otherwise nothing
+    is cancelled and the close is attempted as is -- a reject then reports
+    'blocked' for a human instead of silently un-protecting another tranche."""
+    ids = None
+    if entry_client_id:
+        try:
+            parent = broker.get_order_by_client_id(entry_client_id)
+            if parent is not None:
+                ids = list(parent.legs)
+                if not ids and parent.order_class == "bracket":
+                    ids = list(broker.get_order(parent.id).legs)     # nested fetch expands the children
+        except BrokerError as e:
+            return False, f"entry order lookup failed: {e}"
+    if ids is None:
+        if symbol_shared:
+            return True, "entry order unknown and symbol held by another tranche: nothing cancelled"
+        ok = cancel_symbol_orders(broker, symbol, timeout_s=timeout_s, poll_s=poll_s, sleep=sleep)
+        return ok, ("" if ok else "open orders would not cancel")
+    ok = cancel_orders_and_wait(broker, ids, symbol, timeout_s=timeout_s, poll_s=poll_s, sleep=sleep)
+    return ok, ("" if ok else "bracket legs would not cancel")
+
+
 @dataclass
 class CloseResult:
     symbol: str
@@ -78,8 +131,13 @@ class CloseResult:
 
 def close_leg(broker, symbol: str, qty: int, side: str, client_order_id: str,
               timeout_s: float = 45.0, poll_s: float = 1.0,
-              sleep: Callable[[float], None] = time.sleep, max_attempts: int = 3) -> CloseResult:
+              sleep: Callable[[float], None] = time.sleep, max_attempts: int = 3,
+              entry_client_id: Optional[str] = None, symbol_shared: bool = False) -> CloseResult:
     """Close `qty` shares of a registry leg with a closing MARKET order.
+
+    entry_client_id names the leg's entry order so that only its own bracket
+    children are cancelled first; symbol_shared says another open tranche
+    holds the symbol (see release_shares).
 
     side is the closing order side ('sell' for a long leg, 'buy' for a short).
     Idempotent on client_order_id: attempt k uses `<cid>` then `<cid>_r2`,
@@ -97,9 +155,12 @@ def close_leg(broker, symbol: str, qty: int, side: str, client_order_id: str,
         except BrokerError as e:
             return CloseResult(symbol, qty, filled_total, "unknown", last_id, f"lookup failed: {e}")
         if prior is None:
-            # nothing resting may hold the shares (bracket children)
-            if not cancel_symbol_orders(broker, symbol, timeout_s=min(15.0, timeout_s), poll_s=poll_s, sleep=sleep):
-                return CloseResult(symbol, qty, filled_total, "blocked", last_id, "open orders would not cancel")
+            # nothing resting may hold the shares (bracket children) -- but only
+            # THIS leg's children may go when other tranches hold the symbol
+            ok, note = release_shares(broker, symbol, entry_client_id, symbol_shared,
+                                      timeout_s=min(15.0, timeout_s), poll_s=poll_s, sleep=sleep)
+            if not ok:
+                return CloseResult(symbol, qty, filled_total, "blocked", last_id, note)
             try:
                 prior = broker.submit(symbol, remaining, side, kind="market", client_order_id=cid, tif="day")
             except BrokerError as e:
@@ -127,10 +188,18 @@ class ReconcileReport:
     reduced: list = field(default_factory=list)     # (tranche_id, symbol, side, from_qty, to_qty)
     removed: list = field(default_factory=list)     # (tranche_id, symbol, side, qty)
     orphans: list = field(default_factory=list)     # (symbol, side, broker_qty, registry_qty)
+    pending: list = field(default_factory=list)     # (tranche_id, symbol, side, remaining, order_type, status)
 
     @property
     def changed(self) -> bool:
         return bool(self.reduced or self.removed)
+
+
+def live_entries(broker) -> dict:
+    """client_order_id -> live entry order (ids prefixed 'open_'). Raises
+    BrokerError when the broker cannot be asked."""
+    return {o.client_order_id: o for o in broker.open_orders()
+            if o.client_order_id.startswith(ENTRY_PREFIX) and o.status in LIVE}
 
 
 def reconcile(broker, registry, dry_run: bool = False) -> ReconcileReport:
@@ -141,6 +210,7 @@ def reconcile(broker, registry, dry_run: bool = False) -> ReconcileReport:
     rep = ReconcileReport()
     try:
         positions = broker.positions()
+        entries = live_entries(broker)
     except BrokerError as e:
         rep.aborted, rep.reason = True, f"broker positions unavailable: {e}"
         return rep
@@ -158,14 +228,24 @@ def reconcile(broker, registry, dry_run: bool = False) -> ReconcileReport:
     for key, legs in reg.items():
         reg_total = sum(int(p.qty) for _, p in legs)
         broker_qty = held.get(key, 0.0)
-        if broker_qty >= reg_total:
+        # an entry the broker still has (queued market order after the close,
+        # resting limit) is a leg in flight, not a leg that vanished
+        pending_qty = 0.0
+        for tid, pos in legs:
+            e = entries.get(pos.client_order_id)
+            if e is not None and e.remaining > 0:
+                pending_qty += e.remaining
+                rep.pending.append((tid, pos.symbol, key[1], e.remaining, e.order_type, e.status))
+        if broker_qty + pending_qty >= reg_total:
             if broker_qty > reg_total:
                 rep.orphans.append((key[0], key[1], broker_qty, reg_total))
             continue
-        shortfall = reg_total - int(broker_qty)
-        for tid, pos in legs:                        # oldest first
+        shortfall = reg_total - int(broker_qty + pending_qty)
+        for tid, pos in legs:                        # oldest first, never a leg whose entry is in flight
             if shortfall <= 0:
                 break
+            if pos.client_order_id in entries:
+                continue
             cut = min(int(pos.qty), shortfall)
             shortfall -= cut
             if cut >= int(pos.qty):
@@ -187,6 +267,60 @@ def reconcile(broker, registry, dry_run: bool = False) -> ReconcileReport:
 # ---------------------------------------------------------------------------
 # exposure and entry guards
 # ---------------------------------------------------------------------------
+@dataclass
+class ExpireReport:
+    aborted: bool = False
+    reason: str = ""
+    expired: list = field(default_factory=list)     # (tranche_id, symbol, side, qty, filled_before_cancel)
+
+
+def expire_stale_entries(broker, registry, stale_before: datetime, dry_run: bool = False,
+                         timeout_s: float = 15.0, poll_s: float = 1.0,
+                         sleep: Callable[[float], None] = time.sleep) -> ExpireReport:
+    """A LIMIT entry still resting from before `stale_before` (the last
+    completed session's open) never got its price: cancel it and drop the
+    leg the registry booked for it (or shrink it to what did fill). The
+    2026-09 paper book carried limit entries from three sessions earlier as
+    if they were positions. Queued MARKET entries are left alone: they fill
+    at the next open. dry_run only reports."""
+    rep = ExpireReport()
+    try:
+        entries = live_entries(broker)
+    except BrokerError as e:
+        rep.aborted, rep.reason = True, f"broker orders unavailable: {e}"
+        return rep
+    if stale_before.tzinfo is None:
+        stale_before = stale_before.replace(tzinfo=timezone.utc)
+    for t in registry.open_tranches():
+        for side, legs in (("long", t.longs), ("short", t.shorts)):
+            for pos in list(legs):
+                e = entries.get(pos.client_order_id)
+                if e is None or e.order_type != "limit" or e.submitted_at is None:
+                    continue
+                sub = e.submitted_at if e.submitted_at.tzinfo else e.submitted_at.replace(tzinfo=timezone.utc)
+                if sub >= stale_before:
+                    continue
+                filled = int(e.filled_qty)
+                if not dry_run:
+                    try:
+                        broker.cancel(e.id)
+                        st = wait_for_terminal(broker, e.id, timeout_s=timeout_s, poll_s=poll_s, sleep=sleep)
+                        filled = int(st.filled_qty)
+                        if not st.terminal:
+                            continue                 # cancel not confirmed: leave the leg for the next run
+                    except BrokerError as be:
+                        rep.reason = f"cancel {e.client_order_id}: {be}"
+                        continue
+                    if filled <= 0:
+                        registry.remove_position(t.id, pos.symbol, side, reason="entry_expired_unfilled")
+                    elif filled < int(pos.qty):
+                        registry.reduce_position(t.id, pos.symbol, side, int(pos.qty) - filled, reason="entry_expired_partial")
+                rep.expired.append((t.id, pos.symbol, side, int(pos.qty), filled))
+    if rep.expired and not dry_run:
+        registry.save()
+    return rep
+
+
 @dataclass
 class Exposure:
     gross: float = 0.0                 # |positions| + pending entry notional
