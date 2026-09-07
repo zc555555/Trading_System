@@ -20,13 +20,17 @@ def test_short_caps_exist_and_are_sane():
 
 def test_no_leverage_guard_is_wired():
     """The order path must contain the equity-based exposure block --
-    grep-level pin so a refactor cannot silently drop it."""
+    grep-level pin so a refactor cannot silently drop it. Since the 2026-09
+    execution rewrite the guard lives in trading/execution.entry_allowed and
+    the orchestrator must call it."""
     from pathlib import Path
-    src = (Path(__file__).parent.parent / "run_staggered_trading.py") \
-        .read_text(encoding="utf-8")
-    assert "no leverage, ever" in src
-    assert "SHORT_SINGLE_MAX_PCT" in src
-    assert "SHORT_GROSS_MAX_PCT" in src
+    root = Path(__file__).parent.parent
+    guards = (root / "trading" / "execution.py").read_text(encoding="utf-8")
+    orchestrator = (root / "run_staggered_trading.py").read_text(encoding="utf-8")
+    assert "no leverage, ever" in guards
+    assert "entry_allowed" in orchestrator
+    assert "SHORT_SINGLE_MAX_PCT" in orchestrator
+    assert "SHORT_GROSS_MAX_PCT" in orchestrator
 
 
 def test_principle_block_present():

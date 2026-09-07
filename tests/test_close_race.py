@@ -52,19 +52,6 @@ def test_cancel_waits_for_broker_to_process(monkeypatch):
     assert client.polls >= 3
 
 
-def test_close_path_retries_once(monkeypatch):
-    import run_staggered_trading as rst
-    calls = []
-
-    class _T:
-        def cancel_open_orders(self, s):
-            calls.append("cancel")
-        def wait_until_no_open_orders(self, s):
-            calls.append("wait")
-        def place_market_order(self, s, q, side):
-            calls.append("order")
-            return len([c for c in calls if c == "order"]) == 2   # first fails, second ok
-
-    monkeypatch.setattr(rst.time, "sleep", lambda s: None)
-    ok = rst._close_position(_T(), "TRV", 1, "buy", "cid", dry_run=False)
-    assert ok and calls == ["cancel", "order", "wait", "order"]
+# test_close_path_retries_once was retired on 2026-09-07: the close path moved to
+# trading/execution.close_leg, whose retry/idempotency rules are pinned in
+# tests/test_execution_safety.py.
