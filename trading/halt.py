@@ -19,6 +19,10 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from . import notify as _notify
+
+NOTIFY = _notify.notify        # replaceable hook: called with (title, body) when a halt is set
+
 ROOT = Path(__file__).resolve().parent.parent
 HALT_PATH = ROOT / "trading_logs" / "halt_state.json"
 
@@ -52,6 +56,10 @@ def set_halt(reason: str, equity: Optional[float] = None, extra: Optional[dict] 
     tmp = Path(path).with_suffix(".tmp")
     tmp.write_text(json.dumps(state, indent=2), encoding="utf-8")
     tmp.replace(path)
+    try:
+        NOTIFY("StockPredict HALT", f"{reason} (equity {equity})")
+    except Exception:                            # noqa: BLE001
+        pass
     return state
 
 
