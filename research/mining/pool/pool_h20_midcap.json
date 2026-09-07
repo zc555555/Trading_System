@@ -409,7 +409,76 @@
    "coverage": 0.9084249358010446,
    "pool_size_at_admission": 23,
    "rule_version": "P-3.2"
+  },
+  {
+   "candidate_id": "pv_corr60_sec",
+   "expression": "sector_rank(ts_corr(close, volume, 60))",
+   "canonical": "sector_rank(ts_corr(close, volume, 60))",
+   "hash": "bcfe7df8b050",
+   "expected_direction": "negative",
+   "source": "run:cc_20260907_mid4",
+   "admitted": "2026-09-07",
+   "dev_ic": -0.02084432915996738,
+   "dev_t": -3.199685351071474,
+   "residual_vs_pool_t": 2.799,
+   "pool_corr_max": 0.141,
+   "incumbent_corr_max": 0.305,
+   "coverage": 0.9910001883368659,
+   "pool_size_at_admission": 24,
+   "rule_version": "P-3.2"
+  },
+  {
+   "candidate_id": "pv_corr250_sec",
+   "expression": "sector_rank(ts_corr(close, volume, 250))",
+   "canonical": "sector_rank(ts_corr(close, volume, 250))",
+   "hash": "1ce511e8d581",
+   "expected_direction": "negative",
+   "source": "run:cc_20260907_mid4",
+   "admitted": "2026-09-07",
+   "dev_ic": -0.010572400131155811,
+   "dev_t": -1.3476794815357263,
+   "residual_vs_pool_t": 1.843,
+   "pool_corr_max": -0.296,
+   "incumbent_corr_max": 0.23,
+   "coverage": 0.9067926829632863,
+   "pool_size_at_admission": 25,
+   "rule_version": "P-3.2"
   }
  ],
- "releases": []
+ "releases": [
+  {
+   "release_id": "pool_h20_midcap_r1",
+   "n_members": 26,
+   "date": "2026-09-07",
+   "verdict": "FAIL",
+   "members": [
+    "a327fd011ea2",
+    "4d65cf2572ec",
+    "f2bbeb67638b",
+    "954ed2c00bd5",
+    "85ca610bcaed",
+    "8fd44f0cc425",
+    "bdd20a6092c9",
+    "60a8b760143f",
+    "a8b4b81b54de",
+    "2685ecb89a0d",
+    "a78f21c6cf8a",
+    "96258b989b3e",
+    "dba9809e88bb",
+    "7de3c00dfb01",
+    "e75dba3797ef",
+    "16cef03c9ae4",
+    "f39cd7d7a5cc",
+    "3ec315b8f66c",
+    "935ec1c7f862",
+    "8ecc5b4ec217",
+    "b9cdf27e4752",
+    "e6504c722aec",
+    "9863fc5970a0",
+    "905a671a659f",
+    "bcfe7df8b050",
+    "1ce511e8d581"
+   ]
+  }
+ ]
 }
