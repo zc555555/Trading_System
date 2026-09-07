@@ -233,6 +233,26 @@ class TrancheRegistry:
             return removed
         return False
 
+    def reduce_position(self, tranche_id: str, symbol: str, side: str, qty_closed: int,
+                        reason: str = "partial_close") -> bool:
+        """Lower a leg's quantity after a PARTIAL close or a broker-side
+        shortfall; removes the leg when nothing is left. Returns True when a
+        leg matched."""
+        for rec in self._payload["tranches"]:
+            if rec["id"] != tranche_id:
+                continue
+            key = "longs" if side == "long" else "shorts"
+            for p in rec[key]:
+                if p["symbol"] == symbol:
+                    left = int(p["qty"]) - int(qty_closed)
+                    if left <= 0:
+                        return self.remove_position(tranche_id, symbol, side, reason=reason)
+                    p["qty"] = left
+                    p["entry_amount_usd"] = float(p.get("entry_price", 0.0)) * left
+                    return True
+            return False
+        return False
+
     # ----- aggregates -----
     def equity_in_open_tranches(self) -> float:
         total = 0.0
