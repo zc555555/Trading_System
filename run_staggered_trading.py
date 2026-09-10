@@ -113,6 +113,13 @@ def reconcile_registry_with_broker(broker, registry: TrancheRegistry, dry_run: b
     if rep.aborted:
         print(f"  [reconcile] ABORT: {rep.reason} -- registry untouched, no orders this cycle")
         return rep
+    for tid, sym, side, q, f in rep.never_filled:
+        print(f"  [reconcile] {sym} {side}: {tid} entry filled {f}/{q} and is over -- leg set to what filled")
+    for tid, sym, side, q, px in rep.exited:
+        print(f"  [reconcile] {sym} {side}: {tid} bracket exit filled {q} @ {px} -- leg reduced")
+    for tid, sym, side, q, px in rep.restored:
+        print(f"  [reconcile] {sym} {side}: {tid} filled entry had no leg -- restored {q} @ {px}")
+        _failure(f"LEG RESTORED {sym} {side} {tid}: {q} @ {px} (registry had lost it)")
     for tid, sym, side, q in rep.removed:
         print(f"  [reconcile] {sym} {side}: broker holds none of {tid}'s {q} -- leg removed")
     for tid, sym, side, was, now in rep.reduced:
@@ -371,10 +378,14 @@ def open_new_tranche(broker, registry: TrancheRegistry, signals: dict, dry_run: 
     tranche_pct = config_trading.derived_capital_per_tranche_pct()
     tranche_capital = equity * (tranche_pct / 100.0)
     per_stock_max = (config_trading.PER_STOCK_MAX_PCT / 100.0) * tranche_capital
-    tranche_id = f"tranche_{_today_id_stamp()}"
-    if registry.get(tranche_id) is not None:
-        print(f"[open] {tranche_id} already exists -- already ran today. Skipping.")
-        return None
+    # one tranche per DATA session, not per calendar day: a make-up run before
+    # the open (yesterday's data) and the regular run after the close (today's)
+    # are different tranches; the same data_date twice is refused by signals_fresh
+    dd = _signal_data_date(signals)
+    base = f"tranche_{dd.strftime('%Y%m%d') if dd else _today_id_stamp()}"
+    tranche_id, k = base, 2
+    while registry.get(tranche_id) is not None:
+        tranche_id, k = f"{base}_{k}", k + 1
 
     price_of = price_of or broker.latest_price
     try:

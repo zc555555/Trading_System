@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 
 from .broker import BrokerError, OrderState, LIVE, TERMINAL
@@ -189,10 +189,13 @@ class ReconcileReport:
     removed: list = field(default_factory=list)     # (tranche_id, symbol, side, qty)
     orphans: list = field(default_factory=list)     # (symbol, side, broker_qty, registry_qty)
     pending: list = field(default_factory=list)     # (tranche_id, symbol, side, remaining, order_type, status)
+    never_filled: list = field(default_factory=list)  # (tranche_id, symbol, side, registered_qty, filled_qty)
+    exited: list = field(default_factory=list)      # (tranche_id, symbol, side, qty_exited, exit_price)
+    restored: list = field(default_factory=list)    # (tranche_id, symbol, side, qty, entry_price)
 
     @property
     def changed(self) -> bool:
-        return bool(self.reduced or self.removed)
+        return bool(self.reduced or self.removed or self.never_filled or self.exited or self.restored)
 
 
 def live_entries(broker) -> dict:
@@ -202,13 +205,92 @@ def live_entries(broker) -> dict:
             if o.client_order_id.startswith(ENTRY_PREFIX) and o.status in LIVE}
 
 
+def _tranche_of(client_order_id: str, symbol: str) -> Optional[str]:
+    """'open_<tranche_id>_<SYMBOL>' -> tranche_id (symbols may contain '-')."""
+    tail = f"_{symbol}"
+    if not client_order_id.startswith(ENTRY_PREFIX) or not client_order_id.endswith(tail):
+        return None
+    return client_order_id[len(ENTRY_PREFIX):-len(tail)] or None
+
+
+def converge_legs_from_entries(broker, registry, dry_run: bool, rep: ReconcileReport) -> None:
+    """Per-leg truth from OUR OWN entry orders (client ids 'open_<tranche>_<sym>'),
+    idempotent:
+      * a terminal entry that filled less than the leg says -> the leg shrinks to
+        what filled (a never-filled entry drops the leg);
+      * a bracket child that filled (stop / take-profit) -> THAT leg shrinks by the
+        exit, so the exit is not charged oldest-first to another tranche;
+      * a filled entry of an OPEN tranche with no leg in the registry -> the leg is
+        restored from the fill (the 2026-09 audit found seven of these).
+    A leg smaller than the entry implies a scheduled partial close: left alone."""
+    from .tranche_registry import TranchePosition
+    opens = registry.open_tranches()
+    if not opens:
+        return
+    oldest = min(datetime.fromisoformat(t.open_date) for t in opens) - timedelta(days=2)
+    history = {o.client_order_id: o for o in broker.orders_since(oldest.replace(tzinfo=timezone.utc))
+               if o.client_order_id.startswith(ENTRY_PREFIX)}
+    for t in opens:
+        for side, legs in (("long", t.longs), ("short", t.shorts)):
+            for pos in list(legs):
+                e = history.get(pos.client_order_id)
+                if e is None or not e.terminal:
+                    continue
+                exits = [c for c in e.children if float(c.filled_qty) > 0]
+                exited = int(sum(float(c.filled_qty) for c in exits))
+                expected = int(e.filled_qty) - exited
+                if int(pos.qty) <= expected:
+                    continue
+                cut = int(pos.qty) - max(expected, 0)
+                if int(e.filled_qty) == 0:
+                    rep.never_filled.append((t.id, pos.symbol, side, int(pos.qty), 0)); reason = "entry_never_filled"
+                elif exited > 0:
+                    px = exits[-1].filled_avg_price
+                    rep.exited.append((t.id, pos.symbol, side, min(cut, exited), px)); reason = "bracket_exit"
+                else:
+                    rep.never_filled.append((t.id, pos.symbol, side, int(pos.qty), int(e.filled_qty))); reason = "entry_partial"
+                if dry_run:
+                    continue
+                if expected <= 0:
+                    registry.remove_position(t.id, pos.symbol, side, reason=reason)
+                else:
+                    registry.reduce_position(t.id, pos.symbol, side, cut, reason=reason)
+    open_ids = {t.id: t for t in opens}
+    for cid, e in history.items():
+        if float(e.filled_qty) <= 0:
+            continue
+        tid = _tranche_of(cid, e.symbol)
+        t = open_ids.get(tid)
+        if t is None:
+            continue
+        side = "long" if e.side == "buy" else "short"
+        if any(p.symbol == e.symbol for p in (t.longs if side == "long" else t.shorts)):
+            continue
+        exited = int(sum(float(c.filled_qty) for c in e.children))
+        qty = int(e.filled_qty) - exited
+        if qty <= 0:
+            continue
+        px = float(e.filled_avg_price or 0.0)
+        stop = next((c.limit_price for c in e.children if c.order_type == "stop"), None)
+        take = next((c.limit_price for c in e.children if c.order_type == "limit"), None)
+        rep.restored.append((t.id, e.symbol, side, qty, px))
+        if not dry_run:
+            registry.add_position(t.id, TranchePosition(symbol=e.symbol, side=side, qty=qty, entry_price=px,
+                                                        entry_amount_usd=qty * px, client_order_id=cid,
+                                                        stop_price=stop, take_price=take,
+                                                        stop_basis="restored_from_broker"))
+
+
 def reconcile(broker, registry, dry_run: bool = False) -> ReconcileReport:
     """Converge the registry to broker truth WITHOUT ever destroying legs on
-    a failed query. Broker holding less than the registry -> oldest tranche
-    loses shares first (partial), not whole legs. Broker holding more, or a
-    symbol the registry never opened -> orphan, reported and left alone."""
+    a failed query. First per leg from our own entry orders (see
+    converge_legs_from_entries), then by symbol totals: broker holding less
+    than the registry -> oldest tranche loses shares first (partial), not
+    whole legs. Broker holding more, or a symbol the registry never opened
+    -> orphan, reported and left alone."""
     rep = ReconcileReport()
     try:
+        converge_legs_from_entries(broker, registry, dry_run, rep)
         positions = broker.positions()
         entries = live_entries(broker)
     except BrokerError as e:

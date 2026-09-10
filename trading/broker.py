@@ -51,6 +51,7 @@ class OrderState:
     legs: list[str] = field(default_factory=list)      # child order ids of a bracket/OCO parent
     parent_id: Optional[str] = None                    # set on a child
     submitted_at: Optional[datetime] = None            # aware (UTC at Alpaca)
+    children: list = field(default_factory=list)       # nested child OrderStates when the query was nested
 
     @property
     def terminal(self) -> bool:
@@ -130,6 +131,7 @@ class AlpacaBroker:
                           order_class=norm_status(getattr(o, "order_class", "simple")),
                           limit_price=float(o.limit_price) if getattr(o, "limit_price", None) else None,
                           legs=[str(l.id) for l in legs],
+                          children=[self._to_state(l) for l in legs],
                           parent_id=str(getattr(o, "parent_id", None) or "") or None,
                           submitted_at=getattr(o, "submitted_at", None) or getattr(o, "created_at", None))
 
@@ -167,6 +169,26 @@ class AlpacaBroker:
             return px if px > 0 else None
         except Exception:                            # noqa: BLE001
             return None
+
+    def orders_since(self, after: datetime) -> list[OrderState]:
+        """Every order (any status, nested children) submitted after `after`.
+        The reconciler converges the registry from these -- our own client
+        ids are the only ground truth about which tranche owns what."""
+        try:
+            from alpaca.trading.requests import GetOrdersRequest
+            from alpaca.trading.enums import QueryOrderStatus
+            out, cursor = [], after
+            for _ in range(20):                                  # 500 per page
+                page = self.client.get_orders(GetOrdersRequest(status=QueryOrderStatus.ALL, nested=True,
+                                                               limit=500, after=cursor, direction="asc"))
+                states = [self._to_state(o) for o in page]
+                out.extend(states)
+                if len(states) < 500:
+                    break
+                cursor = max(s.submitted_at for s in states if s.submitted_at)
+            return out
+        except Exception as e:                       # noqa: BLE001
+            raise BrokerError(f"get_orders(all) failed: {e}") from e
 
     def calendar(self, start: date, end: date) -> list[date]:
         """Trading sessions in [start, end] according to the exchange."""
@@ -398,9 +420,42 @@ class FakeBroker:
                                    limit_price=px, parent_id=oid)
                 self.orders[cid] = child
                 o.legs.append(cid)
+                o.children.append(child)
         if self.fill_delay_polls and o.status != "rejected":
             self._pending_polls[oid] = self.fill_delay_polls
         return o
+
+    def orders_since(self, after: datetime) -> list[OrderState]:
+        self._maybe_fail("orders_since")
+        self._advance()
+        out = []
+        for o in self.orders.values():
+            sub = o.submitted_at
+            if sub is not None and sub.tzinfo is None:
+                sub = sub.replace(tzinfo=timezone.utc)
+            if sub is None or after is None or sub >= after:
+                out.append(o)
+        return out
+
+    def trigger_exit(self, parent_id: str, which: str = "stop") -> OrderState:
+        """Fill one bracket child of a filled entry (stop or take): the
+        position shrinks by the child's qty, its OCO sibling is cancelled."""
+        parent = self.orders[parent_id]
+        kind = "stop" if which == "stop" else "limit"
+        child = next(c for c in parent.children if c.order_type == kind)
+        px = float(child.limit_price or self.prices.get(child.symbol, 100.0))
+        signed = child.qty if child.side == "buy" else -child.qty
+        new = self.pos.get(child.symbol, 0.0) + signed
+        if abs(new) < 1e-9:
+            self.pos.pop(child.symbol, None); self.avg.pop(child.symbol, None)
+        else:
+            self.pos[child.symbol] = new
+        self.cash -= signed * px
+        child.filled_qty, child.filled_avg_price, child.status = child.qty, px, "filled"
+        for c in parent.children:
+            if c is not child and c.status in LIVE:
+                c.status = "canceled"
+        return child
 
     def _cancel_one(self, o: OrderState) -> None:
         if o.status in TERMINAL:
