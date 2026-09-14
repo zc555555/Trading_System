@@ -811,20 +811,35 @@ def adopt(candidate_id: str, removal_trigger: str, ledger_path: Path = rb.MINED_
                          f"({last['reasons']})")
     if not removal_trigger.strip():
         raise SystemExit("a pre-registered removal trigger is required")
+    lb = last.get("lookback")
+    uni = last.get("universe")
     entry = {"id": candidate_id, "expression": str(last["expression"]),
              "expected_direction": str(last["expected_direction"]),
              "proposal_hash": str(last["proposal_hash"]),
              "adopted_on": date.today().isoformat(),
-             "lookback": int(last["lookback"]), "family_n": int(last["family_n"]),
+             "lookback": int(lb) if lb is not None and pd.notna(lb) else None,   # a pool composite has none
+             "family_n": int(last["family_n"]),
              "holdout_p_onesided": float(last["holdout_p_onesided"]),
              "removal_trigger": removal_trigger, "rule_version": rb.RULE_VERSION,
              "horizon": int(last.get("horizon") or PRODUCTION_HORIZON),
+             "universe": str(uni) if uni is not None and pd.notna(uni) and str(uni) else rb.DEFAULT_UNIVERSE,
              "adoption_tier": str(last.get("adoption_tier") or "structural")}
+    if entry["expression"].startswith("pool:"):
+        # a pool release: freeze the members it was adjudicated with, so the
+        # production feature never depends on the mutable pool registry
+        from mining import pool as pl
+        pool = pl.load_pool(entry["horizon"], entry["universe"])
+        entry["type"] = "pool"
+        entry["members"] = [{"hash": m["hash"], "expression": m["expression"],
+                             "expected_direction": m["expected_direction"]} for m in pool["members"]]
+        entry["n_members"] = len(entry["members"])
+        if entry["n_members"] == 0:
+            raise SystemExit(f"{candidate_id}: the pool registry has no members to freeze")
     if entry["adoption_tier"] == "probation":
         entry["weight_cap"] = 0.025            # half the 5% static fallback; IC-monitor WARN removes it
         entry["removal_trigger"] = "PROBATION: first IC-monitor WARN removes it | " + removal_trigger
-    if entry["horizon"] != PRODUCTION_HORIZON:
-        entry["status"] = "shelf"        # validated at a non-production horizon; never compiled for the live book
+    if entry["horizon"] != PRODUCTION_HORIZON or entry["universe"] != rb.DEFAULT_UNIVERSE:
+        entry["status"] = "shelf"        # non-production horizon or research universe; never compiled for the live book
     register_adopted(entry)
     rec = dict(last)
     rec.update({"date": date.today().isoformat(), "stage": "adopted",
