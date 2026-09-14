@@ -212,3 +212,25 @@ def test_shared_symbol_close_keeps_other_tranche_protected(tmp_path):
     assert n == 1 and reg.get("t_old").status == "closed" and reg.get("t_new").longs[0].qty == 6
     assert b.pos == {"AAA": 6.0}
     assert all(b.orders[l].status in LIVE for l in new.legs) and all(b.orders[l].status == "canceled" for l in old.legs)
+
+
+# 2026-09-14 review item 1 --------------------------------------------------
+def test_partial_close_retry_does_not_double_book(tmp_path):
+    """Day 1: 5 of 10 AAA fill, the day order expires overnight. Day 2's
+    retry must sell the OTHER 5, not credit the first 5 again (which left
+    the registry empty while the broker still held 5)."""
+    from trading.broker import LIVE
+    reg = _due_registry(tmp_path)
+    b = FakeBroker(prices={"AAA": 110, "SSS": 45})
+    b.pos = {"AAA": 10.0, "SSS": -4.0}
+    b.partial_fill["AAA"] = 0.5
+    rst.close_due_tranches(b, reg, dry_run=False, sleep=NOSLEEP, timeout_s=0.2)
+    assert [(p.symbol, p.qty) for p in reg.get("t1").longs] == [("AAA", 5)]
+    assert reg.close_fills("t1", "AAA", "long") == {"close_t1_AAA": 5}
+    for o in b.orders.values():                       # day orders die overnight, fills stay on record
+        if o.status in LIVE:
+            o.status = "expired"
+    b.partial_fill.clear()
+    rst.close_due_tranches(b, reg, dry_run=False, sleep=NOSLEEP, timeout_s=0.2)
+    assert reg.get("t1").status == "closed" and b.pos == {}
+    assert sum(o.filled_qty for o in b.orders.values() if o.symbol == "AAA" and o.side == "sell") == 10

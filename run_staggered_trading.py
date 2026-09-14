@@ -186,7 +186,8 @@ def close_due_tranches(broker, registry: TrancheRegistry, dry_run: bool,
                 continue
             res = ex.close_leg(broker, pos.symbol, int(pos.qty), order_side, client_order_id=cid,
                                timeout_s=timeout_s, sleep=sleep, entry_client_id=pos.client_order_id,
-                               symbol_shared=holders.get(pos.symbol, 0) > 1)
+                               symbol_shared=holders.get(pos.symbol, 0) > 1,
+                               booked=registry.close_fills(tranche.id, pos.symbol, side))
             if res.filled <= 0:
                 n_open += 1
                 print(f"  [OPEN] {order_side.upper()} {pos.qty} {pos.symbol}: nothing filled "
@@ -205,11 +206,13 @@ def close_due_tranches(broker, registry: TrancheRegistry, dry_run: bool,
             tag = "[SELL  long]" if side == "long" else "[BUY  short]"
             print(f"  {tag}  {pos.symbol:<6} filled {res.filled}/{pos.qty}  entry=${pos.entry_price:>7.2f}  "
                   f"fill=${px:>7.2f}  P&L=${pnl:+.2f}{'' if res.complete else '  (PARTIAL: remainder kept)'}")
-            if res.complete:
-                registry.remove_position(tranche.id, pos.symbol, side, reason="scheduled_close")
+            # book by client id: a retry that meets the same order again credits nothing twice
+            for ccid, cum in res.fills.items():
+                registry.book_close_fill(tranche.id, pos.symbol, side, ccid, cum,
+                                         reason="scheduled_close" if res.complete else "partial_close")
+            if registry.leg_qty(tranche.id, pos.symbol, side) == 0:
                 n_filled_legs += 1
             else:
-                registry.reduce_position(tranche.id, pos.symbol, side, res.filled, reason="partial_close")
                 n_open += 1
             registry.save()
         if dry_run:
