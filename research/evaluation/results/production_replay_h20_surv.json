@@ -1,0 +1,223 @@
+{
+  "horizon": 20,
+  "panel": "surv",
+  "top_n": 10,
+  "cost_bp": 15.0,
+  "params": {
+    "smooth_days": 5,
+    "day_weights": [
+      0.3,
+      0.25,
+      0.2,
+      0.15,
+      0.1
+    ],
+    "trend_filter": true,
+    "filter_7d_min": -3.0,
+    "filter_14d_min": -6.0,
+    "filter_30d_min": null,
+    "trend_strength_min": -3.0,
+    "require_above_mas": false,
+    "top_n": 10,
+    "min_confidence": 0.0015,
+    "min_stocks": 3,
+    "inv_vol": true,
+    "vol_floor": 0.006,
+    "version": "selection-2026-09-14"
+  },
+  "holdout_start": "2025-07-01",
+  "variants": {
+    "raw": {
+      "params": {
+        "smooth_days": 1,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": false,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.01533530605130178,
+      "ic_days": 2142,
+      "coverage": 1.0,
+      "dev": {
+        "sharpe": 0.21731363167262144,
+        "ann_return": 0.02329041761518691,
+        "ann_vol": 0.17971144214062726,
+        "max_drawdown": -0.3220296198602993,
+        "n_days": 1883
+      },
+      "holdout": {
+        "sharpe": 0.8503986262573447,
+        "ann_return": 0.09098608326954172,
+        "ann_vol": 0.10943123619108404,
+        "max_drawdown": -0.07648292067616602,
+        "n_days": 278
+      },
+      "all": {
+        "sharpe": 0.26703230686127516,
+        "ann_return": 0.03175795603672116,
+        "ann_vol": 0.17226888143092203,
+        "max_drawdown": -0.3220296198602993,
+        "n_days": 2161
+      }
+    },
+    "smooth": {
+      "params": {
+        "smooth_days": 5,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": false,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.015348571301988483,
+      "ic_days": 2142,
+      "coverage": 1.0,
+      "dev": {
+        "sharpe": 0.2096780051025481,
+        "ann_return": 0.02227837829027912,
+        "ann_vol": 0.19678089186110884,
+        "max_drawdown": -0.30647484483291487,
+        "n_days": 1883
+      },
+      "holdout": {
+        "sharpe": 0.807742312701939,
+        "ann_return": 0.09358647623195959,
+        "ann_vol": 0.1195909237170981,
+        "max_drawdown": -0.08841769633827479,
+        "n_days": 278
+      },
+      "all": {
+        "sharpe": 0.25650319877316974,
+        "ann_return": 0.031184519951493517,
+        "ann_vol": 0.18861183014072416,
+        "max_drawdown": -0.30647484483291487,
+        "n_days": 2161
+      }
+    },
+    "filter": {
+      "params": {
+        "smooth_days": 1,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": true,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.015565483087215917,
+      "ic_days": 2097,
+      "coverage": 0.6751674498224974,
+      "dev": {
+        "sharpe": 0.16994023201073177,
+        "ann_return": 0.013475566877144685,
+        "ann_vol": 0.123613708336914,
+        "max_drawdown": -0.45997045541965964,
+        "n_days": 1883
+      },
+      "holdout": {
+        "sharpe": 0.6605594936520178,
+        "ann_return": 0.05777314610368833,
+        "ann_vol": 0.09133048382488534,
+        "max_drawdown": -0.07199880708988304,
+        "n_days": 278
+      },
+      "all": {
+        "sharpe": 0.21733279629365604,
+        "ann_return": 0.019068541933266125,
+        "ann_vol": 0.11993368385634975,
+        "max_drawdown": -0.45997045541965964,
+        "n_days": 2161
+      }
+    },
+    "production": {
+      "params": {
+        "smooth_days": 5,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": true,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.014989221929875037,
+      "ic_days": 2097,
+      "coverage": 0.6751674498224974,
+      "dev": {
+        "sharpe": 0.1163389243519051,
+        "ann_return": 0.006669330698894971,
+        "ann_vol": 0.1329369539083899,
+        "max_drawdown": -0.45123095346814834,
+        "n_days": 1883
+      },
+      "holdout": {
+        "sharpe": 0.8944561025117201,
+        "ann_return": 0.0897707123874254,
+        "ann_vol": 0.10191611066710125,
+        "max_drawdown": -0.06863310678820245,
+        "n_days": 278
+      },
+      "all": {
+        "sharpe": 0.19484051077230666,
+        "ann_return": 0.016994042801482534,
+        "ann_vol": 0.12935348666822102,
+        "max_drawdown": -0.45123095346814834,
+        "n_days": 2161
+      }
+    }
+  }
+}
