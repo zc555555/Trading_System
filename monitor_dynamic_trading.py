@@ -142,25 +142,30 @@ class DynamicTradingMonitor:
                 print(f"  [WARN] 撤单失败 {symbol} {order.id}: {e}")
         return n
 
-    def _sync_registry_close(self, symbol: str, qty: float, reason: str):
-        """监控强平后同步 tranche 注册表, 否则次日 orchestrator 会重复平仓。"""
-        try:
-            from trading.tranche_registry import TrancheRegistry
-            import config_trading as _tcfg
-            reg_path = Path(__file__).parent / _tcfg.TRANCHE_REGISTRY_PATH
-            if not reg_path.exists():
-                return
-            reg = TrancheRegistry(reg_path)
-            side = "long" if qty > 0 else "short"
-            removed = 0
-            for t in reg.open_tranches():
-                while reg.remove_position(t.id, symbol, side, reason=reason):
-                    removed += 1
-            if removed:
-                reg.save()
-                print(f"  [registry] {symbol} {side}: 移除 {removed} 个 tranche 腿 ({reason})")
-        except Exception as e:
-            print(f"  [WARN] 注册表同步失败 {symbol}: {e}")
+    def _close_symbol(self, symbol: str, reason: str) -> None:
+        """止损/止盈平仓走执行层 (trading.execution.close_symbol_legs): 逐腿
+        用 orchestrator 同一套 client id 平仓, 按实际成交入账, 只撤本腿的括号
+        子单. 以前是 close_position 后收到"受理"就删登记 (2026-09-14 评审第 1 条).
+        注册表里没有这只股票的腿 (遗留/孤儿持仓) 时退回整只平仓."""
+        from trading.broker import AlpacaBroker
+        from trading import execution as _ex
+        from trading.tranche_registry import TrancheRegistry
+        import config_trading as _tcfg
+        reg_path = Path(__file__).parent / _tcfg.TRANCHE_REGISTRY_PATH
+        results = []
+        if reg_path.exists():
+            results = _ex.close_symbol_legs(AlpacaBroker(trading_client=self.client), TrancheRegistry(reg_path),
+                                            symbol, reason=reason, timeout_s=45.0)
+        if not results:
+            self._cancel_open_orders(symbol)
+            self.client.close_position(symbol)
+            print(f"  [registry] {symbol}: 注册表无此腿, 按整只持仓平仓")
+            return
+        for tid, res in results:
+            print(f"  [registry] {tid} {symbol}: filled {res.filled}/{res.requested} ({res.status})")
+        unfilled = [r for _, r in results if not r.complete]
+        if unfilled:
+            raise RuntimeError(f"{symbol}: {len(unfilled)} 腿未完全成交 ({unfilled[0].status}), 余量保留待重试")
 
     def _convert_stale_limit_entries(self, now_et):
         """执行 A/B: B 组限价进场单在开盘 LIMIT_TIMEOUT_MIN 分钟后仍未成交
@@ -410,10 +415,7 @@ class DynamicTradingMonitor:
                 print(f"平仓 {symbol} - {reason}")
 
                 try:
-                    self._cancel_open_orders(symbol)
-                    self.client.close_position(symbol)
-                    self._sync_registry_close(symbol, item['qty'],
-                                              reason=action.lower())
+                    self._close_symbol(symbol, reason=action.lower())
                     print(f"  ✓ 已平仓")
                     print(f"    入场价: ${item['entry_price']:.2f}")
                     print(f"    平仓价: ${item['current_price']:.2f}")
