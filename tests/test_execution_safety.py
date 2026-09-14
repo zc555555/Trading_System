@@ -264,3 +264,55 @@ def test_expire_stale_limit_entries_but_not_queued_market_orders(tmp_path):
     assert [(p.symbol, p.qty) for p in t.longs] == [("BAX", 20), ("NEW", 3)]     # market + fresh limit untouched
     assert [(p.symbol, p.qty) for p in t.shorts] == [("ROP", 1)]                # shrunk to the filled part
     assert b.orders[rop.id].status == "canceled"
+
+
+# 6 (2026-09-14 review item 1) ----------------------------------------------
+def test_partial_close_is_booked_once_across_runs(tmp_path):
+    """Run 1 fills 5 of 10 and books them. Run 2 meets the same client id
+    (the day order expired overnight with its 5 fills on record): those 5
+    must NOT be credited again -- the old code zeroed the registry while the
+    broker still held 5 shares."""
+    b = FakeBroker(prices={"AAA": 100})
+    b.pos = {"AAA": 10.0}
+    b.partial_fill["AAA"] = 0.5
+    reg = TrancheRegistry(tmp_path / "r.json")
+    reg.add_tranche("t", "2026-08-01", 20)
+    reg.add_position("t", TranchePosition("AAA", "long", 10, 100.0, 1000.0, "open_t_AAA"))
+    res = ex.close_leg(b, "AAA", 10, "sell", "close_t_AAA", timeout_s=0.05, poll_s=0.01, sleep=NOSLEEP,
+                       booked=reg.close_fills("t", "AAA", "long"))
+    assert res.filled == 5 and res.fills == {"close_t_AAA": 5} and not res.complete
+    for cid, cum in res.fills.items():
+        reg.book_close_fill("t", "AAA", "long", cid, cum)
+    assert reg.leg_qty("t", "AAA", "long") == 5 and reg.close_fills("t", "AAA", "long") == {"close_t_AAA": 5}
+    assert reg.book_close_fill("t", "AAA", "long", "close_t_AAA", 5) == 0          # idempotent
+    reg.save()
+    reg = TrancheRegistry(tmp_path / "r.json")                                     # survives a reload
+    assert reg.close_fills("t", "AAA", "long") == {"close_t_AAA": 5}
+    # overnight: the broker expires the day order, keeping its 5 fills on record
+    b.orders[res.order_id].status = "expired"
+    b.partial_fill.clear()
+    res2 = ex.close_leg(b, "AAA", 5, "sell", "close_t_AAA", timeout_s=1, poll_s=0.01, sleep=NOSLEEP,
+                        booked=reg.close_fills("t", "AAA", "long"))
+    assert res2.complete and res2.filled == 5
+    assert res2.fills == {"close_t_AAA": 5, "close_t_AAA_r2": 5}
+    for cid, cum in res2.fills.items():
+        reg.book_close_fill("t", "AAA", "long", cid, cum)
+    assert reg.leg_qty("t", "AAA", "long") == 0 and reg.get("t").status == "closed" and b.pos == {}
+    sold = sum(o.filled_qty for o in b.orders.values() if o.side == "sell")
+    assert sold == 10 and len([c for c in b.calls if c[0] == "submit"]) == 2
+
+
+def test_close_symbol_legs_closes_every_tranche_leg_with_booked_fills(tmp_path):
+    """The monitor's stop/take path: every registry leg of the symbol closes
+    under the orchestrator's client ids and is booked by fill; other
+    symbols and other tranches' legs are untouched; unknown symbol -> []."""
+    reg = _registry(tmp_path)                        # t_old: AAA 10 + SSS short 8; t_new: AAA 6
+    b = FakeBroker(prices={"AAA": 100, "SSS": 50})
+    b.pos = {"AAA": 16.0, "SSS": -8.0}
+    out = ex.close_symbol_legs(b, reg, "AAA", reason="stop_loss", timeout_s=1, poll_s=0.01, sleep=NOSLEEP)
+    assert [(tid, r.complete) for tid, r in out] == [("t_old", True), ("t_new", True)]
+    assert [c[5] for c in b.calls if c[0] == "submit"] == ["close_t_old_AAA", "close_t_new_AAA"]
+    assert b.pos == {"SSS": -8.0}
+    assert _legs(reg, "t_old") == {("SSS", "short"): 8} and reg.get("t_new").status == "closed"
+    assert TrancheRegistry(tmp_path / "reg.json").get("t_new").status == "closed"   # saved
+    assert ex.close_symbol_legs(b, reg, "ZZZ", reason="stop_loss", sleep=NOSLEEP) == []

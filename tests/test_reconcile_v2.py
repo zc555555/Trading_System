@@ -163,3 +163,36 @@ def test_existing_calendar_keyed_tranche_gets_a_suffixed_sibling(tmp_path):
     t2 = rst.open_new_tranche(b, reg, _signals("2026-09-10"), dry_run=False, sleep=NOSLEEP, now_et=late)
     assert t2 == "tranche_20260910_2" and reg.get(t2).notes == "data_date=2026-09-10"
     assert [c[5] for c in b.calls if c[0] == "submit"] == ["open_tranche_20260910_2_AAA"]
+
+
+# 2026-09-14 review item 1: the monitor's limit->market replacement ----------
+def test_limit_entry_replaced_by_market_order_keeps_and_restores_the_leg(tmp_path):
+    reg, b = _book(tmp_path)
+    b.clock = datetime(2026, 9, 4, 8, 0, tzinfo=timezone.utc)
+    reg.add_tranche("t_ab", "2026-09-03", 20)
+    b.submit("BBB", 2, "buy", bracket=(45.0, 60.0), client_order_id="open_t_ab_BBB", tif="gtc")
+    o = b.submit("CCC", 8, "buy", kind="limit", limit_price=19.0, client_order_id="open_t_ab_CCC", tif="gtc")
+    b.cancel(o.id)                                    # limit arm timed out: cancelled unfilled ...
+    b.submit("CCC", 8, "buy", bracket=(18.0, 24.0), client_order_id="open_t_ab_CCC_mkt", tif="gtc")   # ... re-placed as market
+    _fill_all(b)
+    reg.add_position("t_ab", TranchePosition("BBB", "long", 2, 50.0, 100.0, "open_t_ab_BBB"))
+    reg.add_position("t_ab", TranchePosition("CCC", "long", 8, 20.0, 160.0, "open_t_ab_CCC"))
+    reg.save()
+    rep = ex.reconcile(b, reg)
+    assert not rep.aborted and rep.never_filled == [] and rep.orphans == []
+    assert _legs(reg, "t_ab") == {("BBB", "long"): 2, ("CCC", "long"): 8}
+    # the registry loses the leg -> restored from the replacement's fill under the leg's base id
+    reg.remove_position("t_ab", "CCC", "long", reason="lost")
+    rep = ex.reconcile(b, reg)
+    assert rep.restored == [("t_ab", "CCC", "long", 8, 20.0)]
+    p = [p for p in reg.get("t_ab").longs if p.symbol == "CCC"][0]
+    assert p.client_order_id == "open_t_ab_CCC" and p.stop_price == 18.0 and p.take_price == 24.0
+    # a still-live replacement is a pending leg, not a vanished one
+    q = b.submit("CCC", 3, "buy", kind="limit", limit_price=19.0, client_order_id="open_t_ab2_CCC", tif="gtc")
+    b.cancel(q.id)
+    b.fill_delay_polls = 10**9
+    b.submit("CCC", 3, "buy", client_order_id="open_t_ab2_CCC_mkt", tif="day")
+    reg.add_tranche("t_ab2", "2026-09-04", 20)
+    reg.add_position("t_ab2", TranchePosition("CCC", "long", 3, 20.0, 60.0, "open_t_ab2_CCC"))
+    rep = ex.reconcile(b, reg)
+    assert [x[:4] for x in rep.pending] == [("t_ab2", "CCC", "long", 3.0)] and _legs(reg, "t_ab2") == {("CCC", "long"): 3}

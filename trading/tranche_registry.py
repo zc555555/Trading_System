@@ -51,6 +51,10 @@ class TranchePosition:
     stop_basis: Optional[str] = None      # 'atr' | 'fixed_pct_fallback'
     # Execution A/B (2026-08): 'market' | 'limit' | None (pre-A/B legs)
     exec_arm: Optional[str] = None
+    # 2026-09-14: cumulative broker fills already booked into this leg, per
+    # closing client_order_id -- a retry that meets the same order again must
+    # never credit the same fill twice (review item 1)
+    close_fills: dict = field(default_factory=dict)
 
 
 @dataclass
@@ -252,6 +256,40 @@ class TrancheRegistry:
                     return True
             return False
         return False
+
+    def _leg(self, tranche_id: str, symbol: str, side: str) -> Optional[dict]:
+        for rec in self._payload["tranches"]:
+            if rec["id"] == tranche_id:
+                key = "longs" if side == "long" else "shorts"
+                return next((p for p in rec[key] if p["symbol"] == symbol), None)
+        return None
+
+    def leg_qty(self, tranche_id: str, symbol: str, side: str) -> int:
+        p = self._leg(tranche_id, symbol, side)
+        return int(p["qty"]) if p is not None else 0
+
+    def close_fills(self, tranche_id: str, symbol: str, side: str) -> dict:
+        """client_order_id -> cumulative broker fills already booked into the leg."""
+        p = self._leg(tranche_id, symbol, side)
+        return dict(p.get("close_fills") or {}) if p is not None else {}
+
+    def book_close_fill(self, tranche_id: str, symbol: str, side: str, client_order_id: str,
+                        cumulative_filled: int, reason: str = "close") -> int:
+        """Book the broker's CUMULATIVE filled quantity of one closing order
+        into the leg. Only the part not booked before reduces the leg, so
+        booking the same order again (a retry, a re-run after a crash) is a
+        no-op. Returns the quantity newly booked."""
+        p = self._leg(tranche_id, symbol, side)
+        if p is None:
+            return 0
+        fills = p.setdefault("close_fills", {})
+        prev = int(fills.get(client_order_id, 0))
+        delta = max(0, int(cumulative_filled) - prev)
+        if delta == 0:
+            return 0
+        fills[client_order_id] = int(cumulative_filled)
+        self.reduce_position(tranche_id, symbol, side, delta, reason=reason)
+        return delta
 
     # ----- aggregates -----
     def equity_in_open_tranches(self) -> float:

@@ -22,7 +22,7 @@ FakeBroker and no SDK.
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timedelta, timezone
 from typing import Callable, Optional
 
@@ -123,6 +123,7 @@ class CloseResult:
     status: str
     order_id: Optional[str]
     note: str = ""
+    fills: dict = field(default_factory=dict)   # client_order_id -> CUMULATIVE broker fills of every attempt touched
 
     @property
     def complete(self) -> bool:
@@ -132,8 +133,16 @@ class CloseResult:
 def close_leg(broker, symbol: str, qty: int, side: str, client_order_id: str,
               timeout_s: float = 45.0, poll_s: float = 1.0,
               sleep: Callable[[float], None] = time.sleep, max_attempts: int = 3,
-              entry_client_id: Optional[str] = None, symbol_shared: bool = False) -> CloseResult:
+              entry_client_id: Optional[str] = None, symbol_shared: bool = False,
+              booked: Optional[dict] = None) -> CloseResult:
     """Close `qty` shares of a registry leg with a closing MARKET order.
+
+    `booked` maps client ids to the cumulative fills the registry already
+    booked from earlier runs (TrancheRegistry.close_fills); only fills above
+    that are credited, so a retry that meets yesterday's half-filled order
+    does not count its 5 shares a second time (2026-09-14 review item 1).
+    `fills` in the result carries the cumulative broker fills per client id
+    for the caller to book.
 
     entry_client_id names the leg's entry order so that only its own bracket
     children are cancelled first; symbol_shared says another open tranche
@@ -145,6 +154,8 @@ def close_leg(broker, symbol: str, qty: int, side: str, client_order_id: str,
     a filled one is credited. Success means FILLED shares, not acceptance."""
     filled_total = 0
     last_status, last_id = "none", None
+    booked = dict(booked or {})
+    fills: dict = {}
     for attempt in range(1, max_attempts + 1):
         cid = client_order_id if attempt == 1 else f"{client_order_id}_r{attempt}"
         remaining = qty - filled_total
@@ -153,29 +164,63 @@ def close_leg(broker, symbol: str, qty: int, side: str, client_order_id: str,
         try:
             prior = broker.get_order_by_client_id(cid)
         except BrokerError as e:
-            return CloseResult(symbol, qty, filled_total, "unknown", last_id, f"lookup failed: {e}")
+            return CloseResult(symbol, qty, filled_total, "unknown", last_id, f"lookup failed: {e}", fills=fills)
         if prior is None:
             # nothing resting may hold the shares (bracket children) -- but only
             # THIS leg's children may go when other tranches hold the symbol
             ok, note = release_shares(broker, symbol, entry_client_id, symbol_shared,
                                       timeout_s=min(15.0, timeout_s), poll_s=poll_s, sleep=sleep)
             if not ok:
-                return CloseResult(symbol, qty, filled_total, "blocked", last_id, note)
+                return CloseResult(symbol, qty, filled_total, "blocked", last_id, note, fills=fills)
             try:
                 prior = broker.submit(symbol, remaining, side, kind="market", client_order_id=cid, tif="day")
             except BrokerError as e:
-                return CloseResult(symbol, qty, filled_total, "submit_failed", last_id, str(e))
+                return CloseResult(symbol, qty, filled_total, "submit_failed", last_id, str(e), fills=fills)
         state = wait_for_terminal(broker, prior.id, timeout_s=timeout_s, poll_s=poll_s, sleep=sleep)
         last_status, last_id = state.status, state.id
-        filled_total += int(state.filled_qty)
-        if state.status == "filled" or filled_total >= qty:
-            return CloseResult(symbol, qty, min(filled_total, qty), "filled", state.id)
+        cum = int(state.filled_qty)
+        fills[cid] = cum
+        filled_total += max(0, cum - int(booked.get(cid, 0)))   # only what no earlier run booked
+        if filled_total >= qty:
+            return CloseResult(symbol, qty, qty, "filled", state.id, fills=fills)
         if state.status in LIVE:
             # still working after the timeout (queued market order after the
             # close, halted stock): report what filled, keep the rest registered
-            return CloseResult(symbol, qty, filled_total, state.status, state.id, "order still live at timeout")
-        # terminal but not filled (rejected / canceled / expired): try a fresh id
-    return CloseResult(symbol, qty, filled_total, last_status, last_id, "attempts exhausted")
+            return CloseResult(symbol, qty, filled_total, state.status, state.id, "order still live at timeout",
+                               fills=fills)
+        # terminal without covering the leg (rejected / canceled / expired, or
+        # filled for an earlier, smaller remainder): try a fresh id
+    return CloseResult(symbol, qty, filled_total, last_status, last_id, "attempts exhausted", fills=fills)
+
+
+def close_symbol_legs(broker, registry, symbol: str, reason: str = "monitor_close",
+                      timeout_s: float = 45.0, poll_s: float = 1.0,
+                      sleep: Callable[[float], None] = time.sleep, max_attempts: int = 3) -> list:
+    """Close EVERY open registry leg in `symbol` (oldest tranche first) with
+    the orchestrator's client ids ('close_<tranche>_<SYM>') and book the
+    fills per id, so a monitor-triggered stop and the scheduled close never
+    double-book or duplicate each other. Returns [(tranche_id, CloseResult)];
+    empty when no open tranche holds the symbol (the caller decides what to
+    do with a position the registry never opened)."""
+    out = []
+    opens = sorted(registry.open_tranches(), key=lambda t: t.open_date)
+    holders = sum(1 for t in opens if any(p.symbol == symbol for p in t.longs + t.shorts))
+    for t in opens:
+        for side, legs in (("long", t.longs), ("short", t.shorts)):
+            for pos in list(legs):
+                if pos.symbol != symbol:
+                    continue
+                cid = f"close_{t.id}_{symbol}"
+                res = close_leg(broker, symbol, int(pos.qty), "sell" if side == "long" else "buy", cid,
+                                timeout_s=timeout_s, poll_s=poll_s, sleep=sleep, max_attempts=max_attempts,
+                                entry_client_id=pos.client_order_id, symbol_shared=holders > 1,
+                                booked=registry.close_fills(t.id, symbol, side))
+                for ccid, cum in res.fills.items():
+                    registry.book_close_fill(t.id, symbol, side, ccid, cum, reason=reason)
+                out.append((t.id, res))
+    if out:
+        registry.save()
+    return out
 
 
 # ---------------------------------------------------------------------------
@@ -198,15 +243,46 @@ class ReconcileReport:
         return bool(self.reduced or self.removed or self.never_filled or self.exited or self.restored)
 
 
+REPLACEMENT_SUFFIX = "_mkt"      # monitor_dynamic_trading re-places a stale limit entry as '<cid>_mkt'
+
+
+def entry_base_id(client_order_id: str) -> str:
+    """The leg's id: a replacement entry ('open_<tid>_<SYM>_mkt') is the same
+    leg as the limit order it replaced (2026-09-14 review item 1)."""
+    cid = client_order_id or ""
+    return cid[:-len(REPLACEMENT_SUFFIX)] if cid.endswith(REPLACEMENT_SUFFIX) else cid
+
+
+def _merge_entries(orders: list) -> OrderState:
+    """One view of an original entry and its replacement: fills add up,
+    children are pooled, and the group is live while any member is."""
+    if len(orders) == 1:
+        return orders[0]
+    orders = sorted(orders, key=lambda o: (o.submitted_at is None, o.submitted_at))
+    live = [o for o in orders if o.status in LIVE]
+    head = live[0] if live else orders[-1]
+    filled = sum(float(o.filled_qty) for o in orders)
+    notional = sum(float(o.filled_qty) * float(o.filled_avg_price or 0.0) for o in orders)
+    return replace(head, client_order_id=entry_base_id(head.client_order_id),
+                   qty=sum(float(o.qty) for o in orders), filled_qty=filled,
+                   filled_avg_price=(notional / filled) if filled > 0 else head.filled_avg_price,
+                   children=[c for o in orders for c in o.children],
+                   legs=[l for o in orders for l in o.legs])
+
+
 def live_entries(broker) -> dict:
-    """client_order_id -> live entry order (ids prefixed 'open_'). Raises
-    BrokerError when the broker cannot be asked."""
-    return {o.client_order_id: o for o in broker.open_orders()
-            if o.client_order_id.startswith(ENTRY_PREFIX) and o.status in LIVE}
+    """leg id (entry_base_id) -> live entry order (ids prefixed 'open_').
+    Raises BrokerError when the broker cannot be asked."""
+    groups: dict[str, list] = {}
+    for o in broker.open_orders():
+        if o.client_order_id.startswith(ENTRY_PREFIX) and o.status in LIVE:
+            groups.setdefault(entry_base_id(o.client_order_id), []).append(o)
+    return {k: _merge_entries(v) for k, v in groups.items()}
 
 
 def _tranche_of(client_order_id: str, symbol: str) -> Optional[str]:
-    """'open_<tranche_id>_<SYMBOL>' -> tranche_id (symbols may contain '-')."""
+    """'open_<tranche_id>_<SYMBOL>[_mkt]' -> tranche_id (symbols may contain '-')."""
+    client_order_id = entry_base_id(client_order_id)
     tail = f"_{symbol}"
     if not client_order_id.startswith(ENTRY_PREFIX) or not client_order_id.endswith(tail):
         return None
@@ -228,8 +304,11 @@ def converge_legs_from_entries(broker, registry, dry_run: bool, rep: ReconcileRe
     if not opens:
         return
     oldest = min(datetime.fromisoformat(t.open_date) for t in opens) - timedelta(days=2)
-    history = {o.client_order_id: o for o in broker.orders_since(oldest.replace(tzinfo=timezone.utc))
-               if o.client_order_id.startswith(ENTRY_PREFIX)}
+    groups: dict[str, list] = {}
+    for o in broker.orders_since(oldest.replace(tzinfo=timezone.utc)):
+        if o.client_order_id.startswith(ENTRY_PREFIX):
+            groups.setdefault(entry_base_id(o.client_order_id), []).append(o)
+    history = {k: _merge_entries(v) for k, v in groups.items()}   # leg id -> entry (+ its replacement)
     for t in opens:
         for side, legs in (("long", t.longs), ("short", t.shorts)):
             for pos in list(legs):
