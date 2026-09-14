@@ -46,6 +46,12 @@ from config_trend_filters import (
     REQUIRE_PRICE_ABOVE_MAs
 )
 
+# The selection policy (smoothing, trend filter, top-N, sizing) is ONE shared
+# module, replayed by evaluation/experiments/production_replay.py; the
+# thresholds above are read by SelectionParams.production() (2026-09-14).
+from strategy import selection as sel
+SEL_PARAMS = sel.SelectionParams.production()
+
 # Add parent directory to path for news sentiment import
 parent_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(parent_dir))
@@ -217,60 +223,30 @@ def get_weighted_predictions_multi_factor(df, factor_ensembles, n_days=5):
             date_data[f'{factor_name}_pred'] = factor_pred
             daily_factor_predictions[factor_name].append(date_data)
 
-    # Combine all predictions
-    all_factor_preds = {}
+    # Combine all predictions into one long frame of per-date z-scored
+    # factor scores, then smooth + blend with strategy/selection.py -- the
+    # same code the evaluation replays (2026-09-14 review item 3)
+    frames = []
     for factor_name, daily_preds in daily_factor_predictions.items():
         if daily_preds:
-            all_factor_preds[factor_name] = pd.concat(daily_preds, ignore_index=True)
+            f = pd.concat(daily_preds, ignore_index=True)[["date", "symbol", f"{factor_name}_pred"]]
+            frames.append(f.rename(columns={f"{factor_name}_pred": f"factor_{factor_name}"}))
+    if not frames:
+        return pd.DataFrame()
+    scores = frames[0]
+    for f in frames[1:]:
+        scores = scores.merge(f, on=["date", "symbol"], how="outer")
+    factor_cols = [c for c in scores.columns if c.startswith("factor_")]
+    smoothed = sel.smooth_scores(scores, factor_cols, SEL_PARAMS)
+    smoothed["prediction"] = sel.blend(smoothed, FACTOR_WEIGHTS)
+    smoothed["confidence"] = smoothed["prediction"].abs()
 
-    # Calculate weighted average per symbol for each factor
-    weighted_predictions = []
-
-    # Get symbols from first factor
-    first_factor = list(all_factor_preds.values())[0]
-    symbols = first_factor['symbol'].unique()
-
-    for symbol in symbols:
-        # Get latest row for this symbol
-        symbol_data = first_factor[first_factor['symbol'] == symbol].copy()
-        symbol_data = symbol_data.sort_values('date')
-        latest_row = symbol_data.iloc[-1].copy()
-
-        # Calculate weighted prediction for each factor
-        factor_contributions = {}
-
-        for factor_name, factor_df in all_factor_preds.items():
-            symbol_factor_data = factor_df[factor_df['symbol'] == symbol].copy()
-            symbol_factor_data = symbol_factor_data.sort_values('date')
-
-            preds = symbol_factor_data[f'{factor_name}_pred'].values
-
-            # Apply day weights
-            if len(preds) == n_days:
-                weighted_pred = sum(p * w for p, w in zip(preds, reversed(day_weights)))
-            else:
-                available_weights = day_weights[-len(preds):]
-                available_weights = [w / sum(available_weights) for w in available_weights]
-                weighted_pred = sum(p * w for p, w in zip(preds, reversed(available_weights)))
-
-            factor_contributions[factor_name] = weighted_pred
-
-        # Combine factors with factor weights
-        final_prediction = sum(
-            factor_contributions[name] * FACTOR_WEIGHTS[name]
-            for name in factor_contributions.keys()
-        )
-
-        latest_row['prediction'] = final_prediction
-        latest_row['confidence'] = abs(final_prediction)
-
-        # Store factor contributions for analysis
-        for name, contrib in factor_contributions.items():
-            latest_row[f'factor_{name}'] = contrib
-
-        weighted_predictions.append(latest_row)
-
-    result_df = pd.DataFrame(weighted_predictions)
+    # the latest panel row per symbol carries the result (all panel columns)
+    first_factor_frames = next(iter(daily_factor_predictions.values()))
+    latest_rows = (pd.concat(first_factor_frames, ignore_index=True)
+                   .sort_values("date").groupby("symbol", sort=False).tail(1))
+    latest_rows = latest_rows.drop(columns=[c for c in latest_rows.columns if c.endswith("_pred")])
+    result_df = latest_rows.merge(smoothed, on="symbol", how="inner")
 
     # Persist the FULL-universe per-factor scores for the IC decay monitor
     # (evaluation/ic_monitor.py). Each factor's realized 20-day rank IC is
@@ -378,59 +354,10 @@ def main():
     # Calculate long-term metrics for filtering
     print("\nCalculating long-term trend metrics...")
 
-    # Get 7-day, 14-day, 30-day data for trend analysis
+    # Trend metrics: strategy/selection.trend_metrics, the vectorised twin of
+    # the old per-symbol loop (pinned equal in tests/test_selection_policy.py)
     symbols = latest_data['symbol'].unique()
-    trend_metrics = []
-
-    for symbol in symbols:
-        symbol_data = df[df['symbol'] == symbol].sort_values('date')
-
-        if len(symbol_data) < 30:
-            continue
-
-        # Get recent prices
-        recent_30 = symbol_data.tail(30)
-        current_price = recent_30['close'].iloc[-1]
-
-        # Calculate returns
-        price_7d_ago = recent_30['close'].iloc[-7] if len(recent_30) >= 7 else current_price
-        price_14d_ago = recent_30['close'].iloc[-14] if len(recent_30) >= 14 else current_price
-        price_30d_ago = recent_30['close'].iloc[0]
-
-        return_7d = (current_price - price_7d_ago) / price_7d_ago * 100
-        return_14d = (current_price - price_14d_ago) / price_14d_ago * 100
-        return_30d = (current_price - price_30d_ago) / price_30d_ago * 100
-
-        # Calculate moving averages
-        ma_7 = recent_30['close'].tail(7).mean()
-        ma_14 = recent_30['close'].tail(14).mean()
-        ma_30 = recent_30['close'].mean()
-
-        # Trend strength (MA7 vs MA30)
-        trend_strength = (ma_7 - ma_30) / ma_30 * 100
-
-        # Price position relative to MAs
-        above_ma7 = current_price > ma_7
-        above_ma14 = current_price > ma_14
-        above_ma30 = current_price > ma_30
-
-        trend_metrics.append({
-            'symbol': symbol,
-            'return_7d': return_7d,
-            'return_14d': return_14d,
-            'return_30d': return_30d,
-            'ma_7': ma_7,
-            'ma_14': ma_14,
-            'ma_30': ma_30,
-            'trend_strength': trend_strength,
-            'above_ma7': above_ma7,
-            'above_ma14': above_ma14,
-            'above_ma30': above_ma30
-        })
-
-    trend_df = pd.DataFrame(trend_metrics)
-
-    # Merge with latest_data
+    trend_df = sel.trend_metrics(df[df['symbol'].isin(symbols)][['date', 'symbol', 'close']])
     latest_data = latest_data.merge(trend_df, on='symbol', how='left')
 
     # Display trend summary
@@ -469,23 +396,7 @@ def main():
 
     filtered_before = len(latest_data)
 
-    # Build filter conditions
-    filter_conditions = (
-        (latest_data['return_7d'] > FILTER_7D_MIN_RETURN) &
-        (latest_data['return_14d'] > FILTER_14D_MIN_RETURN) &
-        (latest_data['trend_strength'] > FILTER_TREND_STRENGTH_MIN)
-    )
-
-    # Optional 30-day filter
-    if FILTER_30D_MIN_RETURN is not None:
-        filter_conditions = filter_conditions & (latest_data['return_30d'] > FILTER_30D_MIN_RETURN)
-
-    # Optional MA position filter
-    if REQUIRE_PRICE_ABOVE_MAs:
-        filter_conditions = filter_conditions & latest_data['above_ma7'] & latest_data['above_ma14']
-
-    # Apply filters
-    latest_data = latest_data[filter_conditions].copy()
+    latest_data = latest_data[sel.trend_mask(latest_data, SEL_PARAMS)].copy()
 
     filtered_after = len(latest_data)
     filtered_count = filtered_before - filtered_after
@@ -500,79 +411,46 @@ def main():
     print("NEWS SENTIMENT ANALYSIS")
     print("="*80)
 
-    news_analyzer = NewsSentimentAnalyzer()
+    # News sentiment is RECORDED, not applied (decision 2026-09-14): the boost
+    # was never validated, has no historical archive, the GDELT proxy showed
+    # zero IC at 20 days, and it was sign-blind (positive news raised a
+    # SHORT's confidence). Scores go into the signal file as a diagnostic so
+    # the archive can be tested as a hypothesis later. Failures are non-fatal.
     symbols = latest_data['symbol'].tolist()
+    news_sentiments = {}
+    try:
+        news_analyzer = NewsSentimentAnalyzer()
+        print(f"\nFetching news sentiment for {len(symbols)} stocks (diagnostic only)...")
+        news_sentiments = news_analyzer.get_batch_sentiment(symbols, delay=0.5)
+    except Exception as _exc:  # noqa: BLE001
+        print(f"[WARN] news sentiment unavailable ({_exc}); recording zeros")
 
-    print(f"\nFetching news sentiment for {len(symbols)} stocks...")
-    news_sentiments = news_analyzer.get_batch_sentiment(symbols, delay=0.5)
-
-    # Add sentiment scores to latest_data
     latest_data['news_sentiment'] = latest_data['symbol'].map(
-        lambda s: news_sentiments.get(s, {}).get('sentiment_score', 0.0)
-    )
+        lambda s: news_sentiments.get(s, {}).get('sentiment_score', 0.0))
     latest_data['news_count'] = latest_data['symbol'].map(
-        lambda s: news_sentiments.get(s, {}).get('news_count', 0)
-    )
-
-    # Display sentiment summary
-    print("\nNews Sentiment Summary:")
-    print(f"{'Symbol':<8} {'Sentiment':<12} {'News Count':<12} {'Status':<15}")
-    print("-"*50)
-
-    for symbol in symbols[:10]:  # Show top 10
-        sentiment = news_sentiments.get(symbol, {})
-        score = sentiment.get('sentiment_score', 0.0)
-        count = sentiment.get('news_count', 0)
-
-        if score < -0.5:
-            status = "[X] FILTERED OUT"
-        elif score < -0.2:
-            status = "[!] Negative"
-        elif score > 0.5:
-            status = "[+] Very Positive"
-        elif score > 0.2:
-            status = "[+] Positive"
-        else:
-            status = "[-] Neutral"
-
-        print(f"{symbol:<8} {score:>+6.3f}      {count:<12} {status:<15}")
-
-    # Apply news sentiment boost/penalty to confidence
-    print("\nApplying news sentiment adjustment to rankings...")
-    print("-" * 80)
+        lambda s: news_sentiments.get(s, {}).get('news_count', 0))
 
     def calculate_sentiment_boost(sentiment_score):
-        """Calculate confidence boost based on news sentiment"""
+        """The old boost, kept ONLY as a recorded diagnostic (never applied)."""
         if sentiment_score >= 0.5:
-            return 0.20  # +20% for very positive news
+            return 0.20
         elif sentiment_score >= 0.2:
-            return 0.10  # +10% for positive news
+            return 0.10
         elif sentiment_score >= -0.2:
-            return 0.0   # No change for neutral
+            return 0.0
         elif sentiment_score >= -0.5:
-            return -0.10  # -10% penalty for negative news
+            return -0.10
         else:
-            return -0.50  # -50% penalty for very negative news
+            return -0.50
 
     latest_data['sentiment_boost'] = latest_data['news_sentiment'].apply(calculate_sentiment_boost)
     latest_data['original_confidence'] = latest_data['confidence']
-    latest_data['adjusted_confidence'] = latest_data['confidence'] * (1 + latest_data['sentiment_boost'])
-
-    # Filter out stocks with extremely negative sentiment (< -0.5)
+    latest_data['adjusted_confidence'] = latest_data['confidence']          # NOT boosted
     negative_threshold = -0.5
-    filtered_out = latest_data[latest_data['news_sentiment'] < negative_threshold]['symbol'].tolist()
-
-    if filtered_out:
-        print(f"\n[!] FILTERED OUT due to extremely negative news (sentiment < {negative_threshold}):")
-        for sym in filtered_out:
-            sentiment = news_sentiments.get(sym, {})
-            headline = sentiment.get('latest_headline', 'No headline')
-            print(f"  - {sym}: {headline[:80]}")
-
-    # Apply news filter
-    latest_data = latest_data[latest_data['news_sentiment'] >= negative_threshold].copy()
-
-    print(f"\n[OK] {len(latest_data)} stocks passed news sentiment filter")
+    filtered_out = []                                                        # nothing is excluded on news
+    would_exclude = latest_data[latest_data['news_sentiment'] < negative_threshold]['symbol'].tolist()
+    print(f"\n[news] recorded for {len(latest_data)} stocks; {len(would_exclude)} below {negative_threshold} "
+          f"({', '.join(would_exclude[:8])}) -- kept: news no longer changes selection")
     print("\nTop stocks after news sentiment adjustment:")
     print(f"{'Symbol':<8} {'Original':<10} {'Sentiment':<12} {'Boost':<8} {'Adjusted':<10}")
     print("-" * 60)
@@ -588,18 +466,21 @@ def main():
 
     # Select stocks using adjusted confidence (technical + news sentiment)
     config = {
-        'n_top': 10,
-        'min_confidence': 0.0015,  # 0.15% - Further lowered to select more trading opportunities
-        'min_stocks': 3,  # Reduced from 7 to work better with smaller stock pool
-        'news_sentiment_threshold': negative_threshold
+        'n_top': SEL_PARAMS.top_n,
+        'min_confidence': SEL_PARAMS.min_confidence,
+        'min_stocks': SEL_PARAMS.min_stocks,
+        'news_sentiment_threshold': negative_threshold,     # recorded only, no longer applied
+        'selection_params': SEL_PARAMS.to_dict(),
     }
 
-    # Sort by ADJUSTED confidence (includes news sentiment boost)
-    latest_data_sorted = latest_data.sort_values('adjusted_confidence', ascending=False)
-    top_n = latest_data_sorted.head(config['n_top'])
-    # Use original confidence for threshold to maintain standards
-    selected = top_n[top_n['original_confidence'] >= config['min_confidence']]
-
+    # Selection + sizing: strategy/selection.select_book (top_n, min_confidence,
+    # min_stocks, inverse-vol sizing) -- the same code the evaluation replays
+    _cols = ['symbol', 'prediction'] + (['volatility_20d'] if 'volatility_20d' in latest_data.columns else [])
+    book = sel.select_book(latest_data[_cols], SEL_PARAMS)
+    selected = (book[['symbol', 'sizing_weight', 'position_pct', 'rank']]
+                .merge(latest_data.drop(columns=[c for c in ('sizing_weight', 'position_pct', 'rank')
+                                                 if c in latest_data.columns]), on='symbol', how='left')
+                .sort_values('rank'))
     n_stocks = len(selected)
 
     # Display
@@ -625,14 +506,7 @@ def main():
         # vol-stabilized weights are consistently more robust out-of-sample
         # (holdout Sharpe 0.74/0.67/0.63 vs 0.43/0.42/0.37 signal-weighted,
         # with shallower drawdowns) -- high-vol names stop dominating risk.
-        if 'volatility_20d' in selected.columns:
-            _vol = selected['volatility_20d'].clip(lower=0.006)
-            _fill = _vol.median() if _vol.notna().any() else 0.02
-            selected['sizing_weight'] = (
-                selected['adjusted_confidence'] / _vol.fillna(_fill))
-        else:
-            selected['sizing_weight'] = selected['adjusted_confidence']
-        total_conf = selected['sizing_weight'].sum()
+        total_conf = selected['sizing_weight'].sum()          # sizing_weight from select_book
 
         print(f"{'Rank':<6} {'Stock':<8} {'Direction':<10} {'Tech%':<8} {'News':<8} {'Final%':<8} {'Position %':<10}")
         print("-" * 80)
@@ -722,8 +596,9 @@ def main():
     signals = {
         'generated_at': datetime.now().isoformat(),
         'data_date': str(latest_date),
-        'method': 'multi-factor with 5-day weighted prediction + news sentiment filter',
+        'method': 'multi-factor; strategy/selection.py policy (5-day smoothing + trend filter); news recorded only',
         'factor_weights': FACTOR_WEIGHTS,
+        'selection_params': SEL_PARAMS.to_dict(),
         'should_trade': n_stocks >= config['min_stocks'],
         'n_stocks': int(n_stocks),
         'stocks': [
