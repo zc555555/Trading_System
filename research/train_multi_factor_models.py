@@ -85,6 +85,11 @@ def main():
     print("\n" + "=" * 80)
     print("SAVING FACTOR MODELS")
     print("=" * 80)
+    # every ensemble goes to staging first; the set is promoted as a whole
+    # (factors/model_release.py) so a crash mid-way never leaves a mixed set
+    from factors import model_release
+    staging = model_release.stage_dir(artifacts_dir)
+    staging.mkdir(parents=True, exist_ok=True)
     for factor_name, ens in fold['ensembles'].items():
         payload = {
             'models': ens['models'],
@@ -93,10 +98,12 @@ def main():
             'val_score': ens['factor_ic'],          # now: mean daily rank IC
             'individual_scores': ens['model_ics'],  # now: per-model rank ICs
         }
-        out = artifacts_dir / f"ensemble_{factor_name}.pkl"
+        out = staging / f"ensemble_{factor_name}.pkl"
         with open(out, 'wb') as f:
             pickle.dump(payload, f)
-        print(f"  [OK] {factor_name}: rankIC={ens['factor_ic']:+.4f} -> {out.name}")
+        print(f"  [OK] {factor_name}: rankIC={ens['factor_ic']:+.4f} -> staging/{out.name}")
+    model_release.promote(artifacts_dir, list(fold['ensembles'].keys()))
+    print(f"  [OK] promoted {len(fold['ensembles'])} ensembles from staging")
 
     # ---- factor weights json --------------------------------------------
     factor_scores = fold['factor_scores']
@@ -123,6 +130,9 @@ def main():
     with open(artifacts_dir / "factor_weights.json", 'w') as f:
         json.dump(config, f, indent=2)
     print(f"\n[OK] Saved factor_weights.json (strategy={strategy_used})")
+    manifest = model_release.write_manifest(artifacts_dir, list(fold['ensembles'].keys()), horizon=HORIZON,
+                                            data_max_date=str(pd.to_datetime(df_train['date']).max().date()))
+    print(f"[OK] model_release.json written: release {manifest['release_id']}")
 
     print("\n" + "=" * 80)
     print("TRAINING SUMMARY  (per-date rank IC on purged inner validation)")

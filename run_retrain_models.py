@@ -52,6 +52,7 @@ def main():
     print("="*80)
     print(f"Start time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print()
+    run_started = datetime.now()
 
     # 确保在脚本目录下
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -121,22 +122,15 @@ def main():
     artifacts_dir = Path("research") / "artifacts"
 
     print("模型文件检查:")
-    models = {
-        "Momentum": artifacts_dir / "ensemble_momentum.pkl",
-        "Trend": artifacts_dir / "ensemble_trend.pkl",
-        "Volatility": artifacts_dir / "ensemble_volatility.pkl",
-        "Volume": artifacts_dir / "ensemble_volume.pkl",
-        "Market": artifacts_dir / "ensemble_market.pkl",
-        "Alpha": artifacts_dir / "ensemble_alpha.pkl"
-    }
-
-    all_exist = True
-    for name, path in models.items():
-        exists = path.exists()
-        status = "✅" if exists else "❌"
-        print(f"  {status} {name}: {exists}")
-        if not exists:
-            all_exist = False
+    # the release must list EVERY production factor (factor_definitions, not a
+    # hand-kept six-name list that silently missed high52), every file must
+    # match its manifest hash, and the release must postdate this run
+    sys.path.insert(0, str(Path("research")))
+    from factors.factor_definitions import FACTOR_GROUPS
+    from factors.model_release import verify
+    all_exist, problems = verify(artifacts_dir, required=list(FACTOR_GROUPS.keys()), not_before=run_started)
+    for line in problems:
+        print(f"  {'✅' if all_exist else '❌'} {line}")
 
     # ========================================================================
     # Summary

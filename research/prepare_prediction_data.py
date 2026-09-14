@@ -128,6 +128,10 @@ if __name__ == "__main__":
     for line in result.stdout.split('\n')[-10:]:
         if line.strip():
             print(line)
+    if result.returncode != 0:
+        # a failed step must stop the chain: the next steps would read the OLD file
+        print(result.stderr[-4000:])
+        raise SystemExit(f"add_time_windows.py failed (exit {result.returncode})")
 
     # Step 4: Add cross-sectional features (W1.6, 2026-05)
     print("\n[Step 4/4] Adding cross-sectional z-score features...")
