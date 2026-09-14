@@ -77,8 +77,9 @@ def calculate_win_rates_multi_factor(factor_ensembles, df_all):
             weights = ensemble_data['weights']
             feature_cols = ensemble_data['feature_cols']
 
-            X = df_recent[feature_cols].values
-            X = pd.DataFrame(X, columns=feature_cols).ffill().fillna(0).values
+            # a missing feature is 0.0 for THAT cell, exactly as evaluation/factor_training
+            # feeds the same models; the old ffill ran down the rows, i.e. across SYMBOLS
+            X = df_recent[feature_cols].to_numpy(dtype=np.float32, na_value=0.0)
 
             # Ensemble prediction for this factor
             predictions = {}
@@ -196,8 +197,7 @@ def get_weighted_predictions_multi_factor(df, factor_ensembles, n_days=5):
             weights = ensemble_data['weights']
             feature_cols = ensemble_data['feature_cols']
 
-            X = date_data[feature_cols].values
-            X = pd.DataFrame(X, columns=feature_cols).ffill().fillna(0).values
+            X = date_data[feature_cols].to_numpy(dtype=np.float32, na_value=0.0)   # per cell, never across symbols
 
             # Ensemble prediction for this factor
             predictions = {}
@@ -325,6 +325,13 @@ def main():
         print("[ERROR] No factor models found!")
         print("Please run: python train_multi_factor_models.py")
         return
+    from factors.model_release import verify as _verify_release
+    _ok, _problems = _verify_release(artifacts_dir, required=list(FACTOR_GROUPS.keys()))
+    for _line in _problems:
+        print(f"[release] {_line}")
+    if not _ok:
+        print("[ERROR] model release inconsistent -- refusing to generate signals from a mixed model set")
+        sys.exit(3)
 
     # Load data
     df = pd.read_parquet(data_dir / "stocks_with_time_windows.parquet")
