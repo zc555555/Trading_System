@@ -100,7 +100,13 @@ def run(horizon: int, panel_tag: str, data_path: str | None, top_n: int = 10, co
             vv = v.merge(prices[["date", "symbol", "volatility_20d"]], on=["date", "symbol"], how="left")
             books = ls.books_from_predictions(vv, "pred", params)
             res = ls.simulate_ledger(books, prices, lp)
-            daily = res.returns
+            # the price panel starts years before the first OOS prediction: score
+            # only the sessions the weights engine scores (first book .. last panel date)
+            lo, hi = pd.Timestamp(min(books)), pd.Timestamp(panel["date"].max())
+            ridx = pd.DatetimeIndex(res.returns.index)
+            if ridx.tz is None and lo.tz is not None:
+                lo, hi = lo.tz_localize(None), hi.tz_localize(None)
+            daily = res.returns[(ridx >= lo) & (ridx <= hi)]
             rec["blocked"] = res.blocked
             rec["stats"] = res.stats
             fills = res.fills
@@ -120,6 +126,8 @@ def run(horizon: int, panel_tag: str, data_path: str | None, top_n: int = 10, co
                   f"{ic:>8.4f}{m['n_days']:>8}")
         out["variants"][name] = rec
     suffix = ("" if panel_tag == "ext" else f"_{panel_tag}") + ("" if engine == "weights" else f"_{engine}")
+    if engine == "ledger":
+        suffix += ("" if apply_caps else "_nocaps") + ("" if brackets else "_nobrackets")
     path = RESULTS / f"production_replay_h{horizon}{suffix}.json"
     path.write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(f"\nsaved: {path}")

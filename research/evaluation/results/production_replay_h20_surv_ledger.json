@@ -1,0 +1,329 @@
+{
+  "horizon": 20,
+  "panel": "surv",
+  "top_n": 10,
+  "cost_bp": 15.0,
+  "engine": "ledger",
+  "ledger_params": {
+    "hold_days": 20,
+    "capital_per_tranche_pct": 5.0,
+    "per_stock_max_pct": 30.0,
+    "short_single_max_pct": 2.0,
+    "short_gross_max_pct": 25.0,
+    "allow_shorts": true,
+    "apply_caps": true,
+    "cost_bp": 15.0,
+    "initial_equity": 100000.0,
+    "integer_shares": true,
+    "brackets": true,
+    "stop_atr": 3.0,
+    "take_atr": 6.0,
+    "atr_window": 14,
+    "stop_floor": 0.015,
+    "stop_ceiling": 0.12,
+    "take_floor": 0.025,
+    "take_ceiling": 0.25,
+    "delist_haircut": 0.0
+  },
+  "params": {
+    "smooth_days": 5,
+    "day_weights": [
+      0.3,
+      0.25,
+      0.2,
+      0.15,
+      0.1
+    ],
+    "trend_filter": true,
+    "filter_7d_min": -3.0,
+    "filter_14d_min": -6.0,
+    "filter_30d_min": null,
+    "trend_strength_min": -3.0,
+    "require_above_mas": false,
+    "top_n": 10,
+    "min_confidence": 0.0015,
+    "min_stocks": 3,
+    "inv_vol": true,
+    "vol_floor": 0.006,
+    "version": "selection-2026-09-14"
+  },
+  "holdout_start": "2025-07-01",
+  "variants": {
+    "raw": {
+      "params": {
+        "smooth_days": 1,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": false,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.01533530605130178,
+      "ic_days": 2142,
+      "coverage": 1.0,
+      "blocked": {
+        "qty<1": 2048,
+        "short_single": 2564,
+        "short_gross": 1290,
+        "no_open": 5
+      },
+      "stats": {
+        "n_tranches": 2142,
+        "n_fills": 31026,
+        "n_entries": 15513,
+        "exits": {
+          "entry": 15513,
+          "close": 8552,
+          "stop": 5364,
+          "take": 1565,
+          "delist": 32
+        },
+        "traded_notional": 13975514.352099905,
+        "final_equity": 112149.28598350349,
+        "short_share_of_entries": 0.39837555598530267
+      },
+      "dev": {
+        "sharpe": 0.10600854903011779,
+        "ann_return": 0.005665551249015355,
+        "ann_vol": 0.1071545564003399,
+        "max_drawdown": -0.22714275470427991,
+        "n_days": 1884
+      },
+      "holdout": {
+        "sharpe": 1.1707684761136758,
+        "ann_return": 0.06985363646642329,
+        "ann_vol": 0.0591687198043756,
+        "max_drawdown": -0.04077889684038161,
+        "n_days": 258
+      },
+      "all": {
+        "sharpe": 0.1787590478456863,
+        "ann_return": 0.013188173709371531,
+        "ann_vol": 0.10256758286979575,
+        "max_drawdown": -0.22714275470427991,
+        "n_days": 2142
+      }
+    },
+    "smooth": {
+      "params": {
+        "smooth_days": 5,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": false,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.015348571301988483,
+      "ic_days": 2142,
+      "coverage": 1.0,
+      "blocked": {
+        "qty<1": 2107,
+        "short_single": 3800,
+        "short_gross": 547,
+        "no_open": 5
+      },
+      "stats": {
+        "n_tranches": 2142,
+        "n_fills": 29922,
+        "n_entries": 14961,
+        "exits": {
+          "entry": 14961,
+          "close": 8145,
+          "stop": 5256,
+          "take": 1528,
+          "delist": 32
+        },
+        "traded_notional": 13122745.27976848,
+        "final_equity": 111064.86186112117,
+        "short_share_of_entries": 0.37016242229797475
+      },
+      "dev": {
+        "sharpe": 0.09520852243746729,
+        "ann_return": 0.004297209521165968,
+        "ann_vol": 0.11895333834160775,
+        "max_drawdown": -0.2315929765058501,
+        "n_days": 1884
+      },
+      "holdout": {
+        "sharpe": 1.1968364948390222,
+        "ann_return": 0.07663156040571373,
+        "ann_vol": 0.06336905380540443,
+        "max_drawdown": -0.03946589276606238,
+        "n_days": 258
+      },
+      "all": {
+        "sharpe": 0.16794807083541452,
+        "ann_return": 0.012745623870975331,
+        "ann_vol": 0.11370377545432732,
+        "max_drawdown": -0.2315929765058501,
+        "n_days": 2142
+      }
+    },
+    "filter": {
+      "params": {
+        "smooth_days": 1,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": true,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.015565483087215917,
+      "ic_days": 2097,
+      "coverage": 0.6751674498224974,
+      "blocked": {
+        "qty<1": 2201,
+        "short_single": 2430,
+        "short_gross": 2029,
+        "no_open": 3
+      },
+      "stats": {
+        "n_tranches": 2140,
+        "n_fills": 29370,
+        "n_entries": 14685,
+        "exits": {
+          "entry": 14685,
+          "close": 8209,
+          "stop": 5011,
+          "take": 1438,
+          "delist": 27
+        },
+        "traded_notional": 13378275.530828524,
+        "final_equity": 114175.03145864696,
+        "short_share_of_entries": 0.4902962206332993
+      },
+      "dev": {
+        "sharpe": 0.25237174515948013,
+        "ann_return": 0.015040830635491442,
+        "ann_vol": 0.0683750715717136,
+        "max_drawdown": -0.18653826315190902,
+        "n_days": 1884
+      },
+      "holdout": {
+        "sharpe": 0.49361623769667,
+        "ann_return": 0.022708860977638468,
+        "ann_vol": 0.04779425866863638,
+        "max_drawdown": -0.040170982165473657,
+        "n_days": 258
+      },
+      "all": {
+        "sharpe": 0.27208172032537553,
+        "ann_return": 0.01596137694595079,
+        "ann_vol": 0.06622681648722709,
+        "max_drawdown": -0.18653826315190902,
+        "n_days": 2142
+      }
+    },
+    "production": {
+      "params": {
+        "smooth_days": 5,
+        "day_weights": [
+          0.3,
+          0.25,
+          0.2,
+          0.15,
+          0.1
+        ],
+        "trend_filter": true,
+        "filter_7d_min": -3.0,
+        "filter_14d_min": -6.0,
+        "filter_30d_min": null,
+        "trend_strength_min": -3.0,
+        "require_above_mas": false,
+        "top_n": 10,
+        "min_confidence": 0.0015,
+        "min_stocks": 3,
+        "inv_vol": true,
+        "vol_floor": 0.006,
+        "version": "selection-2026-09-14"
+      },
+      "ic_mean": 0.014989221929875037,
+      "ic_days": 2097,
+      "coverage": 0.6751674498224974,
+      "blocked": {
+        "qty<1": 2346,
+        "short_single": 3655,
+        "short_gross": 1041,
+        "no_open": 4
+      },
+      "stats": {
+        "n_tranches": 2140,
+        "n_fills": 28604,
+        "n_entries": 14302,
+        "exits": {
+          "entry": 14302,
+          "close": 7955,
+          "stop": 4879,
+          "take": 1439,
+          "delist": 29
+        },
+        "traded_notional": 12759401.847088775,
+        "final_equity": 115393.50723804,
+        "short_share_of_entries": 0.4824500069920291
+      },
+      "dev": {
+        "sharpe": 0.2439973516473886,
+        "ann_return": 0.015674797842214483,
+        "ann_vol": 0.07532448526315741,
+        "max_drawdown": -0.18637921435120353,
+        "n_days": 1884
+      },
+      "holdout": {
+        "sharpe": 0.5848963032677146,
+        "ann_return": 0.031064940870184632,
+        "ann_vol": 0.05486453002762595,
+        "max_drawdown": -0.05172956161063291,
+        "n_days": 258
+      },
+      "all": {
+        "sharpe": 0.27381310963551414,
+        "ann_return": 0.017516275841494844,
+        "ann_vol": 0.07315372983634884,
+        "max_drawdown": -0.18637921435120353,
+        "n_days": 2142
+      }
+    }
+  }
+}
