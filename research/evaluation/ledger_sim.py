@@ -87,6 +87,8 @@ class SimResult:
     fills: pd.DataFrame
     blocked: dict = field(default_factory=dict)
     stats: dict = field(default_factory=dict)
+    weights: Optional[pd.DataFrame] = None      # [date, symbol, weight] net weight of equity at each close
+    costs: Optional[pd.Series] = None           # cost drag per session as a fraction of prior equity
 
 
 def atr_panel(prices: pd.DataFrame, window: int = 14) -> pd.Series:
@@ -104,7 +106,8 @@ def _clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(hi, x))
 
 
-def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = LedgerParams()) -> SimResult:
+def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = LedgerParams(),
+                    collect: bool = False) -> SimResult:
     """books: {signal_date -> DataFrame[symbol, side ('long'|'short'),
     position_pct]} in rank order (strategy/selection.select_book output);
     prices: [date, symbol, open, high, low, close] for every session."""
@@ -140,13 +143,19 @@ def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = Le
     half_cost = params.cost_bp / 2.0 / 1e4
     n_tranches = 0
 
+    w_rows: list[tuple] = []
+    cost_by_i: dict[int, float] = {}
+
     def mark(i: int) -> float:
         val = cash
         for p in positions:
             c = C[i, p.j]
             if not np.isnan(c):
                 last_px[p.j] = c
-            val += p.side * p.qty * (last_px[p.j] if not np.isnan(last_px[p.j]) else p.entry_px)
+            mv = p.side * p.qty * (last_px[p.j] if not np.isnan(last_px[p.j]) else p.entry_px)
+            val += mv
+            if collect:
+                w_rows.append((i, p.symbol, mv))
         return val
 
     def close_position(p: _Pos, i: int, price: float, kind: str):
@@ -155,6 +164,7 @@ def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = Le
         cash += p.side * notional                      # long: proceeds in; short: buy back out
         cost = notional * half_cost
         cash -= cost
+        cost_by_i[i] = cost_by_i.get(i, 0.0) + cost
         fills.append({"date": sessions[i], "symbol": p.symbol, "side": "long" if p.side > 0 else "short",
                       "qty": p.qty, "price": price, "kind": kind, "tranche": p.tranche, "cost": cost,
                       "pnl": p.side * p.qty * (price - p.entry_px)})
@@ -231,6 +241,7 @@ def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = Le
                 cash -= side * fill_notional
                 cost = fill_notional * half_cost
                 cash -= cost
+                cost_by_i[i] = cost_by_i.get(i, 0.0) + cost
                 gross += notional
                 if side < 0:
                     short_tot += notional
@@ -281,12 +292,23 @@ def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = Le
     eq = pd.Series(equity, index=pd.DatetimeIndex(sessions), name="equity")
     rets = eq.pct_change().dropna()
     fills_df = pd.DataFrame(fills)
+    weights_df = costs_s = None
+    if collect:
+        if w_rows:
+            wdf = pd.DataFrame(w_rows, columns=["i", "symbol", "mv"])
+            wdf["date"] = sessions[wdf["i"].to_numpy()]
+            wdf["weight"] = wdf["mv"] / equity[wdf["i"].to_numpy()]
+            weights_df = wdf[["date", "symbol", "weight"]]
+        else:
+            weights_df = pd.DataFrame(columns=["date", "symbol", "weight"])
+        prev_eq = np.where(np.arange(T) > 0, np.roll(equity, 1), np.nan)
+        costs_s = pd.Series({sessions[i]: c / prev_eq[i] for i, c in cost_by_i.items() if i > 0}, name="costs").sort_index()
     stats = {"n_tranches": n_tranches, "n_fills": len(fills_df),
              "n_entries": int((fills_df["kind"] == "entry").sum()) if len(fills_df) else 0,
              "exits": fills_df["kind"].value_counts().to_dict() if len(fills_df) else {},
              "traded_notional": float((fills_df["qty"] * fills_df["price"]).sum()) if len(fills_df) else 0.0,
              "final_equity": float(eq.iloc[-1]) if len(eq) else cash}
-    return SimResult(eq, rets, fills_df, dict(blocked), stats)
+    return SimResult(eq, rets, fills_df, dict(blocked), stats, weights_df, costs_s)
 
 
 def books_from_predictions(panel: pd.DataFrame, pred_col: str, select_params, vol_col: str = "volatility_20d") -> dict:

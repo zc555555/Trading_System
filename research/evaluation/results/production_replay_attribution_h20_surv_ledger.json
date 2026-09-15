@@ -1,0 +1,202 @@
+{
+  "production_brackets": {
+    "exits": {
+      "entry": 14154,
+      "close": 7906,
+      "stop": 4803,
+      "take": 1410,
+      "delist": 35
+    },
+    "blocked": {
+      "qty<1": 2004,
+      "short_single": 3815,
+      "short_gross": 1370,
+      "no_open": 5
+    },
+    "dev": {
+      "n_days": 1883,
+      "ann_return_total": 0.03410008486488334,
+      "ann_return_market": 0.022978714537757253,
+      "ann_return_sector": 0.01080717591687224,
+      "ann_return_selection": 0.06797815842060091,
+      "ann_return_costs": -0.01081392480564377,
+      "ann_return_residual": -0.05682563271023941,
+      "avg_beta_exposure": 0.134113134602948,
+      "avg_gross_weight": 0.4360826497093037,
+      "avg_net_weight": 0.06862376061337809
+    },
+    "holdout": {
+      "n_days": 258,
+      "ann_return_total": 0.05844862858868983,
+      "ann_return_market": 0.03650301926221939,
+      "ann_return_sector": 0.026614014983522432,
+      "ann_return_selection": 0.042236026938972195,
+      "ann_return_costs": -0.011172252633402846,
+      "ann_return_residual": -0.03573217996262136,
+      "avg_beta_exposure": 0.09747185294925459,
+      "avg_gross_weight": 0.44566122369595085,
+      "avg_net_weight": 0.03297484356687597
+    },
+    "all": {
+      "n_days": 2141,
+      "ann_return_total": 0.0370341924224462,
+      "ann_return_market": 0.02460997709919308,
+      "ann_return_sector": 0.012711970162176183,
+      "ann_return_selection": 0.06487611735462229,
+      "ann_return_costs": -0.01085710489885341,
+      "ann_return_residual": -0.05428377805872822,
+      "avg_beta_exposure": 0.12969769757975655,
+      "avg_gross_weight": 0.43723691037654094,
+      "avg_net_weight": 0.06432790792865246
+    }
+  },
+  "production_nobrackets": {
+    "exits": {
+      "entry": 13297,
+      "close": 13251,
+      "delist": 46
+    },
+    "blocked": {
+      "qty<1": 1593,
+      "short_single": 4152,
+      "short_gross": 2303,
+      "no_open": 3
+    },
+    "dev": {
+      "n_days": 1883,
+      "ann_return_total": 0.05689962089843927,
+      "ann_return_market": 0.03181394166290441,
+      "ann_return_sector": 0.008937225787200671,
+      "ann_return_selection": 0.05199900552630121,
+      "ann_return_costs": -0.010249968998793513,
+      "ann_return_residual": -0.025566792381708923,
+      "avg_beta_exposure": 0.21935515067644157,
+      "avg_gross_weight": 0.5356927136330304,
+      "avg_net_weight": 0.129394317479312
+    },
+    "holdout": {
+      "n_days": 258,
+      "ann_return_total": 0.10601680173594887,
+      "ann_return_market": 0.044885727505327384,
+      "ann_return_sector": 0.03399919239573343,
+      "ann_return_selection": 0.06538197177174798,
+      "ann_return_costs": -0.010337301685986722,
+      "ann_return_residual": -0.027912788250873174,
+      "avg_beta_exposure": 0.16625428918790094,
+      "avg_gross_weight": 0.5289644337090653,
+      "avg_net_weight": 0.0797561914944595
+    },
+    "all": {
+      "n_days": 2141,
+      "ann_return_total": 0.06281845913107705,
+      "ann_return_market": 0.03339062270420649,
+      "ann_return_sector": 0.011957303967958003,
+      "ann_return_selection": 0.05361171234149283,
+      "ann_return_costs": -0.01026049297511105,
+      "ann_return_residual": -0.02584949529354656,
+      "avg_beta_exposure": 0.21295626124905087,
+      "avg_gross_weight": 0.534881926047611,
+      "avg_net_weight": 0.12341270304489259
+    }
+  },
+  "raw_brackets": {
+    "exits": {
+      "entry": 15122,
+      "close": 8311,
+      "stop": 5243,
+      "take": 1529,
+      "delist": 39
+    },
+    "blocked": {
+      "qty<1": 2169,
+      "short_single": 2791,
+      "short_gross": 1332,
+      "no_open": 6
+    },
+    "dev": {
+      "n_days": 1883,
+      "ann_return_total": 0.010472558045304583,
+      "ann_return_market": 0.05800157273615121,
+      "ann_return_sector": 0.0036578072574230736,
+      "ann_return_selection": 0.04476321653929576,
+      "ann_return_costs": -0.01187670349385563,
+      "ann_return_residual": -0.0840117294995663,
+      "avg_beta_exposure": 0.22224561875152482,
+      "avg_gross_weight": 0.46018725302257446,
+      "avg_net_weight": 0.13778011999415887
+    },
+    "holdout": {
+      "n_days": 258,
+      "ann_return_total": 0.09250655572939291,
+      "ann_return_market": 0.0632370137417068,
+      "ann_return_sector": 0.03746245352708225,
+      "ann_return_selection": 0.06142357127992772,
+      "ann_return_costs": -0.011969665788713245,
+      "ann_return_residual": -0.057646817030610614,
+      "avg_beta_exposure": 0.1650643165355174,
+      "avg_gross_weight": 0.46540648851111205,
+      "avg_net_weight": 0.0993314187598085
+    },
+    "all": {
+      "n_days": 2141,
+      "ann_return_total": 0.02035801876575988,
+      "ann_return_market": 0.05863305650400223,
+      "ann_return_sector": 0.007731417130179763,
+      "ann_return_selection": 0.04677086321051624,
+      "ann_return_costs": -0.011887905862876302,
+      "ann_return_residual": -0.08083464056122412,
+      "avg_beta_exposure": 0.2153550181108289,
+      "avg_gross_weight": 0.4608161940576248,
+      "avg_net_weight": 0.13314688089165425
+    }
+  },
+  "raw_nobrackets": {
+    "exits": {
+      "entry": 14456,
+      "close": 14380,
+      "delist": 76
+    },
+    "blocked": {
+      "qty<1": 1837,
+      "short_single": 2888,
+      "short_gross": 2235,
+      "no_open": 4
+    },
+    "dev": {
+      "n_days": 1883,
+      "ann_return_total": 0.04122752784317191,
+      "ann_return_market": 0.08069042258469487,
+      "ann_return_sector": 0.006769951583919352,
+      "ann_return_selection": 0.01696137584217078,
+      "ann_return_costs": -0.011445225650483578,
+      "ann_return_residual": -0.0516632924039222,
+      "avg_beta_exposure": 0.3522455379622294,
+      "avg_gross_weight": 0.5802203228365393,
+      "avg_net_weight": 0.22468948792664226
+    },
+    "holdout": {
+      "n_days": 258,
+      "ann_return_total": 0.12873566187090033,
+      "ann_return_market": 0.09116776224961749,
+      "ann_return_sector": 0.050293168274557876,
+      "ann_return_selection": 0.04541004420816089,
+      "ann_return_costs": -0.01131375543153882,
+      "ann_return_residual": -0.04682155742989713,
+      "avg_beta_exposure": 0.2501424155834656,
+      "avg_gross_weight": 0.5591927128336357,
+      "avg_net_weight": 0.1564998747611325
+    },
+    "all": {
+      "n_days": 2141,
+      "ann_return_total": 0.05177264628275805,
+      "ann_return_market": 0.08195416902394222,
+      "ann_return_sector": 0.012014692315439546,
+      "ann_return_selection": 0.020389566612103262,
+      "ann_return_costs": -0.011429382905743853,
+      "ann_return_residual": -0.05107984185590797,
+      "avg_beta_exposure": 0.3399416586657693,
+      "avg_gross_weight": 0.5776864025279222,
+      "avg_net_weight": 0.2164723369706864
+    }
+  }
+}
