@@ -36,6 +36,7 @@ import pandas as pd
 
 sys.path.append(str(Path(__file__).resolve().parent.parent.parent))
 
+from evaluation import ledger_sim as ls  # noqa: E402
 from evaluation.experiments import portfolio_construction as pc  # noqa: E402
 from evaluation.metrics import portfolio_metrics  # noqa: E402
 from strategy import selection as sel  # noqa: E402
@@ -67,15 +68,23 @@ def daily_rank_ic(panel: pd.DataFrame, pred_col: str, label: str) -> tuple[float
     return (float(np.nanmean(ics)) if ics else float("nan")), len(ics)
 
 
-def run(horizon: int, panel_tag: str, data_path: str | None, top_n: int = 10, cost_bp: float = 15.0) -> dict:
+def run(horizon: int, panel_tag: str, data_path: str | None, top_n: int = 10, cost_bp: float = 15.0,
+        engine: str = "weights", apply_caps: bool = True, brackets: bool = True) -> dict:
+    """engine='weights': the construction grid's fixed-weight simulator
+    (daily rebalanced marks); engine='ledger': evaluation/ledger_sim.py --
+    whole shares, tranche capital from equity, the no-debt / short caps,
+    scheduled open-to-open exits and ATR brackets, i.e. the orchestrator."""
     pc.HOLD_DAYS = horizon
     if data_path:
         pc.DATA = Path(data_path)
     panel, wide = pc.load_inputs(horizon, panel_tag)
-    prices = pd.read_parquet(pc.DATA, columns=["date", "symbol", "close"])
+    prices = pd.read_parquet(pc.DATA, columns=["date", "symbol", "open", "high", "low", "close", "volatility_20d"])
     label = f"future_return_{horizon}d"
     base = sel.SelectionParams.production(top_n=top_n)
-    out = {"horizon": horizon, "panel": panel_tag, "top_n": top_n, "cost_bp": cost_bp,
+    lp = ls.LedgerParams(hold_days=horizon, capital_per_tranche_pct=100.0 / horizon, cost_bp=cost_bp,
+                         apply_caps=apply_caps, brackets=brackets)
+    out = {"horizon": horizon, "panel": panel_tag, "top_n": top_n, "cost_bp": cost_bp, "engine": engine,
+           "ledger_params": lp.__dict__ if engine == "ledger" else None,
            "params": base.to_dict(), "holdout_start": pc.HOLDOUT, "variants": {}}
     cut = pd.Timestamp(pc.HOLDOUT)
     print(f"{'variant':<12}{'seg':<9}{'sharpe':>7}{'ann':>8}{'maxDD':>8}{'IC':>8}{'n_days':>8}")
@@ -85,11 +94,23 @@ def run(horizon: int, panel_tag: str, data_path: str | None, top_n: int = 10, co
         v = panel[["date", "symbol", "open", "close", label, "vol20"]].copy()
         v["pred"] = variant_predictions(panel, prices, params).to_numpy()
         ic, n_ic = daily_rank_ic(v, "pred", label)
-        daily = pc.simulate(v, wide, top_n, True, False, cost_bp)
-        idx = pd.DatetimeIndex(daily.index)
-        c = cut.tz_localize(idx.tz) if idx.tz is not None else cut
         rec = {"params": params.to_dict(), "ic_mean": ic, "ic_days": n_ic,
                "coverage": float(v["pred"].notna().mean())}
+        if engine == "ledger":
+            vv = v.merge(prices[["date", "symbol", "volatility_20d"]], on=["date", "symbol"], how="left")
+            books = ls.books_from_predictions(vv, "pred", params)
+            res = ls.simulate_ledger(books, prices, lp)
+            daily = res.returns
+            rec["blocked"] = res.blocked
+            rec["stats"] = res.stats
+            fills = res.fills
+            if len(fills):
+                ent = fills[fills["kind"] == "entry"]
+                rec["stats"]["short_share_of_entries"] = float((ent["side"] == "short").mean()) if len(ent) else None
+        else:
+            daily = pc.simulate(v, wide, top_n, True, False, cost_bp)
+        idx = pd.DatetimeIndex(daily.index)
+        c = cut.tz_localize(idx.tz) if idx.tz is not None else cut
         for seg, series in (("dev", daily[idx < c]), ("holdout", daily[idx >= c]), ("all", daily)):
             m = portfolio_metrics(series)
             if not m:
@@ -98,7 +119,7 @@ def run(horizon: int, panel_tag: str, data_path: str | None, top_n: int = 10, co
             print(f"{name:<12}{seg:<9}{m['sharpe']:>7.2f}{m['ann_return']:>8.1%}{m['max_drawdown']:>8.1%}"
                   f"{ic:>8.4f}{m['n_days']:>8}")
         out["variants"][name] = rec
-    suffix = "" if panel_tag == "ext" else f"_{panel_tag}"
+    suffix = ("" if panel_tag == "ext" else f"_{panel_tag}") + ("" if engine == "weights" else f"_{engine}")
     path = RESULTS / f"production_replay_h{horizon}{suffix}.json"
     path.write_text(json.dumps(out, indent=2), encoding="utf-8")
     print(f"\nsaved: {path}")
@@ -113,5 +134,9 @@ if __name__ == "__main__":
     ap.add_argument("--data", default=None)
     ap.add_argument("--top-n", type=int, default=10)
     ap.add_argument("--cost-bp", type=float, default=15.0)
+    ap.add_argument("--engine", choices=["weights", "ledger"], default="weights")
+    ap.add_argument("--no-caps", action="store_true", help="ledger engine: ignore the no-debt / short caps")
+    ap.add_argument("--no-brackets", action="store_true", help="ledger engine: no ATR stop / take-profit exits")
     a = ap.parse_args()
-    run(a.horizon, a.panel, a.data, top_n=a.top_n, cost_bp=a.cost_bp)
+    run(a.horizon, a.panel, a.data, top_n=a.top_n, cost_bp=a.cost_bp, engine=a.engine,
+        apply_caps=not a.no_caps, brackets=not a.no_brackets)
