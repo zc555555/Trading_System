@@ -318,14 +318,16 @@ def calendar_gate(broker, now_et: datetime) -> bool:
 
 def _submit_entry(broker, symbol: str, qty: int, order_side: str, arm: str, cur_price: float,
                   stop: float, take: float, client_id: str, sleep=time.sleep) -> bool:
-    """Bracket entry (market or limit arm). True when the broker has the
-    order and did not reject it within a short window; an accepted entry is
-    NOT a fill, which is why the entry's notional is booked as pending
-    exposure until it fills."""
+    """Entry (market or limit arm), with bracket children only while
+    config_trading.USE_BRACKET_ORDERS is on (off since 2026-09-15). True when
+    the broker has the order and did not reject it within a short window; an
+    accepted entry is NOT a fill, which is why the entry's notional is booked
+    as pending exposure until it fills."""
     try:
         st = broker.submit(symbol, qty, order_side, kind="limit" if arm == "limit" else "market",
                            limit_price=float(cur_price) if arm == "limit" else None,
-                           bracket=(stop, take), client_order_id=client_id, tif="gtc")
+                           bracket=(stop, take) if getattr(config_trading, "USE_BRACKET_ORDERS", True) else None,
+                           client_order_id=client_id, tif="gtc")
     except BrokerError as e:
         print(f"  [FAIL]    {order_side.upper():<4} {symbol}: {e}")
         return False

@@ -92,6 +92,17 @@ SHORT_GROSS_MAX_PCT = 25.0    # max % of equity in total short notional
 #       every position regardless of stock.
 USE_ATR_STOPS = True
 
+# Broker-side bracket orders (stop + take-profit children on every entry).
+# 2026-09-15: OFF. The ledger replay on the corrected panel (hypothesis
+# execution_atr_brackets, evaluation/results/hypothesis_ledger.csv) found
+# the 3x/6x ATR brackets cost -0.15 dev Sharpe with no drawdown benefit and
+# stopped out a third of all legs. Stop/take levels are still computed and
+# recorded on each registry leg (diagnostics, and the monitor's rule if it
+# is ever revived); risk control is the 3% daily-loss breaker and the
+# 20-day scheduled close. Legs opened before this date keep the bracket
+# children they already have until they close.
+USE_BRACKET_ORDERS = False
+
 # ATR multiples (used when USE_ATR_STOPS = True).
 #   stop_distance = STOP_ATR_MULTIPLE * ATR_14
 #   take_distance = TAKE_ATR_MULTIPLE * ATR_14
@@ -168,6 +179,7 @@ def summary() -> str:
         f"STRATEGY={STRATEGY}, hold_days={HOLD_DAYS}, "
         f"capital_per_tranche={derived_capital_per_tranche_pct():.1f}%, "
         f"shorts={'on' if ALLOW_SHORTS else 'off'}, "
+        f"brackets={'on' if USE_BRACKET_ORDERS else 'OFF (levels recorded only)'}, "
         f"{stop_desc}, {take_desc}, "
         f"eod_flatten={EOD_FLATTEN}"
     )

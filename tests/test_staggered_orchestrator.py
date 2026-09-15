@@ -234,3 +234,24 @@ def test_partial_close_retry_does_not_double_book(tmp_path):
     rst.close_due_tranches(b, reg, dry_run=False, sleep=NOSLEEP, timeout_s=0.2)
     assert reg.get("t1").status == "closed" and b.pos == {}
     assert sum(o.filled_qty for o in b.orders.values() if o.symbol == "AAA" and o.side == "sell") == 10
+
+
+# 2026-09-15: ATR brackets removed from the live book -----------------------
+def test_entries_carry_no_bracket_children_when_switched_off(tmp_path, monkeypatch):
+    reg = TrancheRegistry(tmp_path / "reg.json")
+    b = FakeBroker(equity=100_000, last_equity=100_000, prices={"AAA": 100, "SSS": 50})
+    monkeypatch.setattr(rst.config_trading, "USE_BRACKET_ORDERS", False)
+    out = rst.open_new_tranche(b, reg, _signals(), dry_run=False, sleep=NOSLEEP)
+    assert out is not None
+    entries = [o for o in b.orders.values() if o.client_order_id.startswith("open_")]
+    assert entries and all(o.order_class == "simple" and not o.legs for o in entries)
+    assert all(o.order_class != "bracket" for o in b.orders.values())
+    # levels are still recorded on the legs (diagnostics)
+    t = reg.get(out)
+    assert all(p.stop_price is not None and p.take_price is not None for p in t.longs + t.shorts)
+    # and the switch on restores bracket children
+    reg2 = TrancheRegistry(tmp_path / "reg2.json")
+    b2 = FakeBroker(equity=100_000, last_equity=100_000, prices={"AAA": 100, "SSS": 50})
+    monkeypatch.setattr(rst.config_trading, "USE_BRACKET_ORDERS", True)
+    out2 = rst.open_new_tranche(b2, reg2, _signals(), dry_run=False, sleep=NOSLEEP)
+    assert out2 is not None and any(o.order_class == "bracket" and o.legs for o in b2.orders.values())

@@ -246,10 +246,16 @@ class DynamicTradingMonitor:
                 if fresh is None or remaining <= 0:
                     print(f"  [A/B] {symbol}: 无剩余数量需要补单 (已成交 {qty - remaining}/{qty})")
                     continue
-                trader.place_bracket_order(
-                    symbol, remaining, side, stop_price=stop_price,
-                    take_price=take_price,
-                    client_order_id=(o.client_order_id or '') + '_mkt')
+                if getattr(_tcfg, 'USE_BRACKET_ORDERS', True):
+                    trader.place_bracket_order(
+                        symbol, remaining, side, stop_price=stop_price,
+                        take_price=take_price,
+                        client_order_id=(o.client_order_id or '') + '_mkt')
+                else:                                   # brackets off (2026-09-15): plain market replacement
+                    from trading.broker import AlpacaBroker
+                    AlpacaBroker(trading_client=self.client).submit(
+                        symbol, remaining, side, kind="market",
+                        client_order_id=(o.client_order_id or '') + '_mkt', tif="gtc")
         except Exception as e:
             print(f"  [WARN] A/B 限价转换检查失败: {e}")
 
