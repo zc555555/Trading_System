@@ -53,7 +53,8 @@ def promote(artifacts_dir: Path, names: Iterable[str], extra_files: Iterable[str
 
 
 def write_manifest(artifacts_dir: Path, names: Iterable[str], horizon: Optional[int] = None,
-                   data_max_date: Optional[str] = None, extra_files: Iterable[str] = ("factor_weights.json",)) -> dict:
+                   data_max_date: Optional[str] = None, extra_files: Iterable[str] = ("factor_weights.json",),
+                   extra: Optional[dict] = None) -> dict:
     artifacts_dir = Path(artifacts_dir)
     files = {ensemble_file(n): {"factor": n} for n in names}
     for f in extra_files:
@@ -66,7 +67,7 @@ def write_manifest(artifacts_dir: Path, names: Iterable[str], horizon: Optional[
         meta["bytes"] = p.stat().st_size
     manifest = {"release_id": datetime.now().strftime("%Y%m%dT%H%M%S"),
                 "training_date": datetime.now().isoformat(timespec="seconds"),
-                "horizon": horizon, "data_max_date": data_max_date, "files": files}
+                "horizon": horizon, "data_max_date": data_max_date, **(extra or {}), "files": files}
     tmp = artifacts_dir / (MANIFEST + ".tmp")
     tmp.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     os.replace(tmp, artifacts_dir / MANIFEST)

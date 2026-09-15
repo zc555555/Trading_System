@@ -42,6 +42,24 @@ from evaluation.factor_training import train_factor_ensembles, refit_on_full_dat
 HORIZON = 20
 EMBARGO_DAYS = 5
 
+# 2026-09-14 (review item 3 / decision 1): production trains exactly the way
+# purged_walk_forward evaluates a fold -- the LAST TRAIN_WINDOW labeled
+# sessions, inner purged validation for base-model and factor weights, and
+# no refit on the full window. Every reported IC / Sharpe describes this
+# policy; the old full-history + refit models were never evaluated.
+TRAIN_WINDOW = 756            # == evaluation.purged_walk_forward FoldConfig.train_window
+REFIT_ON_FULL = False
+
+
+def restrict_to_window(df_train, n_sessions: int):
+    """Keep the last `n_sessions` distinct dates of a labeled frame."""
+    if not n_sessions:
+        return df_train
+    dates = np.sort(df_train["date"].unique())
+    keep = dates[-int(n_sessions):]
+    return df_train[df_train["date"].isin(keep)].copy()
+
+
 
 def main():
     print("\n" + "=" * 80)
@@ -63,6 +81,9 @@ def main():
     print(f"  {df_train.shape[0]:,} rows with {HORIZON}d labels, "
           f"{df_train['date'].min().date()} .. {df_train['date'].max().date()}, "
           f"{df_train['symbol'].nunique()} symbols")
+    df_train = restrict_to_window(df_train, TRAIN_WINDOW)
+    print(f"  rolling window: last {TRAIN_WINDOW} sessions -> {df_train.shape[0]:,} rows, "
+          f"{df_train['date'].min().date()} .. {df_train['date'].max().date()} (the evaluated policy)")
 
     print("\n[Step 2/4] Verifying factor definitions...")
     coverage = verify_feature_coverage(df_train.columns.tolist())
@@ -78,8 +99,12 @@ def main():
         df_train, horizon=HORIZON, embargo_days=EMBARGO_DAYS,
         target_col=target_col)
 
-    print("\n[Step 4/4] Refitting base models on all labeled data...")
-    fold = refit_on_full_data(fold, df_train, target_col=target_col)
+    if REFIT_ON_FULL:
+        print("\n[Step 4/4] Refitting base models on the whole window...")
+        fold = refit_on_full_data(fold, df_train, target_col=target_col)
+    else:
+        print("\n[Step 4/4] No refit: the inner-validation fold models go to production, "
+              "exactly as the walk-forward evaluates them")
 
     # ---- persist ensembles (schema-compatible with all consumers) -------
     print("\n" + "=" * 80)
@@ -124,6 +149,10 @@ def main():
         'score_metric': 'daily_cross_sectional_rank_ic',
         'inner_split': fold['inner_split'],
         'horizon': HORIZON,
+        'train_window_sessions': TRAIN_WINDOW,
+        'train_start': str(pd.to_datetime(df_train['date']).min().date()),
+        'train_end': str(pd.to_datetime(df_train['date']).max().date()),
+        'refit_on_full': REFIT_ON_FULL,
         # legacy alias so older readers keep working
         'factor_weights': dict(FACTOR_WEIGHTS),
     }
@@ -131,7 +160,10 @@ def main():
         json.dump(config, f, indent=2)
     print(f"\n[OK] Saved factor_weights.json (strategy={strategy_used})")
     manifest = model_release.write_manifest(artifacts_dir, list(fold['ensembles'].keys()), horizon=HORIZON,
-                                            data_max_date=str(pd.to_datetime(df_train['date']).max().date()))
+                                            data_max_date=str(pd.to_datetime(df_train['date']).max().date()),
+                                            extra={"train_window_sessions": TRAIN_WINDOW,
+                                                   "train_start": str(pd.to_datetime(df_train['date']).min().date()),
+                                                   "refit_on_full": REFIT_ON_FULL})
     print(f"[OK] model_release.json written: release {manifest['release_id']}")
 
     print("\n" + "=" * 80)

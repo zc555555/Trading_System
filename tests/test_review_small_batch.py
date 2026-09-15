@@ -180,3 +180,21 @@ def test_model_release_promote_is_all_or_nothing(tmp_path):
     mr.promote(tmp_path, ["momentum", "trend"])
     assert (tmp_path / "ensemble_momentum.pkl").read_bytes() == b"new-m"
     assert (tmp_path / "ensemble_trend.pkl").read_bytes() == b"new-t" and not list(staging.iterdir())
+
+
+# decision 1 (2026-09-14): production trains the evaluated policy ------------
+def test_training_window_is_the_evaluated_policy():
+    tm = pytest.importorskip("train_multi_factor_models")
+    from evaluation.purged_walk_forward import WalkForwardConfig as FoldConfig
+    assert tm.TRAIN_WINDOW == FoldConfig().train_window == 756 and tm.REFIT_ON_FULL is False
+    dates = pd.bdate_range("2020-01-01", periods=1000)
+    df = pd.DataFrame({"date": np.repeat(dates, 2), "symbol": ["A", "B"] * 1000, "x": 1.0})
+    w = tm.restrict_to_window(df, 756)
+    assert w["date"].nunique() == 756 and w["date"].max() == dates[-1] and w["date"].min() == dates[-756]
+    assert tm.restrict_to_window(df, 0) is df
+    from factors import model_release as mr
+    import tempfile
+    d = Path(tempfile.mkdtemp())
+    (d / "ensemble_a.pkl").write_bytes(b"a"); (d / "factor_weights.json").write_text("{}")
+    m = mr.write_manifest(d, ["a"], horizon=20, extra={"train_window_sessions": 756, "refit_on_full": False})
+    assert m["train_window_sessions"] == 756 and m["refit_on_full"] is False and mr.verify(d, ["a"])[0]
