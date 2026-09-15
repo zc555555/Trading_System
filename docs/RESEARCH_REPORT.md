@@ -178,6 +178,25 @@ The card's obvious follow-up — *concentrate on high52* — was pre-registered 
 
 ---
 
+### 3.9 The book, replayed as it trades
+
+Until September the evaluation book and the live book were two different strategies. The construction grid ranked each date's raw blended prediction and marked a *fixed weight* per day; production smoothed five sessions of scores, dropped names failing a long-term trend filter, sized whole shares from equity, refused entries the no-debt guards block, and exited through 3×/6× ATR bracket orders. An external review (2026-09-14) put it plainly: the report described a strategy nobody was trading.
+
+Two things changed. The selection policy became one module (`strategy/selection.py`) that the nightly script and the evaluation call alike, each step behind a switch; and the evaluation book became a cash-and-shares ledger (`evaluation/ledger_sim.py`) that does what the orchestrator does — tranche capital from equity, `floor(alloc / close)` shares, the single-short / gross-short / no-leverage guards in rank order, open-to-open scheduled exits, ATR brackets with the production clamps and gap handling, delisting at the last close. Its unit tests pin each rule; the review's own reproduction (100 → 110 → 100 reporting +0.19% under daily rebalancing) is exactly zero under shares.
+
+Adding the live constraints one layer at a time, raw selection on the corrected panel (dev / holdout / all Sharpe):
+
+| layer | dev | holdout | all | max DD |
+|---|---|---|---|---|
+| fixed-weight simulator (§3.7) | 0.22 | 0.85 | 0.27 | −32% |
+| share ledger, no caps, no brackets | 0.24 | 0.73 | 0.28 | −27% |
+| + no-debt / short caps | **0.36** | 1.14 | 0.40 | −23% |
+| + ATR brackets | 0.11 | 1.17 | 0.18 | −23% |
+
+Three verdicts followed, each pre-registered with its rule before the numbers were read (ledger rows `selection_smoothing_5d`, `selection_trend_filter`, `execution_atr_brackets`). Fixed shares versus fixed weights is second-order, as expected. The **risk caps add ~0.12 of dev Sharpe** by refusing the weakest short legs — a risk rule that happens to be alpha-positive. The **five-day smoothing is neutral** and stays. The **trend filter stays**: on the fixed-weight engine it looked harmful (it tilts the book net short, −22%/−31%), but the live caps prevent exactly that tilt; on the faithful engine removing it lowers dev Sharpe (0.24 → 0.10) and deepens the drawdown (−18.6% → −23.2%), with a holdout move the other way (0.58 → 1.20, one 258-day window) logged as a watch item. The **ATR brackets are removed**: −0.15 of dev Sharpe with no drawdown benefit, a third of all legs stopped out, and an attribution residual of −5.7%/yr against −2.6% without them — the gap between intraday stop fills and the close marks the risk model uses is the brackets' realised cost. Since 2026-09-15 entries are plain orders; the 3% daily-loss breaker and the scheduled close are the risk control.
+
+The live book as it stood (smoothing, filter, caps, brackets) scores **0.24 / 0.58 / 0.27, max DD −18.6%**; without brackets **0.39 / 0.76 / 0.41**. Two structural facts fell out of the replay: at $100k the per-name allocation buys zero shares of names priced above it (~2,000 blocked entries over the sample) and the short caps block ~4,700 more, so the book deploys only 44–54% of equity on average. That is a registered, untested lever (`capital_deployment_rate`), not a tuning knob.
+
 ## 4. The factor program: 21 hypotheses, 3 survivors
 
 The complete ledger, most instructive cases first:
@@ -204,7 +223,7 @@ Fully automated since 2026-07-21: nightly signal generation and staggered order 
 
 Factor health has three detection layers. The weekly retrain re-weights factors by recent rank IC and zeroes negatives (automatic, coarse); pre-registered removal triggers fire on fixed dates (strict, infrequent); and a **weekly IC-decay monitor** (`evaluation/ic_monitor.py`) fills the gap between them — each production factor's rolling 120-session rank IC, stitched from the walk-forward history and nightly full-universe score dumps, is compared with its own development-period band, with pre-registered rules (WARN: below dev mean − 1 sd for ≥ 20 sessions; ALERT: below zero for ≥ 60 sessions while carrying weight) that raise a desktop alert and open a removal review — never an automatic removal.
 
-Honest expectation for this configuration on the corrected ruler (§3.7): **all-period Sharpe ≈ 0.3** (dev 0.22, holdout 0.85), of which stock selection is ≈ +3%/yr of the +4.6% total with average β ≈ 0 (§3.6). The 0.8 this report once carried is retracted. Live trading is unaffected by either correction — the book only ever trades current members and cannot look ahead — but its expectation was overstated. Two weeks of live operation surfaced and fixed real bugs (a OneDrive file-lock crash that silently killed one nightly run — now retried with backoff and alerting; an encoding crash in a logging path), exactly what paper trading is for.
+Honest expectation for this configuration on the corrected ruler, replayed as the book actually trades (§3.9, ledger engine with the live caps, brackets off since 2026-09-15): **all-period Sharpe ≈ 0.4** (dev 0.39, holdout 0.76, max DD −18%); the same book with the brackets it carried until September scored 0.27 (0.24 / 0.58). On the older fixed-weight ruler (§3.7) the figures were 0.27 (0.22 / 0.85), with stock selection ≈ +3%/yr of the +4.6% total and average β ≈ 0 (§3.6). The 0.8 this report once carried is retracted. Live trading is unaffected by either correction — the book only ever trades current members and cannot look ahead — but its expectation was overstated. Two weeks of live operation surfaced and fixed real bugs (a OneDrive file-lock crash that silently killed one nightly run — now retried with backoff and alerting; an encoding crash in a logging path), exactly what paper trading is for.
 
 ## 6. Limitations, stated plainly
 
@@ -213,7 +232,8 @@ Honest expectation for this configuration on the corrected ruler (§3.7): **all-
 3. **Beta and selection are measured, not asserted**: on the corrected ruler the book runs near β ≈ 0 with a stock-selection component of ~+3%/yr (IR 0.3 all-period, 0.9 holdout) — small, positive in both segments, and the only part of the original headline that survived the corrections.
 4. **Market-feature reproducibility — fixed 2026-08.** Nightly rebuilds used to refetch macro series live; Yahoo re-adjusts the whole price history on every dividend, so historical feature values drifted between runs (observed: a virgin-tier IC moving 0.0168 → 0.0141 with no code change). Macro series now come from a frozen, append-only snapshot committed to git (`data/market_snapshot.py`; raw closes + dividends + splits, total-return index derived deterministically, only closed sessions ever stored). Any deliberate refresh is a reviewable diff, not silent drift.
 5. **Capacity is small** — the strategy trades large-cap US equities in tiny size; measured costs do not extrapolate.
-6. **Twenty-one hypotheses is a small family** by industry standards; the ~14% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.
+6. **The ledger engine simplifies too**: no borrow fees or cash interest, stop fills at the stop price (or the open when gapped through), delistings at the last close, and paper-calibrated 15 bp costs. Its numbers describe the strategy as coded, on daily bars; intraday paths are not modelled beyond the high/low touch.
+7. **Twenty-one hypotheses is a small family** by industry standards; the ~14% adoption rate and every threshold are computed over exactly the tests recorded, no more, no fewer.
 
 ## 7. What I would tell a younger version of this project
 
