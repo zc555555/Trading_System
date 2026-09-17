@@ -116,7 +116,7 @@ def load_effective_factor_weights(
         if log:
             print(f"[factor_weights] strategy=static -> using hand-tuned "
                   f"weights from factor_definitions.FACTOR_WEIGHTS")
-        return dict(STATIC_WEIGHTS)
+        return finalize_weights(dict(STATIC_WEIGHTS), log=log)
 
     path = Path(json_path) if json_path else _DEFAULT_JSON
     if not path.exists():
@@ -125,7 +125,7 @@ def load_effective_factor_weights(
             f"not found. Falling back to static weights.",
             stacklevel=2,
         )
-        return dict(STATIC_WEIGHTS)
+        return finalize_weights(dict(STATIC_WEIGHTS), log=log)
 
     with open(path, "r", encoding="utf-8") as f:
         payload = json.load(f)
@@ -139,7 +139,7 @@ def load_effective_factor_weights(
             print(f"[factor_weights] strategy={strategy} -> "
                   f"using cached effective_weights from {path.name}")
         _log_weights(effective, payload.get("factor_scores", {}))
-        return dict(effective)
+        return finalize_weights(dict(effective), log=log)
 
     scores = payload.get("factor_scores")
     if not scores:
@@ -147,7 +147,7 @@ def load_effective_factor_weights(
             f"[factor_weights] No factor_scores in {path.name}; "
             f"falling back to static.", stacklevel=2,
         )
-        return dict(STATIC_WEIGHTS)
+        return finalize_weights(dict(STATIC_WEIGHTS), log=log)
 
     power_map = {"ic_squared": 2.0, "ic_sqrt": 0.5, "ic_proportional": 1.0}
     power = power_map.get(strategy, 1.0)
@@ -157,13 +157,59 @@ def load_effective_factor_weights(
             f"[factor_weights] All factors below floor={floor}; "
             f"falling back to static weights.", stacklevel=2,
         )
-        return dict(STATIC_WEIGHTS)
+        return finalize_weights(dict(STATIC_WEIGHTS), log=log)
 
     if log:
         print(f"[factor_weights] strategy={strategy} floor={floor} -> "
               f"recomputed from factor_scores in {path.name}")
         _log_weights(weights, scores)
-    return weights
+    return finalize_weights(weights, log=log)
+
+
+def apply_caps_and_active_set(weights: Dict[str, float], active: Optional[set] = None,
+                              caps: Optional[Dict[str, float]] = None) -> Dict[str, float]:
+    """Keep only the active factor groups (a factor removed from the
+    mined-factor registry drops out, no retrain needed), then enforce
+    per-factor weight caps (probation adoptions) and renormalise the
+    uncapped factors to fill the rest. Pure function."""
+    w = {k: float(v) for k, v in weights.items() if (active is None or k in active) and float(v) > 0}
+    if not w:
+        return {k: float(v) for k, v in weights.items()}
+    total = sum(w.values())
+    w = {k: v / total for k, v in w.items()}
+    caps = {k: float(c) for k, c in (caps or {}).items() if k in w}
+    capped: Dict[str, float] = {}
+    for _ in range(len(w) + 1):
+        over = {k: caps[k] for k in caps if k not in capped and w[k] > caps[k] + 1e-12}
+        if not over:
+            break
+        capped.update(over)
+        free = [k for k in w if k not in capped]
+        free_total = sum(w[k] for k in free)
+        room = max(0.0, 1.0 - sum(capped.values()))
+        for k in capped:
+            w[k] = capped[k]
+        for k in free:
+            w[k] = w[k] / free_total * room if free_total > 0 else 0.0
+    return w
+
+
+def finalize_weights(weights: Dict[str, float], log: bool = True) -> Dict[str, float]:
+    """Production consumption of the adoption registry (2026-09-17): the
+    active set is factor_definitions.FACTOR_GROUPS (registry read at
+    import), caps come from mined_factors.probation_caps()."""
+    try:
+        from factors.factor_definitions import FACTOR_GROUPS
+        from factors.mined_factors import probation_caps
+        active, caps = set(FACTOR_GROUPS.keys()), probation_caps()
+    except Exception:                                # noqa: BLE001
+        return weights
+    out = apply_caps_and_active_set(weights, active=active, caps=caps)
+    if log and (set(out) != set(weights) or any(abs(out[k] - weights.get(k, 0.0)) > 1e-9 for k in out)):
+        dropped = sorted(set(weights) - set(out))
+        capped = sorted(k for k in caps if k in out and abs(out[k] - caps[k]) < 1e-9)
+        print(f"[factor_weights] active-set/caps applied: dropped={dropped} capped={capped}")
+    return out
 
 
 # ---------------------------------------------------------------------------

@@ -288,6 +288,19 @@ def main() -> int:
             notify("StockPredict factor IC decay ALERT", line)
     else:
         print("\nno factor outside its pre-registered band")
+    # pre-registered removal triggers on adopted mined factors (probation
+    # WARN/ALERT -> removed; structural ALERT -> review flag)
+    try:
+        from factors.mined_factors import apply_ic_monitor_triggers
+        changed = apply_ic_monitor_triggers(monitor_path=RESULTS / "ic_monitor_latest.json")
+        for e in changed:
+            what = e.get("removal_reason") or e.get("review_flag")
+            print(f"[trigger] {e['id']}: {what}")
+            with open(WARNINGS_LOG, "a", encoding="utf-8") as fh:
+                fh.write(f"{datetime.now():%Y-%m-%d %H:%M} ADOPTION TRIGGER {e['id']}: {what}\n")
+            notify("StockPredict adoption trigger", f"{e['id']}: {what}")
+    except Exception as exc:                          # noqa: BLE001
+        print(f"[trigger] could not apply adoption triggers: {exc}")
     return 0
 
 

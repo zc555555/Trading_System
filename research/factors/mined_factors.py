@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 import pandas as pd
 
@@ -41,7 +43,7 @@ def load_adopted(path: Path = REGISTRY, production_only: bool = True) -> list[di
     if production_only:
         entries = [e for e in entries if int(e.get("horizon", PRODUCTION_HORIZON)) == PRODUCTION_HORIZON
                    and str(e.get("universe", PRODUCTION_UNIVERSE)) == PRODUCTION_UNIVERSE
-                   and e.get("status", "production") != "shelf"]
+                   and e.get("status", "production") not in ("shelf", "removed")]
     return entries
 
 
@@ -92,6 +94,65 @@ def add_adopted_mined_features(df: pd.DataFrame, path: Path = REGISTRY) -> pd.Da
         # a missing source raises here (DSLError) rather than silently zero-filling a live feature
         df[feature_column(e)] = compile_entry(e, work)
     return df
+
+
+def probation_caps(path: Path = REGISTRY) -> dict:
+    """factor id -> weight_cap for every production entry that carries one
+    (probation-tier adoptions, harness.adopt sets 0.025)."""
+    return {e["id"]: float(e["weight_cap"]) for e in load_adopted(path) if e.get("weight_cap")}
+
+
+def _write_registry(data: dict, path: Path) -> None:
+    path = Path(path)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    tmp.replace(path)
+
+
+def apply_ic_monitor_triggers(registry_path: Path = REGISTRY, monitor_path: Optional[Path] = None,
+                              today: Optional[str] = None) -> list[dict]:
+    """Enforce the pre-registered removal triggers against the IC monitor's
+    latest report (evaluation/results/ic_monitor_latest.json):
+
+      * a PROBATION adoption whose factor is WARN or ALERT is REMOVED
+        (status 'removed', removed_on, removal_reason) -- the trigger written
+        into the entry at adoption time;
+      * a STRUCTURAL adoption on ALERT gets review_flag/review_on -- the
+        monitor's ALERT is a removal-review trigger, not an automatic one.
+
+    Idempotent; returns the entries it changed. Production consumers read
+    the registry at process start, so a removal takes effect at the next
+    signal run without a retrain (load_effective_factor_weights drops the
+    factor and renormalises)."""
+    registry_path = Path(registry_path)
+    if not registry_path.exists():
+        return []
+    mon_path = Path(monitor_path) if monitor_path else Path(__file__).resolve().parent.parent / "evaluation" / "results" / "ic_monitor_latest.json"
+    if not mon_path.exists():
+        return []
+    report = json.loads(mon_path.read_text(encoding="utf-8")).get("factors", {})
+    data = json.loads(registry_path.read_text(encoding="utf-8"))
+    today = today or datetime.now().strftime("%Y-%m-%d")
+    changed = []
+    for e in data.get("adopted", []):
+        if e.get("status") in ("removed", "shelf"):
+            continue
+        key = f"factor_{e['id']}"
+        st = report.get(key, {}).get("status")
+        if st not in ("WARN", "ALERT"):
+            continue
+        if e.get("adoption_tier") == "probation":
+            e["status"] = "removed"
+            e["removed_on"] = today
+            e["removal_reason"] = f"PROBATION trigger: IC monitor {st} (as of {report[key].get('as_of')})"
+            changed.append(e)
+        elif st == "ALERT" and not e.get("review_flag"):
+            e["review_flag"] = f"IC monitor ALERT {today}: removal review required (structural tier, not automatic)"
+            e["review_on"] = today
+            changed.append(e)
+    if changed:
+        _write_registry(data, registry_path)
+    return changed
 
 
 def register_adopted(entry: dict, path: Path = REGISTRY) -> None:

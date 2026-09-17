@@ -94,10 +94,15 @@ def member_features(panel: pd.DataFrame, members: list[dict], horizon: int,
     dates = pd.to_datetime(panel["date"]).to_numpy()
     cache = features_path(horizon, universe)
     have = pd.DataFrame(index=panel.index)
+    fp = panel_fingerprint(panel)
+    reused = False
     if use_cache and cache.exists():
-        old = pd.read_parquet(cache)
-        if len(old) == len(panel):
-            have = old
+        meta = cache.with_suffix(".meta.json")
+        stored = json.loads(meta.read_text(encoding="utf-8")).get("fingerprint") if meta.exists() else None
+        if stored == fp:                         # same rows in the same order, not merely the same count
+            old = pd.read_parquet(cache)
+            if len(old) == len(panel):
+                have, reused = old, True
     cols = {}
     for m in members:
         key = m["hash"]
@@ -113,10 +118,21 @@ def member_features(panel: pd.DataFrame, members: list[dict], horizon: int,
     out = pd.DataFrame(cols, index=panel.index)
     # write the cache only for the panel it was built on (never let a smaller
     # test panel overwrite the screen panel's cache)
-    if use_cache and len(members) and (not cache.exists() or len(have) == len(panel)):
+    if use_cache and len(members) and (not cache.exists() or reused):
         POOL_DIR.mkdir(parents=True, exist_ok=True)
         out.to_parquet(cache, index=False)
+        cache.with_suffix(".meta.json").write_text(json.dumps({"fingerprint": fp, "rows": int(len(panel))}), encoding="utf-8")
     return out
+
+
+def panel_fingerprint(panel: pd.DataFrame) -> str:
+    """Order-sensitive digest of the panel's (date, symbol) rows: a rebuilt
+    or re-sorted panel with the same row count gets a different key, so a
+    cached member signal can never be read against the wrong rows."""
+    import hashlib
+    keys = pd.DataFrame({"date": pd.to_datetime(panel["date"]).astype("int64"), "symbol": panel["symbol"].astype(str)})
+    h = pd.util.hash_pandas_object(keys, index=False).to_numpy()
+    return f"{len(panel)}:{hashlib.sha1(np.ascontiguousarray(h).tobytes()).hexdigest()[:16]}"
 
 
 def composite(features: pd.DataFrame) -> np.ndarray:
