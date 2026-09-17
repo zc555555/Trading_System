@@ -1,0 +1,233 @@
+{
+  "baseline_5pct_100k": {
+    "params": {},
+    "blocked": {
+      "qty<1": 2035,
+      "short_single": 3947,
+      "short_gross": 1940,
+      "no_open": 3
+    },
+    "exits": {
+      "entry": 13423,
+      "close": 13386,
+      "delist": 37
+    },
+    "avg_gross": 0.531667618306938,
+    "dev": {
+      "sharpe": 0.3852851615945412,
+      "ann_return": 0.0316858720485913,
+      "ann_vol": 0.09186640899665778,
+      "max_drawdown": -0.18240281061622976,
+      "n_days": 1884
+    },
+    "holdout": {
+      "sharpe": 0.7595212171769397,
+      "ann_return": 0.045813747742602384,
+      "ann_vol": 0.06145690424863355,
+      "max_drawdown": -0.04600651882600437,
+      "n_days": 258
+    },
+    "all": {
+      "sharpe": 0.4141452304512434,
+      "ann_return": 0.03337738804601398,
+      "ann_vol": 0.08874613392574993,
+      "max_drawdown": -0.18240281061622976,
+      "n_days": 2142
+    }
+  },
+  "tranche_7.5pct": {
+    "params": {
+      "capital_per_tranche_pct": 7.5
+    },
+    "blocked": {
+      "qty<1": 875,
+      "short_single": 5324,
+      "short_gross": 2885,
+      "leverage": 697,
+      "no_open": 2
+    },
+    "exits": {
+      "entry": 11565,
+      "close": 11536,
+      "delist": 29
+    },
+    "avg_gross": 0.6978615777100358,
+    "dev": {
+      "sharpe": 0.40294333076081823,
+      "ann_return": 0.044560754736108654,
+      "ann_vol": 0.12858267406209054,
+      "max_drawdown": -0.22770178243402772,
+      "n_days": 1884
+    },
+    "holdout": {
+      "sharpe": 1.0755757474602718,
+      "ann_return": 0.09758863431056386,
+      "ann_vol": 0.09036055170329639,
+      "max_drawdown": -0.06422110404623338,
+      "n_days": 258
+    },
+    "all": {
+      "sharpe": 0.45973395598464073,
+      "ann_return": 0.05080964642628927,
+      "ann_vol": 0.1245877929485262,
+      "max_drawdown": -0.22770178243402772,
+      "n_days": 2142
+    }
+  },
+  "tranche_10pct": {
+    "params": {
+      "capital_per_tranche_pct": 10.0
+    },
+    "blocked": {
+      "short_single": 5972,
+      "qty<1": 496,
+      "short_gross": 2924,
+      "leverage": 2386
+    },
+    "exits": {
+      "entry": 9570,
+      "close": 9545,
+      "delist": 25
+    },
+    "avg_gross": 0.7789167616295352,
+    "dev": {
+      "sharpe": 0.4523968151684817,
+      "ann_return": 0.057632711950291515,
+      "ann_vol": 0.1479052381126607,
+      "max_drawdown": -0.2724664085775922,
+      "n_days": 1884
+    },
+    "holdout": {
+      "sharpe": 1.1288468364288433,
+      "ann_return": 0.13186682007487383,
+      "ann_vol": 0.1156395606339547,
+      "max_drawdown": -0.09373191179123508,
+      "n_days": 258
+    },
+    "all": {
+      "sharpe": 0.5165096016550964,
+      "ann_return": 0.06630963365698594,
+      "ann_vol": 0.14438390724178435,
+      "max_drawdown": -0.2724664085775922,
+      "n_days": 2142
+    }
+  },
+  "fractional_longs": {
+    "params": {
+      "fractional_longs": true
+    },
+    "blocked": {
+      "qty<1": 1569,
+      "short_single": 3937,
+      "short_gross": 1910,
+      "no_open": 3,
+      "leverage": 3
+    },
+    "exits": {
+      "entry": 13926,
+      "close": 13886,
+      "delist": 40
+    },
+    "avg_gross": 0.5829787939476416,
+    "dev": {
+      "sharpe": 0.348326756113964,
+      "ann_return": 0.030708726460714653,
+      "ann_vol": 0.10156299070760298,
+      "max_drawdown": -0.23246406841293266,
+      "n_days": 1884
+    },
+    "holdout": {
+      "sharpe": 1.000925264768864,
+      "ann_return": 0.07048377332548306,
+      "ann_vol": 0.07052921243628095,
+      "max_drawdown": -0.05577769082860895,
+      "n_days": 258
+    },
+    "all": {
+      "sharpe": 0.40290023462010033,
+      "ann_return": 0.03542016617175392,
+      "ann_vol": 0.09833445356165733,
+      "max_drawdown": -0.23246406841293266,
+      "n_days": 2142
+    }
+  },
+  "equity_1M": {
+    "params": {
+      "initial_equity": 1000000.0
+    },
+    "blocked": {
+      "short_single": 4744,
+      "qty<1": 29,
+      "short_gross": 2828,
+      "no_open": 1,
+      "leverage": 1
+    },
+    "exits": {
+      "entry": 13745,
+      "close": 13710,
+      "delist": 35
+    },
+    "avg_gross": 0.5890649950288368,
+    "dev": {
+      "sharpe": 0.3663371141457983,
+      "ann_return": 0.03198580173448895,
+      "ann_vol": 0.09934580879582931,
+      "max_drawdown": -0.22147789395353323,
+      "n_days": 1884
+    },
+    "holdout": {
+      "sharpe": 1.1313312650337788,
+      "ann_return": 0.07521759910158976,
+      "ann_vol": 0.06602977035605918,
+      "max_drawdown": -0.05215271884784467,
+      "n_days": 258
+    },
+    "all": {
+      "sharpe": 0.4274409428026307,
+      "ann_return": 0.037099505074445815,
+      "ann_vol": 0.09593868958124424,
+      "max_drawdown": -0.22147789395353323,
+      "n_days": 2142
+    }
+  },
+  "fractional_longs_1M": {
+    "params": {
+      "fractional_longs": true,
+      "initial_equity": 1000000.0
+    },
+    "blocked": {
+      "short_single": 4763,
+      "qty<1": 28,
+      "short_gross": 2794,
+      "no_open": 2,
+      "leverage": 9
+    },
+    "exits": {
+      "entry": 13752,
+      "close": 13717,
+      "delist": 35
+    },
+    "avg_gross": 0.5941742266816007,
+    "dev": {
+      "sharpe": 0.3741474437037299,
+      "ann_return": 0.03310107861706291,
+      "ann_vol": 0.100452682121065,
+      "max_drawdown": -0.21836678373532936,
+      "n_days": 1884
+    },
+    "holdout": {
+      "sharpe": 1.0711401534653717,
+      "ann_return": 0.07187539516330044,
+      "ann_vol": 0.06688583444539481,
+      "max_drawdown": -0.0553656730359281,
+      "n_days": 258
+    },
+    "all": {
+      "sharpe": 0.42968403232546715,
+      "ann_return": 0.03769605320275571,
+      "ann_vol": 0.0970168186920197,
+      "max_drawdown": -0.21836678373532936,
+      "n_days": 2142
+    }
+  }
+}
