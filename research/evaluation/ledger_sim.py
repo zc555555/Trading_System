@@ -55,6 +55,7 @@ class LedgerParams:
     cost_bp: float = 15.0                         # round trip
     initial_equity: float = 100_000.0
     integer_shares: bool = True
+    fractional_longs: bool = False                # lever (b): fractional shares for LONG legs only (shorts stay whole)
     brackets: bool = True
     stop_atr: float = 3.0
     take_atr: float = 6.0
@@ -216,8 +217,9 @@ def simulate_ledger(books: dict, prices: pd.DataFrame, params: LedgerParams = Le
                     blocked["no_price"] += 1
                     continue
                 alloc = min(tranche_capital * float(r["position_pct"]) / 100.0, per_stock_max)
-                qty = math.floor(alloc / sig_px) if params.integer_shares else alloc / sig_px
-                if qty < (1 if params.integer_shares else 1e-9):
+                whole = params.integer_shares and not (params.fractional_longs and side > 0)
+                qty = math.floor(alloc / sig_px) if whole else alloc / sig_px
+                if qty < (1 if whole else 1e-9):
                     blocked["qty<1"] += 1
                     continue
                 notional = qty * sig_px
