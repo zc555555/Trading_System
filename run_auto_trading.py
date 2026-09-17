@@ -34,13 +34,39 @@ def pause_exit(code=1):
     sys.exit(code)
 
 
+CHAIN = "nightly"
+
+
+def _record_timing(step: str, seconds: float, rc: int) -> None:
+    """One row per pipeline step in trading_logs/timings.csv (2026-09 review
+    item 7: measure before deciding what to make incremental)."""
+    try:
+        import csv
+        log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_logs")
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(log_dir, "timings.csv")
+        new = not os.path.exists(path)
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            if new:
+                w.writerow(["at", "chain", "step", "seconds", "rc"])
+            w.writerow([datetime.now().isoformat(timespec="seconds"), CHAIN, step, f"{seconds:.1f}", rc])
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def run_command(cmd, description):
-    """运行命令并显示结果"""
+    """运行命令并显示结果(记录耗时到 trading_logs/timings.csv)"""
     print(f"\n{'='*80}")
     print(f"{description}")
     print(f"{'='*80}\n")
 
+    import time as _time
+    t0 = _time.monotonic()
     result = subprocess.run(cmd, shell=True)
+    elapsed = _time.monotonic() - t0
+    _record_timing(description, elapsed, result.returncode)
+    print(f"\n[timing] {description}: {elapsed:.0f}s")
 
     if result.returncode != 0:
         print(f"\n[错误] {description} 失败！")

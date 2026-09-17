@@ -26,3 +26,7 @@ rem Sundays left the fill record stale at 2026-08-14). Non-fatal.
 if not "%errorlevel%"=="0" (
     echo %date% %time% SLIPPAGE CAPTURE FAILED see auto_run_%DT%.log >> "trading_logs\FAILURES.log"
 )
+rem Health check (2026-09 review item 7): job outcome, data date, signal file,
+rem model release, book vs broker, halt, today's failures -> HEALTH.log,
+rem health_latest.json, toast on FAIL. Never fatal.
+"research\venv\Scripts\python.exe" run_health_check.py --nightly-rc %RC% >> "trading_logs\auto_run_%DT%.log" 2>&1

@@ -15,11 +15,34 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='repla
 # 子进程用与本进程相同的解释器(venv), 裸 'python' 会解析到系统 Python
 PY = f'"{sys.executable}"'
 
+CHAIN = "weekly"
+
+
+def _record_timing(step: str, seconds: float, rc: int) -> None:
+    """One row per pipeline step in trading_logs/timings.csv (2026-09 review
+    item 7: measure before deciding what to make incremental)."""
+    try:
+        import csv
+        log_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading_logs")
+        os.makedirs(log_dir, exist_ok=True)
+        path = os.path.join(log_dir, "timings.csv")
+        new = not os.path.exists(path)
+        with open(path, "a", newline="", encoding="utf-8") as f:
+            w = csv.writer(f)
+            if new:
+                w.writerow(["at", "chain", "step", "seconds", "rc"])
+            w.writerow([datetime.now().isoformat(timespec="seconds"), CHAIN, step, f"{seconds:.1f}", rc])
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def run_command(command, description):
-    """运行命令并打印结果"""
+    """运行命令并打印结果(记录耗时到 trading_logs/timings.csv)"""
     print(f"\n[*] {description}...")
     print(f"    命令: {command}")
 
+    import time as _time
+    t0 = _time.monotonic()
     try:
         result = subprocess.run(
             command,
@@ -29,6 +52,8 @@ def run_command(command, description):
             text=True,
             encoding='utf-8'
         )
+        _record_timing(description, _time.monotonic() - t0, 0)
+        print(f"[timing] {description}: {_time.monotonic() - t0:.0f}s")
 
         # 打印输出
         if result.stdout:
@@ -38,6 +63,7 @@ def run_command(command, description):
         return True
 
     except subprocess.CalledProcessError as e:
+        _record_timing(description, _time.monotonic() - t0, e.returncode)
         print(f"\n❌ {description} - 失败")
         print(f"错误码: {e.returncode}")
         if e.stdout:
