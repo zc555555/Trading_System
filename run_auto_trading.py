@@ -16,9 +16,15 @@ import subprocess
 from datetime import datetime
 
 # 任务计划下 stdout 是管道, Windows 默认 cp1252 编码会在中文输出上崩溃
-if sys.platform == 'win32' and hasattr(sys.stdout, 'buffer'):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+if sys.platform == 'win32':
+    # UTF-8 console/pipe output WITHOUT replacing sys.stdout: a new TextIOWrapper
+    # over sys.stdout.buffer at import time closes pytest's capture file when it
+    # is collected (Windows CI: "I/O operation on closed file"); reconfigure() keeps the object.
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
 
 INTERACTIVE = sys.stdin is not None and sys.stdin.isatty()
 

@@ -29,7 +29,15 @@ from pathlib import Path
 
 import pandas as pd
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+if sys.platform == 'win32':
+    # UTF-8 console/pipe output WITHOUT replacing sys.stdout: a new TextIOWrapper
+    # over sys.stdout.buffer at import time closes pytest's capture file when it
+    # is collected (Windows CI: "I/O operation on closed file"); reconfigure() keeps the object.
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
 sys.path.append(str(Path(__file__).resolve().parent / "research"))
 
 PROJECT = Path(__file__).resolve().parent

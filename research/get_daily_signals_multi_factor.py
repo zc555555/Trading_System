@@ -24,9 +24,15 @@ import numpy as np
 # Windows: piped/redirected stdout defaults to cp1252, which cannot encode
 # the Chinese status lines (finbert_sentiment etc.) and crashes the script
 # mid-run under Task Scheduler. Force UTF-8, never crash on odd characters.
-if sys.platform == 'win32' and hasattr(sys.stdout, 'buffer'):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
-    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+if sys.platform == 'win32':
+    # UTF-8 console/pipe output WITHOUT replacing sys.stdout: a new TextIOWrapper
+    # over sys.stdout.buffer at import time closes pytest's capture file when it
+    # is collected (Windows CI: "I/O operation on closed file"); reconfigure() keeps the object.
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except (AttributeError, ValueError):
+        pass
 
 # Import factor definitions
 # W1.5: FACTOR_WEIGHTS is resolved at import time via load_effective_factor_weights()
